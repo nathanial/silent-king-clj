@@ -20,8 +20,7 @@
             entity (state/create-entity
                     :position {:x (rand canvas-width)
                               :y (rand canvas-height)}
-                    :renderable {:image (:image base-image)
-                                :path (:path base-image)}
+                    :renderable {:path (:path base-image)}  ;; Only store path, not image
                     :transform {:size (+ 80 (rand 80))
                                :rotation 0.0}
                     :physics {:rotation-speed (+ 0.5 (rand 1.5))})]
@@ -250,7 +249,12 @@
               renderable (state/get-component entity :renderable)
               transform (state/get-component entity :transform)
               physics (state/get-component entity :physics)
-              star-image (:image renderable)
+              path (:path renderable)
+              ;; Look up image from assets by path
+              star-image (->> (:individual-images assets)
+                             (filter #(= (:path %) path))
+                             first
+                             :image)
               x (:x pos)
               y (:y pos)
               size (:size transform)
@@ -323,8 +327,7 @@
   (let [surface (state/get-surface render-state)
         context (state/get-context render-state)
         window (state/get-window render-state)
-        assets (state/get-assets game-state)
-        entities (state/get-all-entities game-state)]
+        assets (state/get-assets game-state)]
 
     ;; Close surface
     (when surface
@@ -334,11 +337,10 @@
     (when context
       (.close ^DirectContext context))
 
-    ;; Close all star images from entities
-    (doseq [[_ entity] entities]
-      (when-let [renderable (state/get-component entity :renderable)]
-        (when-let [image (:image renderable)]
-          (.close ^Image image))))
+    ;; Close all unique individual star images from assets
+    (doseq [img-data (:individual-images assets)]
+      (when-let [image (:image img-data)]
+        (.close ^Image image)))
 
     ;; Close atlas image
     (when-let [atlas-image (:atlas-image assets)]
