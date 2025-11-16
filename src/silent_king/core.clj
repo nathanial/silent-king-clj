@@ -192,7 +192,7 @@
         pan-y (:pan-y @camera)
 
         ;; LOD: Use atlas when zoomed out for performance
-        use-atlas? (< zoom 0.6)
+        use-atlas? (< zoom 2.5)
         atlas-image (:atlas-image assets)
         atlas-metadata (:atlas-metadata assets)
         atlas-size (:atlas-size assets)
