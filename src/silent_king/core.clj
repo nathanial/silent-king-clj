@@ -203,11 +203,25 @@
         pan-x (:pan-x camera)
         pan-y (:pan-y camera)
 
-        ;; LOD: Use atlas when zoomed out for performance
-        use-atlas? (< zoom 2.5)
-        atlas-image (:atlas-image assets)
-        atlas-metadata (:atlas-metadata assets)
-        atlas-size (:atlas-size assets)
+        ;; 3-Level LOD system
+        lod-level (cond
+                    (< zoom 1.0) :small   ;; Far zoom: use small atlas (128x128)
+                    (< zoom 2.5) :medium  ;; Medium zoom: use medium atlas (256x256)
+                    :else :high)          ;; Close zoom: use full-res images
+
+        ;; Select atlas based on LOD level
+        atlas-image (case lod-level
+                      :small (:atlas-image-small assets)
+                      :medium (:atlas-image-medium assets)
+                      nil)
+        atlas-metadata (case lod-level
+                         :small (:atlas-metadata-small assets)
+                         :medium (:atlas-metadata-medium assets)
+                         nil)
+        atlas-size (case lod-level
+                     :small (:atlas-size-small assets)
+                     :medium (:atlas-size-medium assets)
+                     nil)
 
         ;; Get all star entities (those with position, renderable, and transform components)
         star-entities (state/filter-entities-with game-state [:position :renderable :transform :physics])
@@ -227,9 +241,10 @@
     (.translate canvas (float pan-x) (float pan-y))
     (.scale canvas (float zoom) (float zoom))
 
-    ;; Draw visible stars using LOD
-    (if use-atlas?
-      ;; Low-detail mode: Use atlas for better batching
+    ;; Draw visible stars using 3-level LOD
+    (case lod-level
+      ;; Small atlas (far zoom, lowest detail)
+      :small
       (doseq [[_ entity] visible-stars]
         (let [pos (state/get-component entity :position)
               renderable (state/get-component entity :renderable)
@@ -243,7 +258,23 @@
               rotation (* time 30 rotation-speed)]
           (draw-star-from-atlas canvas atlas-image atlas-metadata path x y size rotation atlas-size)))
 
-      ;; High-detail mode: Use individual full-res images
+      ;; Medium atlas (medium zoom, medium detail)
+      :medium
+      (doseq [[_ entity] visible-stars]
+        (let [pos (state/get-component entity :position)
+              renderable (state/get-component entity :renderable)
+              transform (state/get-component entity :transform)
+              physics (state/get-component entity :physics)
+              path (:path renderable)
+              x (:x pos)
+              y (:y pos)
+              size (:size transform)
+              rotation-speed (:rotation-speed physics)
+              rotation (* time 30 rotation-speed)]
+          (draw-star-from-atlas canvas atlas-image atlas-metadata path x y size rotation atlas-size)))
+
+      ;; Full-res images (close zoom, highest detail)
+      :high
       (doseq [[_ entity] visible-stars]
         (let [pos (state/get-component entity :position)
               renderable (state/get-component entity :renderable)
@@ -268,11 +299,15 @@
     ;; Draw UI overlay (not affected by camera)
     (let [paint (doto (Paint.)
                   (.setColor (unchecked-int 0xFFffffff)))
-          font (Font. (Typeface/makeDefault) (float 24))]
+          font (Font. (Typeface/makeDefault) (float 24))
+          lod-description (case lod-level
+                            :small "Small atlas (128x128, far zoom)"
+                            :medium "Medium atlas (256x256, medium zoom)"
+                            :high "Full-res images (close zoom)")]
       (.drawString canvas "Silent King - Star Gallery" (float 20) (float 30) font paint)
       (.drawString canvas (str "Stars: " total-count " (visible: " visible-count ")") (float 20) (float 60) font paint)
       (.drawString canvas (str "Zoom: " (format "%.2f" zoom) "x") (float 20) (float 90) font paint)
-      (.drawString canvas (str "LOD: " (if use-atlas? "Atlas (low-detail)" "Individual (high-detail)")) (float 20) (float 120) font paint)
+      (.drawString canvas (str "LOD: " lod-description) (float 20) (float 120) font paint)
       (.drawString canvas "Controls: Click-Drag=Pan, Scroll=Zoom" (float 20) (float 150) font paint)
       (.close font)
       (.close paint))))
@@ -342,9 +377,13 @@
       (when-let [image (:image img-data)]
         (.close ^Image image)))
 
-    ;; Close atlas image
-    (when-let [atlas-image (:atlas-image assets)]
-      (.close ^Image atlas-image))
+    ;; Close medium atlas image
+    (when-let [atlas-image-medium (:atlas-image-medium assets)]
+      (.close ^Image atlas-image-medium))
+
+    ;; Close small atlas image
+    (when-let [atlas-image-small (:atlas-image-small assets)]
+      (.close ^Image atlas-image-small))
 
     ;; Destroy window
     (when window

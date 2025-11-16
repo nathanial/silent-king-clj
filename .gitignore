@@ -28,5 +28,7 @@ Thumbs.db
 
 # Generated/preprocessed assets (build artifacts)
 assets/stars-processed/
-assets/star-atlas.png
-assets/star-atlas.json
+assets/star-atlas-medium.png
+assets/star-atlas-medium.json
+assets/star-atlas-small.png
+assets/star-atlas-small.json

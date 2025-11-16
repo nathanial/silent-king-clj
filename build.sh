@@ -11,17 +11,26 @@ echo "Step 1: Preprocessing star images (removing black backgrounds)..."
 clojure scripts/preprocess-stars.clj
 echo ""
 
-# Step 2: Generate texture atlas
-echo "Step 2: Generating texture atlas..."
-clojure scripts/generate-atlas.clj
+# Step 2: Generate texture atlases (medium and small)
+echo "Step 2: Generating texture atlases..."
+echo ""
+
+echo "  Generating medium atlas (256x256 tiles)..."
+clojure scripts/generate-atlas.clj 256 assets/star-atlas-medium.png assets/star-atlas-medium.json
+echo ""
+
+echo "  Generating small atlas (128x128 tiles)..."
+clojure scripts/generate-atlas.clj 128 assets/star-atlas-small.png assets/star-atlas-small.json
 echo ""
 
 echo "=========================="
 echo "Build complete!"
 echo ""
 echo "Generated assets:"
-echo "  - assets/stars-processed/    (159 preprocessed PNG images)"
-echo "  - assets/star-atlas.png      (4096x4096 texture atlas)"
-echo "  - assets/star-atlas.json     (atlas metadata)"
+echo "  - assets/stars-processed/         (159 preprocessed PNG images)"
+echo "  - assets/star-atlas-medium.png    (4096x4096, 256x256 tiles)"
+echo "  - assets/star-atlas-medium.json   (medium atlas metadata)"
+echo "  - assets/star-atlas-small.png     (4096x4096, 128x128 tiles)"
+echo "  - assets/star-atlas-small.json    (small atlas metadata)"
 echo ""
 echo "You can now run the application with: ./run.sh"
