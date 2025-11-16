@@ -34,12 +34,18 @@
           :current-time 0.0
           :frame-count 0}
    :assets {:individual-images []
+            :atlas-image-xs nil
+            :atlas-metadata-xs {}
+            :atlas-size-xs 4096
+            :atlas-image-small nil
+            :atlas-metadata-small {}
+            :atlas-size-small 4096
             :atlas-image-medium nil
             :atlas-metadata-medium {}
             :atlas-size-medium 4096
-            :atlas-image-small nil
-            :atlas-metadata-small {}
-            :atlas-size-small 4096}})
+            :atlas-image-lg nil
+            :atlas-metadata-lg {}
+            :atlas-size-lg 4096}})
 
 (defn create-render-state []
   "Create initial render state structure"

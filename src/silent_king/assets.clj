@@ -80,12 +80,18 @@
     (Image/makeFromEncoded (.getBytes (Data/makeFromFileName (.getPath atlas-file))))))
 
 (defn load-all-assets []
-  "Load individual star images and both atlases (medium and small) for 3-level LOD rendering"
+  "Load individual star images and all atlases (xs, small, medium, lg) for 5-level LOD rendering"
   (println "Loading all assets...")
   {:individual-images (load-star-images)
+   :atlas-image-xs (load-atlas-image "assets/star-atlas-xs.png")
+   :atlas-metadata-xs (load-atlas-metadata "assets/star-atlas-xs.json")
+   :atlas-size-xs 4096
+   :atlas-image-small (load-atlas-image "assets/star-atlas-small.png")
+   :atlas-metadata-small (load-atlas-metadata "assets/star-atlas-small.json")
+   :atlas-size-small 4096
    :atlas-image-medium (load-atlas-image "assets/star-atlas-medium.png")
    :atlas-metadata-medium (load-atlas-metadata "assets/star-atlas-medium.json")
    :atlas-size-medium 4096
-   :atlas-image-small (load-atlas-image "assets/star-atlas-small.png")
-   :atlas-metadata-small (load-atlas-metadata "assets/star-atlas-small.json")
-   :atlas-size-small 4096})
+   :atlas-image-lg (load-atlas-image "assets/star-atlas-lg.png")
+   :atlas-metadata-lg (load-atlas-metadata "assets/star-atlas-lg.json")
+   :atlas-size-lg 4096})

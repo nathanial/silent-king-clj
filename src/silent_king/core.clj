@@ -11,15 +11,21 @@
 (set! *warn-on-reflection* true)
 
 (defn generate-star-entities! [game-state base-images num-stars]
-  "Generate star entities with components and add them to game state"
-  (println "Generating" num-stars "star entities...")
-  (let [canvas-width 4000
-        canvas-height 4000]
+  "Generate star entities with components and add them to game state in a disk pattern"
+  (println "Generating" num-stars "star entities in a disk pattern...")
+  (let [center-x 2000.0
+        center-y 2000.0
+        max-radius 10000.0]  ;; Disk radius
     (doseq [i (range num-stars)]
       (let [base-image (rand-nth base-images)
+            ;; Use polar coordinates for uniform disk distribution
+            angle (* (rand) 2.0 Math/PI)
+            ;; sqrt ensures uniform distribution (not just radial)
+            radius (* (Math/sqrt (rand)) max-radius)
+            x (+ center-x (* radius (Math/cos angle)))
+            y (+ center-y (* radius (Math/sin angle)))
             entity (state/create-entity
-                    :position {:x (rand canvas-width)
-                              :y (rand canvas-height)}
+                    :position {:x x :y y}
                     :renderable {:path (:path base-image)}  ;; Only store path, not image
                     :transform {:size (+ 80 (rand 80))
                                :rotation 0.0}
@@ -203,24 +209,32 @@
         pan-x (:pan-x camera)
         pan-y (:pan-y camera)
 
-        ;; 3-Level LOD system
+        ;; 5-Level LOD system
         lod-level (cond
+                    (< zoom 0.5) :xs      ;; Very far zoom: use xs atlas (64x64)
                     (< zoom 1.0) :small   ;; Far zoom: use small atlas (128x128)
                     (< zoom 2.5) :medium  ;; Medium zoom: use medium atlas (256x256)
-                    :else :high)          ;; Close zoom: use full-res images
+                    (< zoom 5.0) :lg      ;; Close zoom: use lg atlas (512x512)
+                    :else :high)          ;; Very close zoom: use full-res images
 
         ;; Select atlas based on LOD level
         atlas-image (case lod-level
+                      :xs (:atlas-image-xs assets)
                       :small (:atlas-image-small assets)
                       :medium (:atlas-image-medium assets)
+                      :lg (:atlas-image-lg assets)
                       nil)
         atlas-metadata (case lod-level
+                         :xs (:atlas-metadata-xs assets)
                          :small (:atlas-metadata-small assets)
                          :medium (:atlas-metadata-medium assets)
+                         :lg (:atlas-metadata-lg assets)
                          nil)
         atlas-size (case lod-level
+                     :xs (:atlas-size-xs assets)
                      :small (:atlas-size-small assets)
                      :medium (:atlas-size-medium assets)
+                     :lg (:atlas-size-lg assets)
                      nil)
 
         ;; Get all star entities (those with position, renderable, and transform components)
@@ -241,9 +255,24 @@
     (.translate canvas (float pan-x) (float pan-y))
     (.scale canvas (float zoom) (float zoom))
 
-    ;; Draw visible stars using 3-level LOD
+    ;; Draw visible stars using 5-level LOD
     (case lod-level
-      ;; Small atlas (far zoom, lowest detail)
+      ;; XS atlas (very far zoom, lowest detail)
+      :xs
+      (doseq [[_ entity] visible-stars]
+        (let [pos (state/get-component entity :position)
+              renderable (state/get-component entity :renderable)
+              transform (state/get-component entity :transform)
+              physics (state/get-component entity :physics)
+              path (:path renderable)
+              x (:x pos)
+              y (:y pos)
+              size (:size transform)
+              rotation-speed (:rotation-speed physics)
+              rotation (* time 30 rotation-speed)]
+          (draw-star-from-atlas canvas atlas-image atlas-metadata path x y size rotation atlas-size)))
+
+      ;; Small atlas (far zoom, low detail)
       :small
       (doseq [[_ entity] visible-stars]
         (let [pos (state/get-component entity :position)
@@ -273,7 +302,22 @@
               rotation (* time 30 rotation-speed)]
           (draw-star-from-atlas canvas atlas-image atlas-metadata path x y size rotation atlas-size)))
 
-      ;; Full-res images (close zoom, highest detail)
+      ;; LG atlas (close zoom, high detail)
+      :lg
+      (doseq [[_ entity] visible-stars]
+        (let [pos (state/get-component entity :position)
+              renderable (state/get-component entity :renderable)
+              transform (state/get-component entity :transform)
+              physics (state/get-component entity :physics)
+              path (:path renderable)
+              x (:x pos)
+              y (:y pos)
+              size (:size transform)
+              rotation-speed (:rotation-speed physics)
+              rotation (* time 30 rotation-speed)]
+          (draw-star-from-atlas canvas atlas-image atlas-metadata path x y size rotation atlas-size)))
+
+      ;; Full-res images (very close zoom, highest detail)
       :high
       (doseq [[_ entity] visible-stars]
         (let [pos (state/get-component entity :position)
@@ -301,9 +345,11 @@
                   (.setColor (unchecked-int 0xFFffffff)))
           font (Font. (Typeface/makeDefault) (float 24))
           lod-description (case lod-level
+                            :xs "XS atlas (64x64, very far zoom)"
                             :small "Small atlas (128x128, far zoom)"
                             :medium "Medium atlas (256x256, medium zoom)"
-                            :high "Full-res images (close zoom)")]
+                            :lg "LG atlas (512x512, close zoom)"
+                            :high "Full-res images (very close zoom)")]
       (.drawString canvas "Silent King - Star Gallery" (float 20) (float 30) font paint)
       (.drawString canvas (str "Stars: " total-count " (visible: " visible-count ")") (float 20) (float 60) font paint)
       (.drawString canvas (str "Zoom: " (format "%.2f" zoom) "x") (float 20) (float 90) font paint)
@@ -377,13 +423,18 @@
       (when-let [image (:image img-data)]
         (.close ^Image image)))
 
-    ;; Close medium atlas image
+    ;; Close all atlas images
+    (when-let [atlas-image-xs (:atlas-image-xs assets)]
+      (.close ^Image atlas-image-xs))
+
+    (when-let [atlas-image-small (:atlas-image-small assets)]
+      (.close ^Image atlas-image-small))
+
     (when-let [atlas-image-medium (:atlas-image-medium assets)]
       (.close ^Image atlas-image-medium))
 
-    ;; Close small atlas image
-    (when-let [atlas-image-small (:atlas-image-small assets)]
-      (.close ^Image atlas-image-small))
+    (when-let [atlas-image-lg (:atlas-image-lg assets)]
+      (.close ^Image atlas-image-lg))
 
     ;; Destroy window
     (when window
@@ -418,7 +469,7 @@
           (state/set-assets! game-state loaded-assets)
 
           ;; Generate star entities
-          (generate-star-entities! game-state base-images 1000)
+          (generate-star-entities! game-state base-images 10000)
           (println "Generated" (count (state/get-all-entities game-state)) "star entities"))
 
         ;; Run render loop
