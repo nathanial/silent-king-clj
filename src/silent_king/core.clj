@@ -19,6 +19,18 @@
              {:image image
               :path (.getName file)})))))
 
+(defn generate-star-instances [base-images num-stars]
+  (println "Generating" num-stars "star instances...")
+  (let [canvas-width 4000
+        canvas-height 4000]
+    (vec (for [i (range num-stars)]
+           (let [base-image (rand-nth base-images)]
+             {:image (:image base-image)
+              :x (rand canvas-width)
+              :y (rand canvas-height)
+              :size (+ 80 (rand 80))  ;; Random size between 80-160
+              :rotation-speed (+ 0.5 (rand 1.5))})))))
+
 (defn init-glfw []
   (println "Initializing GLFW...")
   (GLFWErrorCallback/createPrint System/err)
@@ -155,30 +167,24 @@
   ;; Clear background
   (.clear canvas (unchecked-int 0xFF000000))
 
-  (let [rotation (* time 30) ;; degrees per second
-        zoom (:zoom @camera)
+  (let [zoom (:zoom @camera)
         pan-x (:pan-x @camera)
-        pan-y (:pan-y @camera)
-        cols 9  ;; Grid columns
-        rows (int (Math/ceil (/ (count star-images) cols)))
-        spacing 250
-        star-size 120]
+        pan-y (:pan-y @camera)]
 
     ;; Save canvas state and apply camera transform
     (.save canvas)
     (.translate canvas (float pan-x) (float pan-y))
     (.scale canvas (float zoom) (float zoom))
 
-    ;; Draw all stars in a grid
-    (doseq [i (range (count star-images))]
-      (let [star-data (nth star-images i)
-            star-image (:image star-data)
-            col (mod i cols)
-            row (int (/ i cols))
-            x (* col spacing)
-            y (* row spacing)
-            individual-rotation (+ rotation (* i 5))]
-        (draw-rotating-star canvas star-image x y star-size individual-rotation)))
+    ;; Draw all stars at their random positions
+    (doseq [star-data star-images]
+      (let [star-image (:image star-data)
+            x (:x star-data)
+            y (:y star-data)
+            size (:size star-data)
+            rotation-speed (:rotation-speed star-data)
+            rotation (* time 30 rotation-speed)]
+        (draw-rotating-star canvas star-image x y size rotation)))
 
     ;; Restore canvas state
     (.restore canvas)
@@ -256,8 +262,10 @@
       (reset! window (create-window 1280 800 "Silent King - Star Gallery"))
       (setup-mouse-callbacks @window mouse-state camera)
       (reset! context (create-skija-context))
-      (reset! star-images (load-star-images))
-      (println "Loaded" (count @star-images) "star images")
+      (let [base-images (load-star-images)]
+        (println "Loaded" (count base-images) "base star images")
+        (reset! star-images (generate-star-instances base-images 1000)))
+      (println "Generated" (count @star-images) "star instances")
       (render-loop @window @context surface @star-images camera)
       (catch Exception e
         (println "Error:" (.getMessage e))
