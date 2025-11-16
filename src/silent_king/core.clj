@@ -153,7 +153,7 @@
 
 (defn draw-frame [^Canvas canvas width height time star-images camera]
   ;; Clear background
-  (.clear canvas (unchecked-int 0xFF0a0a1e))
+  (.clear canvas (unchecked-int 0xFF000000))
 
   (let [rotation (* time 30) ;; degrees per second
         zoom (:zoom @camera)
