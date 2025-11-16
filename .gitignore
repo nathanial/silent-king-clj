@@ -1,0 +1,27 @@
+# Clojure
+.cpcache/
+.nrepl-port
+.nrepl-history
+.lein-*
+target/
+classes/
+checkouts/
+pom.xml
+pom.xml.asc
+*.jar
+*.class
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.calva/
+.clj-kondo/
+.lsp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

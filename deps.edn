@@ -1,0 +1,41 @@
+{:paths ["src"]
+
+ :deps
+ {org.clojure/clojure {:mvn/version "1.11.1"}
+  io.github.humbleui/types {:mvn/version "0.1.2"}
+
+  ;; LWJGL for windowing
+  org.lwjgl/lwjgl {:mvn/version "3.3.1"}
+  org.lwjgl/lwjgl-glfw {:mvn/version "3.3.1"}
+  org.lwjgl/lwjgl-opengl {:mvn/version "3.3.1"}}
+
+ :aliases
+ {:macos-arm64
+  {:extra-deps
+   {io.github.humbleui/skija-macos-arm64 {:mvn/version "0.116.1"}
+    org.lwjgl/lwjgl$natives-macos-arm64 {:mvn/version "3.3.1"}
+    org.lwjgl/lwjgl-glfw$natives-macos-arm64 {:mvn/version "3.3.1"}
+    org.lwjgl/lwjgl-opengl$natives-macos-arm64 {:mvn/version "3.3.1"}}
+   :jvm-opts ["-XstartOnFirstThread"]}
+
+  :macos-x64
+  {:extra-deps
+   {io.github.humbleui/skija-macos-x64 {:mvn/version "0.116.1"}
+    org.lwjgl/lwjgl$natives-macos {:mvn/version "3.3.1"}
+    org.lwjgl/lwjgl-glfw$natives-macos {:mvn/version "3.3.1"}
+    org.lwjgl/lwjgl-opengl$natives-macos {:mvn/version "3.3.1"}}
+   :jvm-opts ["-XstartOnFirstThread"]}
+
+  :linux-x64
+  {:extra-deps
+   {io.github.humbleui/skija-linux-x64 {:mvn/version "0.116.1"}
+    org.lwjgl/lwjgl$natives-linux {:mvn/version "3.3.1"}
+    org.lwjgl/lwjgl-glfw$natives-linux {:mvn/version "3.3.1"}
+    org.lwjl/lwjgl-opengl$natives-linux {:mvn/version "3.3.1"}}}
+
+  :windows-x64
+  {:extra-deps
+   {io.github.humbleui/skija-windows-x64 {:mvn/version "0.116.1"}
+    org.lwjgl/lwjgl$natives-windows {:mvn/version "3.3.1"}
+    org.lwjgl/lwjgl-glfw$natives-windows {:mvn/version "3.3.1"}
+    org.lwjgl/lwjgl-opengl$natives-windows {:mvn/version "3.3.1"}}}}}
