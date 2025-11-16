@@ -25,3 +25,8 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Generated/preprocessed assets (build artifacts)
+assets/stars-processed/
+assets/star-atlas.png
+assets/star-atlas.json

@@ -16,6 +16,7 @@
     (vec (for [i (range num-stars)]
            (let [base-image (rand-nth base-images)]
              {:image (:image base-image)
+              :path (:path base-image)  ;; Store path for atlas lookup
               :x (rand canvas-width)
               :y (rand canvas-height)
               :size (+ 80 (rand 80))  ;; Random size between 80-160
@@ -153,28 +154,81 @@
                                    scaled-height)))
   (.restore canvas))
 
-(defn draw-frame [^Canvas canvas width height time star-images camera]
+(defn draw-star-from-atlas [^Canvas canvas ^Image atlas-image atlas-metadata path x y size angle atlas-size]
+  "Draw a star from the texture atlas"
+  (when-let [coords (get atlas-metadata path)]
+    (.save canvas)
+    (.translate canvas x y)
+    (.rotate canvas angle)
+    (let [tile-size (:size coords)
+          scale (/ size tile-size)
+          scaled-size (* tile-size scale)]
+      (.drawImageRect canvas atlas-image
+                      (Rect/makeXYWH (:x coords) (:y coords) tile-size tile-size)
+                      (Rect/makeXYWH (- (/ scaled-size 2))
+                                     (- (/ scaled-size 2))
+                                     scaled-size
+                                     scaled-size)))
+    (.restore canvas)))
+
+(defn star-visible? [star-x star-y star-size viewport-x viewport-y viewport-width viewport-height zoom]
+  "Check if a star is visible in the current viewport (with margin for safety)"
+  (let [margin (* star-size 2)  ;; Extra margin to avoid pop-in
+        world-min-x (/ (- viewport-x) zoom)
+        world-max-x (/ (+ (- viewport-x) viewport-width) zoom)
+        world-min-y (/ (- viewport-y) zoom)
+        world-max-y (/ (+ (- viewport-y) viewport-height) zoom)]
+    (and (> (+ star-x margin) world-min-x)
+         (< (- star-x margin) world-max-x)
+         (> (+ star-y margin) world-min-y)
+         (< (- star-y margin) world-max-y))))
+
+(defn draw-frame [^Canvas canvas width height time star-images camera assets]
   ;; Clear background
   (.clear canvas (unchecked-int 0xFF000000))
 
   (let [zoom (:zoom @camera)
         pan-x (:pan-x @camera)
-        pan-y (:pan-y @camera)]
+        pan-y (:pan-y @camera)
+
+        ;; LOD: Use atlas when zoomed out for performance
+        use-atlas? (< zoom 0.6)
+        atlas-image (:atlas-image assets)
+        atlas-metadata (:atlas-metadata assets)
+        atlas-size (:atlas-size assets)
+
+        ;; Frustum culling: filter visible stars
+        visible-stars (filter #(star-visible? (:x %) (:y %) (:size %)
+                                              pan-x pan-y width height zoom)
+                             star-images)
+        visible-count (count visible-stars)]
 
     ;; Save canvas state and apply camera transform
     (.save canvas)
     (.translate canvas (float pan-x) (float pan-y))
     (.scale canvas (float zoom) (float zoom))
 
-    ;; Draw all stars at their random positions
-    (doseq [star-data star-images]
-      (let [star-image (:image star-data)
-            x (:x star-data)
-            y (:y star-data)
-            size (:size star-data)
-            rotation-speed (:rotation-speed star-data)
-            rotation (* time 30 rotation-speed)]
-        (draw-rotating-star canvas star-image x y size rotation)))
+    ;; Draw visible stars using LOD
+    (if use-atlas?
+      ;; Low-detail mode: Use atlas for better batching
+      (doseq [star-data visible-stars]
+        (let [path (:path star-data)
+              x (:x star-data)
+              y (:y star-data)
+              size (:size star-data)
+              rotation-speed (:rotation-speed star-data)
+              rotation (* time 30 rotation-speed)]
+          (draw-star-from-atlas canvas atlas-image atlas-metadata path x y size rotation atlas-size)))
+
+      ;; High-detail mode: Use individual full-res images
+      (doseq [star-data visible-stars]
+        (let [star-image (:image star-data)
+              x (:x star-data)
+              y (:y star-data)
+              size (:size star-data)
+              rotation-speed (:rotation-speed star-data)
+              rotation (* time 30 rotation-speed)]
+          (draw-rotating-star canvas star-image x y size rotation))))
 
     ;; Restore canvas state
     (.restore canvas)
@@ -184,13 +238,14 @@
                   (.setColor (unchecked-int 0xFFffffff)))
           font (Font. (Typeface/makeDefault) (float 24))]
       (.drawString canvas "Silent King - Star Gallery" (float 20) (float 30) font paint)
-      (.drawString canvas (str "Stars: " (count star-images)) (float 20) (float 60) font paint)
+      (.drawString canvas (str "Stars: " (count star-images) " (visible: " visible-count ")") (float 20) (float 60) font paint)
       (.drawString canvas (str "Zoom: " (format "%.2f" zoom) "x") (float 20) (float 90) font paint)
-      (.drawString canvas "Controls: Click-Drag=Pan, Scroll=Zoom" (float 20) (float 120) font paint)
+      (.drawString canvas (str "LOD: " (if use-atlas? "Atlas (low-detail)" "Individual (high-detail)")) (float 20) (float 120) font paint)
+      (.drawString canvas "Controls: Click-Drag=Pan, Scroll=Zoom" (float 20) (float 150) font paint)
       (.close font)
       (.close paint))))
 
-(defn render-loop [window context surface-atom star-images camera]
+(defn render-loop [window context surface-atom star-images camera assets]
   (println "Starting render loop...")
   (let [start-time (System/nanoTime)]
     (loop []
@@ -218,7 +273,7 @@
           ;; Render with Skija
           (let [^Surface surface @surface-atom
                 ^Canvas canvas (.getCanvas surface)]
-            (draw-frame canvas fb-width fb-height current-time star-images camera)
+            (draw-frame canvas fb-width fb-height current-time star-images camera assets)
             (.flush surface))
 
           ;; Swap buffers and poll events
@@ -227,7 +282,7 @@
 
           (recur))))))
 
-(defn cleanup [window context surface-atom star-images]
+(defn cleanup [window context surface-atom star-images assets]
   (println "Cleaning up...")
   (when @surface-atom
     (.close ^Surface @surface-atom))
@@ -235,6 +290,8 @@
     (.close ^DirectContext context))
   (doseq [star-data star-images]
     (.close ^Image (:image star-data)))
+  (when-let [atlas-image (:atlas-image assets)]
+    (.close ^Image atlas-image))
   (when window
     (GLFW/glfwDestroyWindow window))
   (GLFW/glfwTerminate))
@@ -245,6 +302,7 @@
         context (atom nil)
         surface (atom nil)
         star-images (atom [])
+        assets (atom {})
         camera (atom {:zoom 1.0 :pan-x 0.0 :pan-y 0.0})
         mouse-state (atom {:mouse-x 0.0 :mouse-y 0.0 :dragging false})]
     (try
@@ -252,15 +310,17 @@
       (reset! window (create-window 1280 800 "Silent King - Star Gallery"))
       (setup-mouse-callbacks @window mouse-state camera)
       (reset! context (create-skija-context))
-      (let [base-images (assets/load-star-images)]
+      (let [loaded-assets (assets/load-all-assets)
+            base-images (:individual-images loaded-assets)]
         (println "Loaded" (count base-images) "base star images")
+        (reset! assets loaded-assets)
         (reset! star-images (generate-star-instances base-images 1000)))
       (println "Generated" (count @star-images) "star instances")
-      (render-loop @window @context surface @star-images camera)
+      (render-loop @window @context surface @star-images camera @assets)
       (catch Exception e
         (println "Error:" (.getMessage e))
         (.printStackTrace e))
       (finally
-        (cleanup @window @context surface @star-images))))
+        (cleanup @window @context surface @star-images @assets))))
   (println "Goodbye!")
   (System/exit 0))

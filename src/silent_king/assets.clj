@@ -1,4 +1,5 @@
 (ns silent-king.assets
+  (:require [clojure.data.json :as json])
   (:import [io.github.humbleui.skija Image Data]
            [java.io File ByteArrayOutputStream]
            [javax.imageio ImageIO]
@@ -51,14 +52,37 @@
       image)))
 
 (defn load-star-images []
-  (println "Loading star images...")
-  (println "Processing images to remove black backgrounds...")
-  (let [star-files (sort (.listFiles (File. "assets/stars")))]
+  (println "Loading preprocessed star images...")
+  (let [star-files (sort (.listFiles (File. "assets/stars-processed")))]
     (vec (for [^File file star-files
                :when (.endsWith (.getName file) ".png")]
-           (let [;; Load image and remove black background (returns BufferedImage)
-                 buffered-image (remove-black-background file)
-                 ;; Convert BufferedImage to Skija Image
-                 skija-image (buffered-image-to-skija buffered-image)]
+           (let [;; Load preprocessed image directly (no runtime processing needed)
+                 skija-image (Image/makeFromEncoded (.getBytes (Data/makeFromFileName (.getPath file))))]
              {:image skija-image
               :path (.getName file)})))))
+
+(defn load-atlas-metadata []
+  "Load atlas metadata from JSON file"
+  (println "Loading atlas metadata...")
+  (let [metadata-file (File. "assets/star-atlas.json")
+        json-data (json/read-str (slurp metadata-file) :key-fn keyword)]
+    (into {} (map (fn [entry]
+                    [(:name entry)
+                     {:x (:x entry)
+                      :y (:y entry)
+                      :size (:size entry)}])
+                  json-data))))
+
+(defn load-atlas-image []
+  "Load the atlas texture"
+  (println "Loading atlas texture...")
+  (let [atlas-file (File. "assets/star-atlas.png")]
+    (Image/makeFromEncoded (.getBytes (Data/makeFromFileName (.getPath atlas-file))))))
+
+(defn load-all-assets []
+  "Load both individual star images and atlas for LOD rendering"
+  (println "Loading all assets...")
+  {:individual-images (load-star-images)
+   :atlas-image (load-atlas-image)
+   :atlas-metadata (load-atlas-metadata)
+   :atlas-size 4096})
