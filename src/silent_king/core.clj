@@ -1,5 +1,5 @@
 (ns silent-king.core
-  (:import [org.lwjgl.glfw GLFW GLFWErrorCallback]
+  (:import [org.lwjgl.glfw GLFW GLFWErrorCallback GLFWCursorPosCallbackI GLFWMouseButtonCallbackI GLFWScrollCallbackI]
            [org.lwjgl.opengl GL GL11 GL30]
            [org.lwjgl.system MemoryUtil]
            [io.github.humbleui.skija Canvas Color4f Paint Surface DirectContext BackendRenderTarget FramebufferFormat ColorSpace SurfaceOrigin SurfaceColorFormat Font Typeface Image Data]
@@ -10,10 +10,9 @@
 
 (defn load-star-images []
   (println "Loading star images...")
-  (let [star-files (sort (.listFiles (File. "assets/stars")))
-        ;; Load a selection of stars (every 8th one to get ~6 stars)
-        selected-files (take 6 (take-nth 8 star-files))]
-    (vec (for [^File file selected-files]
+  (let [star-files (sort (.listFiles (File. "assets/stars")))]
+    (vec (for [^File file star-files
+               :when (.endsWith (.getName file) ".png")]
            (let [data (Data/makeFromFileName (.getPath file))
                  image (Image/makeFromEncoded (.getBytes data))]
              (.close data)
@@ -57,6 +56,64 @@
 
     window))
 
+(defn setup-mouse-callbacks [window mouse-state camera]
+  ;; Mouse cursor position callback
+  (GLFW/glfwSetCursorPosCallback window
+    (reify GLFWCursorPosCallbackI
+      (invoke [this win xpos ypos]
+        ;; Convert mouse coordinates from window space to framebuffer space
+        (let [win-width-arr (int-array 1)
+              win-height-arr (int-array 1)
+              fb-width-arr (int-array 1)
+              fb-height-arr (int-array 1)
+              _ (GLFW/glfwGetWindowSize window win-width-arr win-height-arr)
+              _ (GLFW/glfwGetFramebufferSize window fb-width-arr fb-height-arr)
+              scale-x (/ (aget fb-width-arr 0) (double (aget win-width-arr 0)))
+              scale-y (/ (aget fb-height-arr 0) (double (aget win-height-arr 0)))
+              fb-xpos (* xpos scale-x)
+              fb-ypos (* ypos scale-y)
+              old-x (:mouse-x @mouse-state)
+              old-y (:mouse-y @mouse-state)
+              dragging (:dragging @mouse-state)]
+          (when dragging
+            (let [dx (- fb-xpos old-x)
+                  dy (- fb-ypos old-y)]
+              (swap! camera update :pan-x #(+ % dx))
+              (swap! camera update :pan-y #(+ % dy))))
+          (swap! mouse-state assoc :mouse-x fb-xpos :mouse-y fb-ypos)))))
+
+  ;; Mouse button callback
+  (GLFW/glfwSetMouseButtonCallback window
+    (reify GLFWMouseButtonCallbackI
+      (invoke [this win button action mods]
+        (when (= button GLFW/GLFW_MOUSE_BUTTON_LEFT)
+          (swap! mouse-state assoc :dragging (= action GLFW/GLFW_PRESS))))))
+
+  ;; Scroll callback for zoom
+  (GLFW/glfwSetScrollCallback window
+    (reify GLFWScrollCallbackI
+      (invoke [this win xoffset yoffset]
+        (let [mouse-x (:mouse-x @mouse-state)
+              mouse-y (:mouse-y @mouse-state)
+              old-zoom (:zoom @camera)
+              zoom-factor (Math/pow 1.1 yoffset)
+              new-zoom (max 0.1 (min 10.0 (* old-zoom zoom-factor)))
+
+              ;; Calculate world position before zoom
+              old-pan-x (:pan-x @camera)
+              old-pan-y (:pan-y @camera)
+              world-x (/ (- mouse-x old-pan-x) old-zoom)
+              world-y (/ (- mouse-y old-pan-y) old-zoom)
+
+              ;; Calculate new pan to keep world position under cursor
+              new-pan-x (- mouse-x (* world-x new-zoom))
+              new-pan-y (- mouse-y (* world-y new-zoom))]
+
+          (swap! camera assoc
+                 :zoom new-zoom
+                 :pan-x new-pan-x
+                 :pan-y new-pan-y))))))
+
 (defn create-skija-context []
   (println "Creating Skija DirectContext...")
   (DirectContext/makeGL))
@@ -94,45 +151,57 @@
                                    scaled-height)))
   (.restore canvas))
 
-(defn draw-frame [^Canvas canvas width height time star-images]
+(defn draw-frame [^Canvas canvas width height time star-images camera]
   ;; Clear background
   (.clear canvas (unchecked-int 0xFF0a0a1e))
 
-  (let [center-x (/ width 2)
-        center-y (/ height 2)
-        rotation (* time 30) ;; degrees per second
-        orbit-radius 200]
+  (let [rotation (* time 30) ;; degrees per second
+        zoom (:zoom @camera)
+        pan-x (:pan-x @camera)
+        pan-y (:pan-y @camera)
+        cols 9  ;; Grid columns
+        rows (int (Math/ceil (/ (count star-images) cols)))
+        spacing 250
+        star-size 120]
 
-    ;; Draw multiple rotating stars in a circular pattern
+    ;; Save canvas state and apply camera transform
+    (.save canvas)
+    (.translate canvas (float pan-x) (float pan-y))
+    (.scale canvas (float zoom) (float zoom))
+
+    ;; Draw all stars in a grid
     (doseq [i (range (count star-images))]
       (let [star-data (nth star-images i)
             star-image (:image star-data)
-            angle (* i (/ 360 (count star-images)))
-            rad-angle (* angle (/ Math/PI 180))
-            x (+ center-x (* orbit-radius (Math/cos rad-angle)))
-            y (+ center-y (* orbit-radius (Math/sin rad-angle)))
-            size 120]
-        (draw-rotating-star canvas star-image x y size (+ rotation (* i 20)))))
+            col (mod i cols)
+            row (int (/ i cols))
+            x (* col spacing)
+            y (* row spacing)
+            individual-rotation (+ rotation (* i 5))]
+        (draw-rotating-star canvas star-image x y star-size individual-rotation)))
 
-    ;; Draw center rotating star
-    (when (seq star-images)
-      (let [center-star (:image (first star-images))]
-        (draw-rotating-star canvas center-star center-x center-y 180 rotation)))
+    ;; Restore canvas state
+    (.restore canvas)
 
-    ;; Draw title
+    ;; Draw UI overlay (not affected by camera)
     (let [paint (doto (Paint.)
                   (.setColor (unchecked-int 0xFFffffff)))
-          font (Font. (Typeface/makeDefault) (float 32))]
-      (.drawString canvas "Silent King - Star Animation" (float 20) (float 40) font paint)
+          font (Font. (Typeface/makeDefault) (float 24))]
+      (.drawString canvas "Silent King - Star Gallery" (float 20) (float 30) font paint)
+      (.drawString canvas (str "Stars: " (count star-images)) (float 20) (float 60) font paint)
+      (.drawString canvas (str "Zoom: " (format "%.2f" zoom) "x") (float 20) (float 90) font paint)
+      (.drawString canvas "Controls: Click-Drag=Pan, Scroll=Zoom" (float 20) (float 120) font paint)
       (.close font)
       (.close paint))))
 
-(defn render-loop [window context surface-atom star-images]
+(defn render-loop [window context surface-atom star-images camera]
   (println "Starting render loop...")
   (let [start-time (System/nanoTime)]
     (loop []
-      (when-not (GLFW/glfwWindowShouldClose window)
-        (let [current-time (/ (- (System/nanoTime) start-time) 1e9)
+      (if (GLFW/glfwWindowShouldClose window)
+        nil
+        (let [current-time-ns (System/nanoTime)
+              current-time (/ (- current-time-ns start-time) 1e9)
               fb-width-arr (int-array 1)
               fb-height-arr (int-array 1)
               _ (GLFW/glfwGetFramebufferSize window fb-width-arr fb-height-arr)
@@ -153,14 +222,14 @@
           ;; Render with Skija
           (let [^Surface surface @surface-atom
                 ^Canvas canvas (.getCanvas surface)]
-            (draw-frame canvas fb-width fb-height current-time star-images)
+            (draw-frame canvas fb-width fb-height current-time star-images camera)
             (.flush surface))
 
           ;; Swap buffers and poll events
           (GLFW/glfwSwapBuffers window)
-          (GLFW/glfwPollEvents))
+          (GLFW/glfwPollEvents)
 
-        (recur)))))
+          (recur))))))
 
 (defn cleanup [window context surface-atom star-images]
   (println "Cleaning up...")
@@ -179,14 +248,17 @@
   (let [window (atom nil)
         context (atom nil)
         surface (atom nil)
-        star-images (atom [])]
+        star-images (atom [])
+        camera (atom {:zoom 1.0 :pan-x 0.0 :pan-y 0.0})
+        mouse-state (atom {:mouse-x 0.0 :mouse-y 0.0 :dragging false})]
     (try
       (init-glfw)
-      (reset! window (create-window 1024 768 "Silent King - Star Animation"))
+      (reset! window (create-window 1280 800 "Silent King - Star Gallery"))
+      (setup-mouse-callbacks @window mouse-state camera)
       (reset! context (create-skija-context))
       (reset! star-images (load-star-images))
       (println "Loaded" (count @star-images) "star images")
-      (render-loop @window @context surface @star-images)
+      (render-loop @window @context surface @star-images camera)
       (catch Exception e
         (println "Error:" (.getMessage e))
         (.printStackTrace e))
