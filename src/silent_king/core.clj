@@ -1,4 +1,5 @@
 (ns silent-king.core
+  (:require [silent-king.assets :as assets])
   (:import [org.lwjgl.glfw GLFW GLFWErrorCallback GLFWCursorPosCallbackI GLFWMouseButtonCallbackI GLFWScrollCallbackI]
            [org.lwjgl.opengl GL GL11 GL30]
            [org.lwjgl.system MemoryUtil]
@@ -7,17 +8,6 @@
            [java.io File]))
 
 (set! *warn-on-reflection* true)
-
-(defn load-star-images []
-  (println "Loading star images...")
-  (let [star-files (sort (.listFiles (File. "assets/stars")))]
-    (vec (for [^File file star-files
-               :when (.endsWith (.getName file) ".png")]
-           (let [data (Data/makeFromFileName (.getPath file))
-                 image (Image/makeFromEncoded (.getBytes data))]
-             (.close data)
-             {:image image
-              :path (.getName file)})))))
 
 (defn generate-star-instances [base-images num-stars]
   (println "Generating" num-stars "star instances...")
@@ -262,7 +252,7 @@
       (reset! window (create-window 1280 800 "Silent King - Star Gallery"))
       (setup-mouse-callbacks @window mouse-state camera)
       (reset! context (create-skija-context))
-      (let [base-images (load-star-images)]
+      (let [base-images (assets/load-star-images)]
         (println "Loaded" (count base-images) "base star images")
         (reset! star-images (generate-star-instances base-images 1000)))
       (println "Generated" (count @star-images) "star instances")
