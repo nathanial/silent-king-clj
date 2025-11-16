@@ -27,8 +27,8 @@ echo "  Generating medium atlas (256x256 tiles)..."
 clojure scripts/generate-atlas.clj 256 assets/star-atlas-medium.png assets/star-atlas-medium.json
 echo ""
 
-echo "  Generating lg atlas (512x512 tiles)..."
-clojure scripts/generate-atlas.clj 512 assets/star-atlas-lg.png assets/star-atlas-lg.json
+echo "  Generating lg atlas (512x512 tiles, 8192x8192 texture)..."
+clojure scripts/generate-atlas.clj 512 assets/star-atlas-lg.png assets/star-atlas-lg.json 8192
 echo ""
 
 echo "=========================="

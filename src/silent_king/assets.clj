@@ -94,4 +94,4 @@
    :atlas-size-medium 4096
    :atlas-image-lg (load-atlas-image "assets/star-atlas-lg.png")
    :atlas-metadata-lg (load-atlas-metadata "assets/star-atlas-lg.json")
-   :atlas-size-lg 4096})
+   :atlas-size-lg 8192})

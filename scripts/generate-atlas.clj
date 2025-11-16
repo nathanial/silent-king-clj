@@ -9,7 +9,6 @@
 (set! *warn-on-reflection* true)
 
 (def ^:const black-threshold 20)
-(def ^:const atlas-size 4096)
 
 (defn remove-black-background [^BufferedImage img]
   "Make near-black pixels transparent in a BufferedImage"
@@ -52,7 +51,7 @@
     {:name (.getName file)
      :image scaled}))
 
-(defn create-atlas [star-images tile-size]
+(defn create-atlas [star-images tile-size atlas-size]
   "Pack star images into a single atlas texture"
   (let [tiles-per-row (/ atlas-size tile-size)
         ^BufferedImage atlas (BufferedImage. atlas-size atlas-size BufferedImage/TYPE_INT_ARGB)
@@ -105,6 +104,9 @@
         output-json-path (if (>= (count args) 3)
                           (nth args 2)
                           "assets/star-atlas.json")
+        atlas-size (if (>= (count args) 4)
+                     (Integer/parseInt (nth args 3))
+                     4096)
         tiles-per-row (/ atlas-size tile-size)]
 
     (println "Star Atlas Generator")
@@ -131,7 +133,7 @@
 
         ;; Create atlas
         (println "\nCreating texture atlas...")
-        (let [{:keys [atlas metadata]} (create-atlas processed-stars tile-size)]
+        (let [{:keys [atlas metadata]} (create-atlas processed-stars tile-size atlas-size)]
 
           ;; Save atlas image
           (println (format "Saving atlas to %s..." output-image-path))

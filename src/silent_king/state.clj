@@ -45,7 +45,7 @@
             :atlas-size-medium 4096
             :atlas-image-lg nil
             :atlas-metadata-lg {}
-            :atlas-size-lg 4096}})
+            :atlas-size-lg 8192}})
 
 (defn create-render-state []
   "Create initial render state structure"
