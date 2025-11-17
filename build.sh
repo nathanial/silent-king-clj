@@ -32,10 +32,6 @@ echo "  Generating medium atlas (256x256 tiles)..."
 clojure scripts/generate-atlas.clj 256 assets/star-atlas-medium.png assets/star-atlas-medium.json
 echo ""
 
-echo "  Generating lg atlas (512x512 tiles, 8192x8192 texture)..."
-clojure scripts/generate-atlas.clj 512 assets/star-atlas-lg.png assets/star-atlas-lg.json 8192
-echo ""
-
 echo "=========================="
 echo "Build complete!"
 echo ""
@@ -48,7 +44,5 @@ echo "  - assets/star-atlas-small.png     (4096x4096, 128x128 tiles)"
 echo "  - assets/star-atlas-small.json    (small atlas metadata)"
 echo "  - assets/star-atlas-medium.png    (4096x4096, 256x256 tiles)"
 echo "  - assets/star-atlas-medium.json   (medium atlas metadata)"
-echo "  - assets/star-atlas-lg.png        (4096x4096, 512x512 tiles)"
-echo "  - assets/star-atlas-lg.json       (lg atlas metadata)"
 echo ""
 echo "You can now run the application with: ./run.sh"

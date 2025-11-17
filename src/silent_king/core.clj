@@ -241,33 +241,25 @@
         pan-x (:pan-x camera)
         pan-y (:pan-y camera)
 
-        ;; 5-Level LOD system
+        ;; 3-Level LOD system
         lod-level (cond
-                    (< zoom 0.5) :xs      ;; Very far zoom: use xs atlas (64x64)
-                    (< zoom 1.0) :small   ;; Far zoom: use small atlas (128x128)
-                    (< zoom 2.5) :medium  ;; Medium zoom: use medium atlas (256x256)
-                    (< zoom 5.0) :lg      ;; Close zoom: use lg atlas (512x512)
-                    :else :high)          ;; Very close zoom: use full-res images
+                    (< zoom 0.5) :xs       ;; Far zoom: use xs atlas (64x64)
+                    (< zoom 1.5) :small    ;; Medium zoom: use small atlas (128x128)
+                    :else :medium)         ;; Close zoom: use medium atlas (256x256, highest quality)
 
         ;; Select atlas based on LOD level
         atlas-image (case lod-level
                       :xs (:atlas-image-xs assets)
                       :small (:atlas-image-small assets)
-                      :medium (:atlas-image-medium assets)
-                      :lg (:atlas-image-lg assets)
-                      nil)
+                      :medium (:atlas-image-medium assets))
         atlas-metadata (case lod-level
                          :xs (:atlas-metadata-xs assets)
                          :small (:atlas-metadata-small assets)
-                         :medium (:atlas-metadata-medium assets)
-                         :lg (:atlas-metadata-lg assets)
-                         nil)
+                         :medium (:atlas-metadata-medium assets))
         atlas-size (case lod-level
                      :xs (:atlas-size-xs assets)
                      :small (:atlas-size-small assets)
-                     :medium (:atlas-size-medium assets)
-                     :lg (:atlas-size-lg assets)
-                     nil)
+                     :medium (:atlas-size-medium assets))
 
         ;; Get all star entities (those with position, renderable, and transform components)
         star-entities (state/filter-entities-with game-state [:position :renderable :transform :physics])
@@ -284,118 +276,32 @@
 
     ;; Note: No canvas transform needed - we calculate screen positions per-star with non-linear scaling
 
-    ;; Draw visible stars using 5-level LOD
-    (case lod-level
-      ;; XS atlas (very far zoom, lowest detail)
-      :xs
-      (doseq [[_ entity] visible-stars]
-        (let [pos (state/get-component entity :position)
-              renderable (state/get-component entity :renderable)
-              transform (state/get-component entity :transform)
-              physics (state/get-component entity :physics)
-              path (:path renderable)
-              world-x (:x pos)
-              world-y (:y pos)
-              base-size (:size transform)
-              ;; Transform to screen coordinates with non-linear scaling
-              screen-x (transform-position world-x zoom pan-x)
-              screen-y (transform-position world-y zoom pan-y)
-              screen-size (transform-size base-size zoom)
-              rotation-speed (:rotation-speed physics)
-              rotation (* time 30 rotation-speed)]
-          (draw-star-from-atlas canvas atlas-image atlas-metadata path screen-x screen-y screen-size rotation atlas-size)))
-
-      ;; Small atlas (far zoom, low detail)
-      :small
-      (doseq [[_ entity] visible-stars]
-        (let [pos (state/get-component entity :position)
-              renderable (state/get-component entity :renderable)
-              transform (state/get-component entity :transform)
-              physics (state/get-component entity :physics)
-              path (:path renderable)
-              world-x (:x pos)
-              world-y (:y pos)
-              base-size (:size transform)
-              ;; Transform to screen coordinates with non-linear scaling
-              screen-x (transform-position world-x zoom pan-x)
-              screen-y (transform-position world-y zoom pan-y)
-              screen-size (transform-size base-size zoom)
-              rotation-speed (:rotation-speed physics)
-              rotation (* time 30 rotation-speed)]
-          (draw-star-from-atlas canvas atlas-image atlas-metadata path screen-x screen-y screen-size rotation atlas-size)))
-
-      ;; Medium atlas (medium zoom, medium detail)
-      :medium
-      (doseq [[_ entity] visible-stars]
-        (let [pos (state/get-component entity :position)
-              renderable (state/get-component entity :renderable)
-              transform (state/get-component entity :transform)
-              physics (state/get-component entity :physics)
-              path (:path renderable)
-              world-x (:x pos)
-              world-y (:y pos)
-              base-size (:size transform)
-              ;; Transform to screen coordinates with non-linear scaling
-              screen-x (transform-position world-x zoom pan-x)
-              screen-y (transform-position world-y zoom pan-y)
-              screen-size (transform-size base-size zoom)
-              rotation-speed (:rotation-speed physics)
-              rotation (* time 30 rotation-speed)]
-          (draw-star-from-atlas canvas atlas-image atlas-metadata path screen-x screen-y screen-size rotation atlas-size)))
-
-      ;; LG atlas (close zoom, high detail)
-      :lg
-      (doseq [[_ entity] visible-stars]
-        (let [pos (state/get-component entity :position)
-              renderable (state/get-component entity :renderable)
-              transform (state/get-component entity :transform)
-              physics (state/get-component entity :physics)
-              path (:path renderable)
-              world-x (:x pos)
-              world-y (:y pos)
-              base-size (:size transform)
-              ;; Transform to screen coordinates with non-linear scaling
-              screen-x (transform-position world-x zoom pan-x)
-              screen-y (transform-position world-y zoom pan-y)
-              screen-size (transform-size base-size zoom)
-              rotation-speed (:rotation-speed physics)
-              rotation (* time 30 rotation-speed)]
-          (draw-star-from-atlas canvas atlas-image atlas-metadata path screen-x screen-y screen-size rotation atlas-size)))
-
-      ;; Full-res images (very close zoom, highest detail)
-      :high
-      (doseq [[_ entity] visible-stars]
-        (let [pos (state/get-component entity :position)
-              renderable (state/get-component entity :renderable)
-              transform (state/get-component entity :transform)
-              physics (state/get-component entity :physics)
-              path (:path renderable)
-              ;; Look up image from assets by path
-              star-image (->> (:individual-images assets)
-                             (filter #(= (:path %) path))
-                             first
-                             :image)
-              world-x (:x pos)
-              world-y (:y pos)
-              base-size (:size transform)
-              ;; Transform to screen coordinates with non-linear scaling
-              screen-x (transform-position world-x zoom pan-x)
-              screen-y (transform-position world-y zoom pan-y)
-              screen-size (transform-size base-size zoom)
-              rotation-speed (:rotation-speed physics)
-              rotation (* time 30 rotation-speed)]
-          (draw-rotating-star canvas star-image screen-x screen-y screen-size rotation))))
+    ;; Draw visible stars using 3-level LOD
+    (doseq [[_ entity] visible-stars]
+      (let [pos (state/get-component entity :position)
+            renderable (state/get-component entity :renderable)
+            transform (state/get-component entity :transform)
+            physics (state/get-component entity :physics)
+            path (:path renderable)
+            world-x (:x pos)
+            world-y (:y pos)
+            base-size (:size transform)
+            ;; Transform to screen coordinates with non-linear scaling
+            screen-x (transform-position world-x zoom pan-x)
+            screen-y (transform-position world-y zoom pan-y)
+            screen-size (transform-size base-size zoom)
+            rotation-speed (:rotation-speed physics)
+            rotation (* time 30 rotation-speed)]
+        (draw-star-from-atlas canvas atlas-image atlas-metadata path screen-x screen-y screen-size rotation atlas-size)))
 
     ;; Draw UI overlay (not affected by camera)
     (let [paint (doto (Paint.)
                   (.setColor (unchecked-int 0xFFffffff)))
           font (Font. (Typeface/makeDefault) (float 24))
           lod-description (case lod-level
-                            :xs "XS atlas (64x64, very far zoom)"
-                            :small "Small atlas (128x128, far zoom)"
-                            :medium "Medium atlas (256x256, medium zoom)"
-                            :lg "LG atlas (512x512, close zoom)"
-                            :high "Full-res images (very close zoom)")]
+                            :xs "XS atlas (64x64, far zoom)"
+                            :small "Small atlas (128x128, medium zoom)"
+                            :medium "Medium atlas (256x256, close zoom - highest quality)")]
       (.drawString canvas "Silent King - Star Gallery" (float 20) (float 30) font paint)
       (.drawString canvas (str "Stars: " total-count " (visible: " visible-count ")") (float 20) (float 60) font paint)
       (.drawString canvas (str "Zoom: " (format "%.2f" zoom) "x") (float 20) (float 90) font paint)
@@ -464,11 +370,6 @@
     (when context
       (.close ^DirectContext context))
 
-    ;; Close all unique individual star images from assets
-    (doseq [img-data (:individual-images assets)]
-      (when-let [image (:image img-data)]
-        (.close ^Image image)))
-
     ;; Close all atlas images
     (when-let [atlas-image-xs (:atlas-image-xs assets)]
       (.close ^Image atlas-image-xs))
@@ -478,9 +379,6 @@
 
     (when-let [atlas-image-medium (:atlas-image-medium assets)]
       (.close ^Image atlas-image-medium))
-
-    (when-let [atlas-image-lg (:atlas-image-lg assets)]
-      (.close ^Image atlas-image-lg))
 
     ;; Destroy window
     (when window
@@ -517,12 +415,12 @@
 
       ;; Load assets
       (let [loaded-assets (assets/load-all-assets)
-            base-images (:individual-images loaded-assets)]
-        (println "Loaded" (count base-images) "base star images")
+            star-filenames (assets/load-star-filenames)]
+        (println "Loaded" (count star-filenames) "star filenames")
         (state/set-assets! game-state loaded-assets)
 
         ;; Generate star entities with noise-based clustering
-        (galaxy/generate-galaxy-entities! game-state base-images 10000))
+        (galaxy/generate-galaxy-entities! game-state star-filenames 10000))
 
       ;; Run render loop
       (render-loop game-state render-state))
