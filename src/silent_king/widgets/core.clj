@@ -128,6 +128,40 @@
                               :hover-cursor :pointer
                               :on-click nil}))
 
+(defn star-preview
+  "Create a simple star preview widget used by the inspector panel."
+  [& {:keys [id bounds visual]}]
+  (create-widget :star-preview
+                 :id id
+                 :bounds (or bounds {:width 140 :height 120})
+                 :visual (merge {:background-color 0x33111111
+                                :border-radius 12.0}
+                               visual)
+                 :value {:star-id nil
+                         :density 0.0
+                         :size 0.0}))
+
+(defn scroll-view
+  "Create a vertical scroll view with inertial scrolling handled by the interaction layer."
+  [& {:keys [id bounds visual value]}]
+  (create-widget :scroll-view
+                 :id id
+                 :bounds (or bounds {:width 240 :height 200})
+                 :visual (merge {:background-color 0x22181818
+                                :border-radius 10.0
+                                :scrollbar-color 0x55FFFFFF}
+                               visual)
+                 :interaction {:enabled true
+                               :hovered false
+                               :pressed false
+                               :focused false
+                               :hover-cursor :default}
+                 :value (merge {:items []
+                                :scroll-offset 0.0
+                                :item-height 34.0
+                                :gap 6.0}
+                               value)))
+
 ;; =============================================================================
 ;; Layout Containers
 ;; =============================================================================

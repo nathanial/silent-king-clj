@@ -9,12 +9,13 @@
             [silent-king.widgets.layout :as wlayout]
             [silent-king.widgets.animation :as wanim]
             [silent-king.ui.controls :as ui-controls]
+            [silent-king.ui.star-inspector :as ui-inspector]
             [nrepl.server :as nrepl]
             [cider.nrepl :refer [cider-nrepl-handler]])
   (:import [org.lwjgl.glfw GLFW GLFWErrorCallback GLFWCursorPosCallbackI GLFWMouseButtonCallbackI GLFWScrollCallbackI GLFWKeyCallbackI]
            [org.lwjgl.opengl GL GL11 GL30]
            [org.lwjgl.system MemoryUtil]
-           [io.github.humbleui.skija Canvas Color4f Paint Surface DirectContext BackendRenderTarget FramebufferFormat ColorSpace SurfaceOrigin SurfaceColorFormat Font Typeface Image Data]
+           [io.github.humbleui.skija Canvas Color4f Paint PaintMode Surface DirectContext BackendRenderTarget FramebufferFormat ColorSpace SurfaceOrigin SurfaceColorFormat Font Typeface Image Data]
            [io.github.humbleui.types Rect]
            [java.io File]))
 
@@ -53,7 +54,7 @@
   (GLFW/glfwWindowHint GLFW/GLFW_OPENGL_PROFILE GLFW/GLFW_OPENGL_CORE_PROFILE)
   (GLFW/glfwWindowHint GLFW/GLFW_OPENGL_FORWARD_COMPAT GLFW/GLFW_TRUE))
 
-(defn create-window [width height title]
+(defn create-window [width height ^CharSequence title]
   (println "Creating window...")
   (let [window (GLFW/glfwCreateWindow (int width) (int height) title MemoryUtil/NULL MemoryUtil/NULL)]
     (when (= window MemoryUtil/NULL)
@@ -76,89 +77,97 @@
     window))
 
 (defn setup-mouse-callbacks [window game-state]
-  (doto window
-    ;; Mouse cursor position callback
-    (GLFW/glfwSetCursorPosCallback
-     (reify GLFWCursorPosCallbackI
-       (invoke [_ win xpos ypos]
-         ;; Convert mouse coordinates from window space to framebuffer space
-         (let [win-width-arr (int-array 1)
-               win-height-arr (int-array 1)
-               fb-width-arr (int-array 1)
-               fb-height-arr (int-array 1)
-               _ (GLFW/glfwGetWindowSize win win-width-arr win-height-arr)
-               _ (GLFW/glfwGetFramebufferSize win fb-width-arr fb-height-arr)
-               scale-x (/ (aget fb-width-arr 0) (double (aget win-width-arr 0)))
-               scale-y (/ (aget fb-height-arr 0) (double (aget win-height-arr 0)))
-               fb-xpos (* xpos scale-x)
-               fb-ypos (* ypos scale-y)
-               input (state/get-input game-state)
-               old-x (:mouse-x input)
-               old-y (:mouse-y input)
-               dragging (:dragging input)]
+  (GLFW/glfwSetCursorPosCallback
+   window
+   (reify GLFWCursorPosCallbackI
+     (invoke [_ win xpos ypos]
+       (let [win-width-arr (int-array 1)
+             win-height-arr (int-array 1)
+             fb-width-arr (int-array 1)
+             fb-height-arr (int-array 1)
+             _ (GLFW/glfwGetWindowSize win win-width-arr win-height-arr)
+             _ (GLFW/glfwGetFramebufferSize win fb-width-arr fb-height-arr)
+             scale-x (/ (aget fb-width-arr 0) (double (aget win-width-arr 0)))
+             scale-y (/ (aget fb-height-arr 0) (double (aget win-height-arr 0)))
+             fb-xpos (* xpos scale-x)
+             fb-ypos (* ypos scale-y)
+             input (state/get-input game-state)
+             old-x (:mouse-x input)
+             old-y (:mouse-y input)
+             dragging (:dragging input)]
+         (if-not (winteraction/handle-mouse-move game-state fb-xpos fb-ypos)
+           (when dragging
+             (let [dx (- fb-xpos old-x)
+                   dy (- fb-ypos old-y)]
+               (state/update-camera! game-state
+                                     (fn [cam]
+                                       (-> cam
+                                           (update :pan-x #(+ % dx))
+                                           (update :pan-y #(+ % dy))))))))
+         (state/update-input! game-state assoc :mouse-x fb-xpos :mouse-y fb-ypos)))))
 
-           ;; Try widget interaction first
-           (if-not (winteraction/handle-mouse-move game-state fb-xpos fb-ypos)
-             ;; If no widget handled the event, handle camera panning
-             (when dragging
-               (let [dx (- fb-xpos old-x)
-                     dy (- fb-ypos old-y)]
-                 (state/update-camera! game-state
-                                       (fn [cam]
-                                         (-> cam
-                                             (update :pan-x #(+ % dx))
-                                             (update :pan-y #(+ % dy))))))))
-
-           (state/update-input! game-state assoc :mouse-x fb-xpos :mouse-y fb-ypos)))))
-
-    ;; Mouse button callback
-    (GLFW/glfwSetMouseButtonCallback
-     (reify GLFWMouseButtonCallbackI
-       (invoke [_ win button action mods]
-         (when (= button GLFW/GLFW_MOUSE_BUTTON_LEFT)
-           (let [input (state/get-input game-state)
-                 x (:mouse-x input)
-                 y (:mouse-y input)
-                 pressed? (= action GLFW/GLFW_PRESS)]
-             ;; Try widget interaction first
-             (if-not (winteraction/handle-mouse-click game-state x y pressed?)
-               ;; If no widget handled the event, handle camera dragging
-               (state/update-input! game-state assoc :dragging pressed?)))))))
-
-    ;; Scroll callback for zoom
-    (GLFW/glfwSetScrollCallback
-     (reify GLFWScrollCallbackI
-       (invoke [_ win xoffset yoffset]
+  (GLFW/glfwSetMouseButtonCallback
+   window
+   (reify GLFWMouseButtonCallbackI
+     (invoke [_ win button action mods]
+       (when (= button GLFW/GLFW_MOUSE_BUTTON_LEFT)
          (let [input (state/get-input game-state)
-               camera (state/get-camera game-state)
-               mouse-x (:mouse-x input)
-               mouse-y (:mouse-y input)
-               old-zoom (:zoom camera)
-               zoom-factor (Math/pow 1.1 yoffset)
-               new-zoom (max 0.4 (min 10.0 (* old-zoom zoom-factor)))
+               x (:mouse-x input)
+               y (:mouse-y input)
+               pressed? (= action GLFW/GLFW_PRESS)
+               handled? (winteraction/handle-mouse-click game-state x y pressed?)]
+           (when-not handled?
+             (if pressed?
+               (state/update-input! game-state assoc
+                                    :dragging true
+                                    :mouse-down-x x
+                                    :mouse-down-y y)
+               (let [dx (- x (:mouse-down-x input))
+                     dy (- y (:mouse-down-y input))
+                     distance (Math/sqrt (+ (* dx dx) (* dy dy)))
+                     click-threshold 6.0]
+                 (state/update-input! game-state assoc :dragging false)
+                 (when (<= distance click-threshold)
+                   (let [camera (state/get-camera game-state)
+                         world-x (inverse-transform-position x (:zoom camera) (:pan-x camera))
+                         world-y (inverse-transform-position y (:zoom camera) (:pan-y camera))]
+                     (ui-inspector/handle-star-click! game-state world-x world-y)))))))))))
 
-               ;; Calculate world position before zoom using non-linear transform
-               old-pan-x (:pan-x camera)
-               old-pan-y (:pan-y camera)
-               world-x (inverse-transform-position mouse-x old-zoom old-pan-x)
-               world-y (inverse-transform-position mouse-y old-zoom old-pan-y)
+  (GLFW/glfwSetScrollCallback
+   window
+   (reify GLFWScrollCallbackI
+     (invoke [_ win xoffset yoffset]
+       (let [input (state/get-input game-state)
+             mouse-x (:mouse-x input)
+             mouse-y (:mouse-y input)]
+         (when-not (winteraction/handle-scroll game-state mouse-x mouse-y yoffset)
+           (let [camera (state/get-camera game-state)
+                 old-zoom (:zoom camera)
+                 zoom-factor (Math/pow 1.1 yoffset)
+                 new-zoom (max 0.4 (min 10.0 (* old-zoom zoom-factor)))
+                 old-pan-x (:pan-x camera)
+                 old-pan-y (:pan-y camera)
+                 world-x (inverse-transform-position mouse-x old-zoom old-pan-x)
+                 world-y (inverse-transform-position mouse-y old-zoom old-pan-y)
+                 new-pan-x (- mouse-x (* world-x (zoom->position-scale new-zoom)))
+                 new-pan-y (- mouse-y (* world-y (zoom->position-scale new-zoom)))]
+             (state/update-camera! game-state assoc
+                                   :zoom new-zoom
+                                   :pan-x new-pan-x
+                                   :pan-y new-pan-y)))))))
 
-               ;; Calculate new pan to keep world position under cursor with non-linear transform
-               new-pan-x (- mouse-x (* world-x (zoom->position-scale new-zoom)))
-               new-pan-y (- mouse-y (* world-y (zoom->position-scale new-zoom)))]
+  (GLFW/glfwSetKeyCallback
+   window
+   (reify GLFWKeyCallbackI
+     (invoke [_ win key scancode action mods]
+       (cond
+         (and (= action GLFW/GLFW_PRESS)
+              (= key GLFW/GLFW_KEY_H))
+         (state/toggle-hyperlanes! game-state)
 
-           (state/update-camera! game-state assoc
-                                 :zoom new-zoom
-                                 :pan-x new-pan-x
-                                 :pan-y new-pan-y)))))
-
-    ;; Keyboard callback for simple feature toggles
-    (GLFW/glfwSetKeyCallback
-     (reify GLFWKeyCallbackI
-       (invoke [_ win key scancode action mods]
-         (when (and (= action GLFW/GLFW_PRESS)
-                    (= key GLFW/GLFW_KEY_H))
-           (state/toggle-hyperlanes! game-state)))))))
+         (and (= action GLFW/GLFW_PRESS)
+              (= key GLFW/GLFW_KEY_ESCAPE))
+         (ui-inspector/clear-star-selection! game-state))))))
 
 (defn create-skija-context []
   (println "Creating Skija DirectContext...")
@@ -218,6 +227,22 @@
                                      scaled-width
                                      scaled-height))
       (.restore canvas))))
+
+(defn draw-selection-highlight
+  "Draw a glowing selection ring around the focused star."
+  [^Canvas canvas screen-x screen-y screen-size time]
+  (let [pulse (+ 1.0 (* 0.15 (Math/sin (* time 3.0))))
+        glow-radius (* screen-size 0.65 pulse)]
+    (let [glow-paint (doto (Paint.)
+                       (.setColor (unchecked-int 0x44FFD966)))]
+      (.drawCircle canvas (float screen-x) (float screen-y) (float glow-radius) glow-paint)
+      (.close glow-paint))
+    (let [ring-paint (doto (Paint.)
+                       (.setColor (unchecked-int 0xFFFFE680))
+                       (.setMode PaintMode/STROKE)
+                       (.setStrokeWidth 3.0))]
+      (.drawCircle canvas (float screen-x) (float screen-y) (float (* screen-size 0.45 pulse)) ring-paint)
+      (.close ring-paint))))
 
 (defn star-visible?
   "Check if a star is visible in the current viewport using non-linear transform"
@@ -288,7 +313,8 @@
                                                pan-x pan-y width height zoom)))
                              star-entities)
         visible-count (count visible-stars)
-        total-count (count star-entities)]
+        total-count (count star-entities)
+        selected-star (ui-inspector/selected-star-id game-state)]
 
     ;; Note: No canvas transform needed - we calculate screen positions per-star with non-linear scaling
 
@@ -300,7 +326,7 @@
       (swap! game-state assoc-in [:debug :hyperlanes-rendered] 0))
 
     ;; Draw visible stars using 4-level LOD
-    (doseq [[_ entity] visible-stars]
+    (doseq [[entity-id entity] visible-stars]
       (let [pos (state/get-component entity :position)
             renderable (state/get-component entity :renderable)
             transform (state/get-component entity :transform)
@@ -319,7 +345,9 @@
           ;; Draw from full-resolution image
           (draw-full-res-star canvas star-images path screen-x screen-y screen-size rotation)
           ;; Draw from texture atlas
-          (draw-star-from-atlas canvas atlas-image atlas-metadata path screen-x screen-y screen-size rotation atlas-size))))
+          (draw-star-from-atlas canvas atlas-image atlas-metadata path screen-x screen-y screen-size rotation atlas-size))
+        (when (and selected-star (= entity-id selected-star))
+          (draw-selection-highlight canvas screen-x screen-y screen-size time))))
 
     ;; Calculate FPS
     (let [time-state (state/get-time game-state)
@@ -332,7 +360,10 @@
       (ui-controls/update-stats-label! game-state fps total-count visible-count hyperlanes-count hyperlanes-enabled)
 
       ;; Update zoom slider to match current camera zoom
-      (ui-controls/update-zoom-slider! game-state zoom))
+      (ui-controls/update-zoom-slider! game-state zoom)
+
+      ;; Animate star inspector panel
+      (ui-inspector/update-panel! game-state))
 
     ;; Recompute dirty widget layouts before rendering
     (wlayout/process-layouts! game-state width height)
@@ -464,7 +495,10 @@
         (ui-controls/create-control-panel! game-state)
 
         ;; Create the minimap for galaxy navigation
-        (ui-controls/create-minimap! game-state))
+        (ui-controls/create-minimap! game-state)
+
+        ;; Create the star inspector panel (hidden by default)
+        (ui-inspector/create-star-inspector! game-state))
 
       ;; Run render loop
       (render-loop game-state render-state))

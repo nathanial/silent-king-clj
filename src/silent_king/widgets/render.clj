@@ -113,6 +113,17 @@
     (.close font)))
 
 ;; =============================================================================
+;; Widget-Specific Helpers
+;; =============================================================================
+
+(defn- scroll-content-height
+  [item-count item-height gap]
+  (if (pos? item-count)
+    (+ (* item-count item-height)
+       (* (max 0 (dec item-count)) gap))
+    0.0))
+
+;; =============================================================================
 ;; Multi-method Widget Rendering
 ;; =============================================================================
 
@@ -316,6 +327,99 @@
                                       (float border-radius))]
             (.drawRRect canvas rrect border-paint)
             (doto border-paint (.setMode PaintMode/FILL))))))))
+
+;; Star preview rendering
+(defmethod render-widget :star-preview
+  [^Canvas canvas widget-entity _game-state time]
+  (let [bounds (state/get-component widget-entity :bounds)
+        visual (state/get-component widget-entity :visual)
+        value (state/get-component widget-entity :value)]
+    (when (and bounds (:width bounds) (:height bounds))
+      (let [bg-color (or (:background-color visual) 0x33111111)
+            border-radius (or (:border-radius visual) 12.0)
+            density (double (or (:density value) 0.0))
+            normalized-density (-> density (max 0.0) (min 1.0))
+            star-color (wminimap/density-color normalized-density)
+            center-x (+ (:x bounds) (/ (:width bounds) 2.0))
+            center-y (+ (:y bounds) (/ (:height bounds) 2.0))
+            radius (* 0.28 (min (:width bounds) (:height bounds)))
+            pulse (+ 0.95 (* 0.05 (Math/sin (* time 4.0))))]
+        (draw-rounded-rect canvas bounds bg-color border-radius nil)
+        (let [glow-paint (doto (Paint.)
+                           (.setColor (unchecked-int (bit-or 0x33000000 star-color))))]
+          (.drawCircle canvas (float center-x) (float center-y) (float (* radius 1.8 pulse)) glow-paint)
+          (.close glow-paint))
+        (let [ring-paint (doto (Paint.)
+                           (.setColor (unchecked-int star-color))
+                           (.setMode PaintMode/STROKE)
+                           (.setStrokeWidth 2.5))]
+          (.drawCircle canvas (float center-x) (float center-y) (float (* radius 1.25 pulse)) ring-paint)
+          (.drawCircle canvas (float center-x) (float center-y) (float (* radius pulse)) ring-paint)
+          (.close ring-paint))
+        (when-let [star-id (:star-id value)]
+          (draw-centered-text canvas (str "Star #" star-id)
+                              {:x (:x bounds)
+                               :y (+ (:y bounds) (- (:height bounds) 28))
+                               :width (:width bounds)
+                               :height 24}
+                              0xFFEEEEEE
+                              14))))))
+
+;; Scroll view rendering
+(defmethod render-widget :scroll-view
+  [^Canvas canvas widget-entity _game-state _time]
+  (let [bounds (state/get-component widget-entity :bounds)
+        visual (state/get-component widget-entity :visual)
+        value (state/get-component widget-entity :value)]
+    (when (and bounds (:width bounds) (:height bounds))
+      (let [bg-color (or (:background-color visual) 0x22181818)
+            border-radius (or (:border-radius visual) 10.0)
+            scrollbar-color (or (:scrollbar-color visual) 0x55FFFFFF)
+            items (:items value)
+            item-height (double (or (:item-height value) 34.0))
+            gap (double (or (:gap value) 6.0))
+            content-height (scroll-content-height (count items) item-height gap)
+            max-offset (max 0.0 (- content-height (:height bounds)))
+            requested-offset (double (or (:scroll-offset value) 0.0))
+            scroll-offset (-> requested-offset (max 0.0) (min max-offset))]
+        (draw-rounded-rect canvas bounds bg-color border-radius nil)
+        (let [clip-rect (Rect/makeXYWH (float (:x bounds))
+                                       (float (:y bounds))
+                                       (float (:width bounds))
+                                       (float (:height bounds)))]
+          (.save canvas)
+          (.clipRect canvas clip-rect)
+          (if (seq items)
+            (doseq [[idx {:keys [primary secondary]}] (map-indexed vector items)]
+              (let [item-y (+ (:y bounds) (- scroll-offset) (* idx (+ item-height gap)))]
+                (when (< item-y (+ (:y bounds) (:height bounds)))
+                  (draw-text canvas primary (+ (:x bounds) 12) (+ item-y 18) 0xFFEEEEEE 14)
+                  (when secondary
+                    (draw-text canvas secondary (+ (:x bounds) 12) (+ item-y 34) 0xFFAAAAAA 12)))))
+            (draw-centered-text canvas "No connections"
+                                {:x (:x bounds)
+                                 :y (:y bounds)
+                                 :width (:width bounds)
+                                 :height (:height bounds)}
+                                0xFF888888
+                                14))
+          (.restore canvas))
+        (when (> content-height (:height bounds))
+          (let [viewport-ratio (/ (:height bounds) content-height)
+                scrollbar-height (* (:height bounds) (max 0.1 viewport-ratio))
+                scroll-progress (if (pos? max-offset) (/ scroll-offset max-offset) 0.0)
+                track-length (- (:height bounds) scrollbar-height)
+                scrollbar-y (+ (:y bounds) (* scroll-progress track-length))
+                scrollbar-x (+ (:x bounds) (- (:width bounds) 6))]
+            (let [paint (doto (Paint.)
+                          (.setColor (unchecked-int scrollbar-color)))]
+              (.drawRect canvas
+                         (Rect/makeXYWH (float scrollbar-x)
+                                        (float scrollbar-y)
+                                        4.0
+                                        (float scrollbar-height))
+                         paint)
+              (.close paint))))))))
 
 ;; Default rendering (for unknown widget types)
 (defmethod render-widget :default

@@ -28,6 +28,13 @@
        (<= x (+ (:x bounds) (:width bounds)))
        (<= y (+ (:y bounds) (:height bounds)))))
 
+(defn- scroll-content-height
+  [item-count item-height gap]
+  (if (pos? item-count)
+    (+ (* item-count item-height)
+       (* (max 0 (dec item-count)) gap))
+    0.0))
+
 (defn- widget-at-point
   "Return the first widget matching the screen coordinate from a cached list.
   Screen coordinates are automatically transformed to widget space."
@@ -189,6 +196,35 @@
        (let [had-active? (any-active-interactions? widgets)]
          (reset-pressed-and-dragging! game-state widgets)
          (or handled? had-active?))))))
+
+(defn handle-scroll
+  "Handle scroll wheel movement. Returns true if a scroll-view consumed the event."
+  [game-state x y delta-y]
+  (let [widgets (draw-order/sort-for-render game-state (wcore/get-all-widgets game-state))
+        target (widget-at-point widgets x y)]
+    (if-let [[entity-id widget] target]
+      (let [widget-data (state/get-component widget :widget)]
+        (if (= (:type widget-data) :scroll-view)
+          (let [value (state/get-component widget :value)
+                bounds (state/get-component widget :bounds)
+                items (:items value)
+                item-height (double (or (:item-height value) 34.0))
+                gap (double (or (:gap value) 6.0))
+                content-height (scroll-content-height (count items) item-height gap)
+                max-offset (max 0.0 (- content-height (:height bounds)))
+                current-offset (double (or (:scroll-offset value) 0.0))]
+            (if (pos? max-offset)
+              (let [scroll-px (* (- delta-y) (max 24.0 (* 0.7 item-height)))
+                    new-offset (-> (+ current-offset scroll-px)
+                                   (max 0.0)
+                                   (min max-offset))]
+                (when (not= new-offset current-offset)
+                  (state/update-entity! game-state entity-id
+                                        #(assoc-in % [:components :value :scroll-offset] new-offset)))
+                true)
+              false))
+          false))
+      false)))
 
 ;; =============================================================================
 ;; Helper Functions

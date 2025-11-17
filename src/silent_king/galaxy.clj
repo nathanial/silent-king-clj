@@ -230,7 +230,8 @@
                     :renderable {:path (:path base-image)}
                     :transform {:size size
                                :rotation 0.0}
-                    :physics {:rotation-speed rotation-speed})]
+                    :physics {:rotation-speed rotation-speed}
+                    :star {:density density})]
         (state/add-entity! game-state entity)))
 
     (let [elapsed (- (System/currentTimeMillis) start-time)]

@@ -29,6 +29,8 @@
             :pan-y 0.0}
    :input {:mouse-x 0.0
            :mouse-y 0.0
+           :mouse-down-x 0.0
+           :mouse-down-y 0.0
            :dragging false}
    :time {:start-time (System/nanoTime)
           :current-time 0.0
@@ -47,6 +49,17 @@
            :atlas-metadata-lg {}
            :atlas-size-lg 8192}
    :widgets {:layout-dirty #{}}
+   :selection {:star-id nil
+               :last-world-click nil
+               :details nil}
+   :ui {:star-inspector {:visible? false
+                         :panel-width 320.0
+                         :panel-height 520.0
+                         :margin 20.0
+                         :current-x 0.0
+                         :target-x 0.0
+                         :slide-speed 10.0
+                         :panel-entity nil}}
    :features {:hyperlanes? true
               :minimap? true}})
 

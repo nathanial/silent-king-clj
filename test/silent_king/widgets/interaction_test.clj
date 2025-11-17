@@ -1,6 +1,7 @@
 (ns silent-king.widgets.interaction-test
   (:require [clojure.test :refer [deftest is testing]]
             [silent-king.state :as state]
+            [silent-king.widgets.config :as wconfig]
             [silent-king.widgets.core :as wcore]
             [silent-king.widgets.interaction :as winteraction]))
 
@@ -55,3 +56,20 @@
       (is (false? (get-in (state/get-entity game-state button-id)
                           [:components :interaction :pressed])))
       (is (zero? @clicks)))))
+
+(deftest scroll-view-consumes-wheel-events
+  (testing "Scroll views update their internal offset when the wheel moves"
+    (state/reset-entity-ids!)
+    (let [game-state (atom (state/create-game-state))
+          scroll (wcore/scroll-view :id :hyperlane-list
+                                    :bounds {:x 0 :y 0 :width 200 :height 100})
+          scroll-id (wcore/add-widget! game-state scroll)
+          screen-x (* 10 wconfig/ui-scale)
+          screen-y (* 10 wconfig/ui-scale)]
+      (state/update-entity! game-state scroll-id
+                            #(assoc-in % [:components :value :items]
+                                       (vec (repeat 12 {:primary "Row" :secondary ""}))))
+      (is (true? (winteraction/handle-scroll game-state screen-x screen-y -1.0)))
+      (is (> (get-in (state/get-entity game-state scroll-id)
+                     [:components :value :scroll-offset])
+             0.0)))))
