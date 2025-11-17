@@ -3,6 +3,7 @@
             [silent-king.state :as state]
             [silent-king.widgets.core :as wcore]
             [silent-king.widgets.layout :as wlayout]
+            [silent-king.widgets.interaction :as winteraction]
             [silent-king.ui.hyperlane-settings :as hsettings]))
 
 (defn- setup-state []
@@ -69,3 +70,16 @@
       (is (<= (:y row-bounds) (:y slider-bounds)))
       (is (<= (:y slider-bounds) (+ (:y row-bounds) (:height row-bounds))))
       (is (= (:height slider-bounds) 24.0)))))
+
+(deftest dropdown-expansion-does-not-shift-siblings
+  (let [game-state (setup-state)]
+    (hsettings/create-hyperlane-settings! game-state)
+    (wlayout/process-layouts! game-state 1280 800)
+    (let [[_ slider-entity] (wcore/get-widget-by-id game-state :hyperlane-opacity-slider)
+          dropdown-id (first (wcore/get-widget-by-id game-state :hyperlane-color-dropdown))
+          slider-y-before (get-in slider-entity [:components :bounds :y])]
+      (#'winteraction/set-dropdown-expanded! game-state dropdown-id true)
+      (wlayout/process-layouts! game-state 1280 800)
+      (let [[_ updated-slider] (wcore/get-widget-by-id game-state :hyperlane-opacity-slider)
+            slider-y-after (get-in updated-slider [:components :bounds :y])]
+        (is (= slider-y-before slider-y-after))))))

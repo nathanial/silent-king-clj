@@ -73,3 +73,49 @@
       (is (> (get-in (state/get-entity game-state scroll-id)
                      [:components :value :scroll-offset])
              0.0)))))
+
+(deftest dropdown-raises-z-index-while-expanded
+  (testing "Dropdown temporarily renders over its siblings when expanded"
+    (state/reset-entity-ids!)
+    (let [game-state (atom (state/create-game-state))
+          dropdown (wcore/dropdown [{:value :blue :label "Blue"}
+                                    {:value :red :label "Red"}]
+                                   :blue
+                                   (fn [_])
+                                   :id :color-dropdown
+                                   :bounds {:x 0 :y 0 :width 200 :height 36})
+          slider (wcore/slider 0.0 1.0 0.5 (fn [_])
+                               :id :opacity-slider
+                               :bounds {:x 0 :y 50 :width 200 :height 24})
+          dropdown-id (wcore/add-widget! game-state dropdown)
+          slider-id (wcore/add-widget! game-state slider)
+          base-z (get-in (state/get-entity game-state dropdown-id)
+                         [:components :layout :z-index])]
+      (#'winteraction/set-dropdown-expanded! game-state dropdown-id true)
+      (let [expanded-z (get-in (state/get-entity game-state dropdown-id)
+                               [:components :layout :z-index])
+            slider-z (get-in (state/get-entity game-state slider-id)
+                             [:components :layout :z-index])]
+        (is (> expanded-z slider-z))
+        (is (> expanded-z base-z)))
+      (#'winteraction/set-dropdown-expanded! game-state dropdown-id false)
+      (is (= base-z (get-in (state/get-entity game-state dropdown-id)
+                            [:components :layout :z-index]))))))
+
+(deftest dropdown-hit-area-includes-expanded-menu
+  (testing "Expanded dropdown captures clicks below its base height"
+    (state/reset-entity-ids!)
+    (let [game-state (atom (state/create-game-state))
+          dropdown (wcore/dropdown [{:value :blue :label "Blue"}
+                                    {:value :red :label "Red"}]
+                                   :blue
+                                   (fn [_])
+                                   :id :color-dropdown
+                                   :bounds {:x 10 :y 10 :width 200 :height 36})
+          dropdown-id (wcore/add-widget! game-state dropdown)]
+      (#'winteraction/set-dropdown-expanded! game-state dropdown-id true)
+      (let [menu-y (+ 10 50)  ;; below base-height
+            hit (winteraction/find-widget-at-point game-state
+                                                   (* wconfig/ui-scale 20)
+                                                   (* wconfig/ui-scale menu-y))]
+        (is (= dropdown-id (first hit)))))))

@@ -41,24 +41,41 @@
     (+ base-height (* option-height (count options)))
     base-height))
 
+(def ^:private dropdown-z-offset 1000)
+
 (defn- set-dropdown-expanded!
   [game-state entity-id expanded?]
   (state/update-entity! game-state entity-id
                         (fn [entity]
                           (let [value (state/get-component entity :value)
-                                base-height (double (:base-height value))
-                                option-height (double (:option-height value))
-                                options (:options value)
-                                new-height (dropdown-total-height {:base-height base-height
-                                                                   :option-height option-height
-                                                                   :options options}
-                                                                  expanded?)]
+                                layout (or (state/get-component entity :layout) {})
+                                base-z-index (or (:base-z-index value)
+                                                 (:z-index layout)
+                                                 0)
+                                new-z-index (if expanded?
+                                              (+ base-z-index dropdown-z-offset)
+                                              base-z-index)]
                             (-> entity
                                 (assoc-in [:components :value :expanded?] expanded?)
                                 (assoc-in [:components :value :hover-index] nil)
-                                (assoc-in [:components :bounds :height] new-height)))))
+                                (assoc-in [:components :value :base-z-index] base-z-index)
+                                (assoc-in [:components :layout :z-index] new-z-index)))))
   (wcore/request-layout! game-state entity-id)
   (wcore/request-parent-layout! game-state entity-id))
+
+(defn- dropdown-hit-bounds
+  [bounds value]
+  (when bounds
+    (let [base-height (double (:base-height value))
+          option-height (double (:option-height value))
+          options (:options value)
+          expanded? (:expanded? value)]
+      (if expanded?
+        (assoc bounds :height (dropdown-total-height {:base-height base-height
+                                                      :option-height option-height
+                                                      :options options}
+                                                     true))
+        (assoc bounds :height base-height)))))
 
 (defn- collapse-all-dropdowns!
   [game-state except-entity-id]
@@ -77,10 +94,16 @@
   (let [sorted-widgets (reverse widgets)
         [widget-x widget-y] (screen->widget-coords x y)]
     (some (fn [[entity-id widget]]
-            (let [bounds (state/get-component widget :bounds)
+            (let [widget-data (state/get-component widget :widget)
+                  bounds (state/get-component widget :bounds)
+                  value (when (= (:type widget-data) :dropdown)
+                          (state/get-component widget :value))
+                  hit-bounds (if (and (= (:type widget-data) :dropdown) value)
+                               (dropdown-hit-bounds bounds value)
+                               bounds)
                   interaction (state/get-component widget :interaction)]
               (when (and (:enabled interaction)
-                         (point-in-bounds? widget-x widget-y bounds))
+                         (point-in-bounds? widget-x widget-y hit-bounds))
                 [entity-id widget])))
           sorted-widgets)))
 
