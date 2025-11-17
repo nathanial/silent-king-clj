@@ -89,12 +89,8 @@
         ;; Create VStack with all children
         children [title zoom-label zoom-slider hyperlane-button reset-button stats-label]]
 
-    ;; Add panel and children to game state
+    ;; Add panel and children to game state (layout will run automatically)
     (wcore/add-widget-tree! game-state panel children)
-
-    ;; Compute initial layout
-    (let [[panel-id _] (wcore/get-widget-by-id game-state :control-panel)]
-      (wcore/update-vstack-layout! game-state panel-id))
 
     (println "Control panel created")))
 

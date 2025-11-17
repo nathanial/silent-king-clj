@@ -5,6 +5,7 @@
             [silent-king.hyperlanes :as hyperlanes]
             [silent-king.widgets.render :as wrender]
             [silent-king.widgets.interaction :as winteraction]
+            [silent-king.widgets.layout :as wlayout]
             [silent-king.ui.controls :as ui-controls]
             [nrepl.server :as nrepl]
             [cider.nrepl :refer [cider-nrepl-handler]])
@@ -353,6 +354,8 @@
       ;; Update zoom slider to match current camera zoom
       (ui-controls/update-zoom-slider! game-state zoom))
 
+    ;; Recompute dirty widget layouts before rendering
+    (wlayout/process-layouts! game-state)
     ;; Render all widgets (control panel, etc.)
     (wrender/render-all-widgets canvas game-state time)))
 

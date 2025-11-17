@@ -41,11 +41,12 @@
             :atlas-metadata-small {}
             :atlas-size-small 4096
             :atlas-image-medium nil
-            :atlas-metadata-medium {}
-            :atlas-size-medium 4096
+           :atlas-metadata-medium {}
+           :atlas-size-medium 4096
            :atlas-image-lg nil
            :atlas-metadata-lg {}
            :atlas-size-lg 8192}
+   :widgets {:layout-dirty #{}}
    :features {:hyperlanes? true}})
 
 (defn create-render-state []

@@ -1,7 +1,8 @@
 (ns silent-king.widgets.core-test
   (:require [clojure.test :refer [deftest is testing]]
             [silent-king.state :as state]
-            [silent-king.widgets.core :as wcore]))
+            [silent-king.widgets.core :as wcore]
+            [silent-king.widgets.layout :as wlayout]))
 
 (deftest compute-vstack-layout-respects-padding-gap-align
   (testing "VStack layout honors padding, gap, and alignment"
@@ -38,3 +39,30 @@
             child-b-bounds (state/get-component (state/get-entity game-state child-b-id) :bounds)]
         (is (= {:x 60 :y 38 :width 280 :height 10} child-a-bounds))
         (is (= {:x 60 :y 52 :width 280 :height 20} child-b-bounds))))))
+
+(deftest layout-queue-processes-dirty-widgets
+  (testing "Queued layout roots recompute bounds before rendering"
+    (state/reset-entity-ids!)
+    (let [game-state (atom (state/create-game-state))
+          panel (wcore/panel :id :panel
+                             :bounds {:x 0 :y 0 :width 200 :height 100}
+                             :layout {:padding {:left 0 :right 0 :top 0 :bottom 0}
+                                      :gap 0
+                                      :align :stretch})
+          child (wcore/label "Child" :id :child :bounds {:width 40 :height 10})
+          panel-id (wcore/add-widget-tree! game-state panel [child])]
+      ;; No manual layout run yet; child keeps original width
+      (let [[child-id _] (wcore/get-widget-by-id game-state :child)
+            child-bounds (state/get-component (state/get-entity game-state child-id) :bounds)]
+        (is (= 40 (:width child-bounds))))
+      ;; Process dirty layouts and verify child was stretched
+      (wlayout/process-layouts! game-state)
+      (let [[child-id _] (wcore/get-widget-by-id game-state :child)
+            child-bounds (state/get-component (state/get-entity game-state child-id) :bounds)]
+        (is (= 200 (:width child-bounds))))
+      ;; Mark the panel dirty again and ensure reprocessing works
+      (wcore/request-layout! game-state panel-id)
+      (wlayout/process-layouts! game-state)
+      (let [[child-id _] (wcore/get-widget-by-id game-state :child)
+            child-bounds (state/get-component (state/get-entity game-state child-id) :bounds)]
+        (is (= 200 (:width child-bounds)))))))

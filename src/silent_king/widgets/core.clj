@@ -1,6 +1,7 @@
 (ns silent-king.widgets.core
   "Core widget system - entity creation and component management"
-  (:require [silent-king.state :as state]))
+  (:require [silent-king.state :as state]
+            [silent-king.widgets.layout :as wlayout]))
 
 (set! *warn-on-reflection* true)
 
@@ -142,6 +143,7 @@
     (doseq [child-id child-ids]
       (state/update-entity! game-state child-id
                            #(assoc-in % [:components :widget :parent-id] parent-id)))
+    (wlayout/mark-dirty! game-state parent-id)
     parent-id))
 
 (defn get-all-widgets
@@ -209,3 +211,16 @@
     (doseq [[child-id [_child new-bounds]] (map vector child-ids child-layouts)]
       (state/update-entity! game-state child-id
                            #(state/add-component % :bounds new-bounds)))))
+
+(defmethod wlayout/perform-layout :vstack
+  [game-state entity-id _entity]
+  (update-vstack-layout! game-state entity-id))
+
+(defmethod wlayout/perform-layout :panel
+  [game-state entity-id _entity]
+  (update-vstack-layout! game-state entity-id))
+
+(defn request-layout!
+  "Mark a widget entity to recompute its layout before the next frame."
+  [game-state entity-id]
+  (wlayout/mark-dirty! game-state entity-id))
