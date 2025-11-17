@@ -2,6 +2,7 @@
   (:require [clojure.test :refer :all]
             [silent-king.state :as state]
             [silent-king.widgets.core :as wcore]
+            [silent-king.widgets.layout :as wlayout]
             [silent-king.ui.hyperlane-settings :as hsettings]))
 
 (defn- setup-state []
@@ -41,3 +42,30 @@
     (state/update-time! game-state assoc :current-time 1.0)
     (hsettings/update! game-state)
     (is (true? (get-in @game-state [:ui :hyperlane-settings :body-visible?])))))
+
+(deftest sliders-align-after-layout-processing
+  (let [game-state (setup-state)]
+    (hsettings/create-hyperlane-settings! game-state)
+    ;; Force a deterministic dirty order that would previously misplace sliders
+    (let [[row-id _] (wcore/get-widget-by-id game-state :hyperlane-opacity-row)
+          [panel-id panel-entity] (wcore/get-widget-by-id game-state :hyperlane-settings-panel)]
+      (swap! game-state assoc-in [:widgets :layout-dirty] [row-id panel-id])
+      (wlayout/process-layouts! game-state 1280 800)
+      (let [[_ slider-entity] (wcore/get-widget-by-id game-state :hyperlane-opacity-slider)
+            slider-bounds (get-in slider-entity [:components :bounds])
+            panel-bounds (get-in panel-entity [:components :bounds])]
+        (is (> (:y slider-bounds 0) (:y panel-bounds 0)))
+        (is (> (:height panel-bounds 0) 0.0))
+        (is (= 150.0 (:width slider-bounds)))))))
+
+(deftest sliders-share-row-bounds
+  (let [game-state (setup-state)]
+    (hsettings/create-hyperlane-settings! game-state)
+    (wlayout/process-layouts! game-state 1280 800)
+    (let [[_ row-entity] (wcore/get-widget-by-id game-state :hyperlane-opacity-row)
+          [_ slider-entity] (wcore/get-widget-by-id game-state :hyperlane-opacity-slider)
+          row-bounds (get-in row-entity [:components :bounds])
+          slider-bounds (get-in slider-entity [:components :bounds])]
+      (is (<= (:y row-bounds) (:y slider-bounds)))
+      (is (<= (:y slider-bounds) (+ (:y row-bounds) (:height row-bounds))))
+      (is (= (:height slider-bounds) 24.0)))))

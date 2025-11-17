@@ -76,6 +76,17 @@
   [game-state entity-id]
   (swap! game-state update-in [:widgets :layout-dirty] (fnil conj #{}) entity-id))
 
+(defn- widget-depth
+  "Return how many ancestors a widget has so parents lay out before children."
+  [game-state widget-entity]
+  (loop [depth 0
+         current widget-entity]
+    (if-let [parent-id (get-in current [:components :widget :parent-id])]
+      (if-let [parent (state/get-entity game-state parent-id)]
+        (recur (inc depth) parent)
+        depth)
+      depth)))
+
 (defn process-layouts!
   "Process all widgets that have been marked dirty.
   Viewport dimensions are needed for anchor positioning."
@@ -85,7 +96,13 @@
    (let [dirty (seq (get-in @game-state [:widgets :layout-dirty]))]
      (when dirty
        (swap! game-state assoc-in [:widgets :layout-dirty] #{})
-       (doseq [entity-id dirty
-               :let [entity (state/get-entity game-state entity-id)]
-               :when entity]
-         (perform-layout game-state entity-id entity viewport-width viewport-height))))))
+       (let [entities (->> dirty
+                           (map (fn [entity-id]
+                                  (when-let [entity (state/get-entity game-state entity-id)]
+                                    [entity-id entity])))
+                           (remove nil?))
+             ordered (sort-by (fn [[_ entity]]
+                                (widget-depth game-state entity))
+                              entities)]
+         (doseq [[entity-id entity] ordered]
+           (perform-layout game-state entity-id entity viewport-width viewport-height)))))))
