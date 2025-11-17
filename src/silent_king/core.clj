@@ -25,7 +25,7 @@
 ;; =============================================================================
 
 (def ^:const position-exponent 2.5)  ;; How fast positions spread apart
-(def ^:const size-exponent 1.0)      ;; How fast star sizes grow
+(def ^:const size-exponent 1.3)      ;; How fast star sizes grow
 
 (defn zoom->position-scale
   "Convert zoom to position scale factor using a power function.
@@ -142,7 +142,7 @@
               mouse-y (:mouse-y input)
               old-zoom (:zoom camera)
               zoom-factor (Math/pow 1.1 yoffset)
-              new-zoom (max 0.1 (min 10.0 (* old-zoom zoom-factor)))
+              new-zoom (max 0.4 (min 10.0 (* old-zoom zoom-factor)))
 
               ;; Calculate world position before zoom using non-linear transform
               old-pan-x (:pan-x camera)
@@ -197,6 +197,27 @@
                                      scaled-size)))
     (.restore canvas)))
 
+(defn draw-full-res-star
+  "Draw a star from a full-resolution image at screen coordinates (x, y)"
+  [^Canvas canvas star-images path screen-x screen-y size angle]
+  (when-let [star-data (first (filter #(= (:path %) path) star-images))]
+    (let [^Image image (:image star-data)
+          img-width (.getWidth image)
+          img-height (.getHeight image)
+          scale (/ size (max img-width img-height))
+          scaled-width (* img-width scale)
+          scaled-height (* img-height scale)]
+      (.save canvas)
+      (.translate canvas screen-x screen-y)
+      (.rotate canvas angle)
+      (.drawImageRect canvas image
+                      (Rect/makeXYWH 0 0 img-width img-height)
+                      (Rect/makeXYWH (- (/ scaled-width 2))
+                                     (- (/ scaled-height 2))
+                                     scaled-width
+                                     scaled-height))
+      (.restore canvas))))
+
 (defn star-visible?
   "Check if a star is visible in the current viewport using non-linear transform"
   [star-world-x star-world-y star-base-size pan-x pan-y viewport-width viewport-height zoom]
@@ -222,25 +243,32 @@
         pan-x (:pan-x camera)
         pan-y (:pan-y camera)
 
-        ;; 3-Level LOD system
+        ;; 4-Level LOD system
         lod-level (cond
                     (< zoom 0.5) :xs       ;; Far zoom: use xs atlas (64x64)
                     (< zoom 1.5) :small    ;; Medium zoom: use small atlas (128x128)
-                    :else :medium)         ;; Close zoom: use medium atlas (256x256, highest quality)
+                    (< zoom 4.0) :medium   ;; Close zoom: use medium atlas (256x256)
+                    :else :full)           ;; Very close zoom: use full-resolution images
 
-        ;; Select atlas based on LOD level
+        ;; Select atlas based on LOD level (or nil for full-res)
         atlas-image (case lod-level
                       :xs (:atlas-image-xs assets)
                       :small (:atlas-image-small assets)
-                      :medium (:atlas-image-medium assets))
+                      :medium (:atlas-image-medium assets)
+                      :full nil)
         atlas-metadata (case lod-level
                          :xs (:atlas-metadata-xs assets)
                          :small (:atlas-metadata-small assets)
-                         :medium (:atlas-metadata-medium assets))
+                         :medium (:atlas-metadata-medium assets)
+                         :full nil)
         atlas-size (case lod-level
                      :xs (:atlas-size-xs assets)
                      :small (:atlas-size-small assets)
-                     :medium (:atlas-size-medium assets))
+                     :medium (:atlas-size-medium assets)
+                     :full nil)
+
+        ;; Get star images for full-res rendering
+        star-images (:star-images assets)
 
         ;; Get all star entities (those with position, renderable, and transform components)
         star-entities (state/filter-entities-with game-state [:position :renderable :transform :physics])
@@ -257,7 +285,7 @@
 
     ;; Note: No canvas transform needed - we calculate screen positions per-star with non-linear scaling
 
-    ;; Draw visible stars using 3-level LOD
+    ;; Draw visible stars using 4-level LOD
     (doseq [[_ entity] visible-stars]
       (let [pos (state/get-component entity :position)
             renderable (state/get-component entity :renderable)
@@ -273,7 +301,11 @@
             screen-size (transform-size base-size zoom)
             rotation-speed (:rotation-speed physics)
             rotation (* time 30 rotation-speed)]
-        (draw-star-from-atlas canvas atlas-image atlas-metadata path screen-x screen-y screen-size rotation atlas-size)))
+        (if (= lod-level :full)
+          ;; Draw from full-resolution image
+          (draw-full-res-star canvas star-images path screen-x screen-y screen-size rotation)
+          ;; Draw from texture atlas
+          (draw-star-from-atlas canvas atlas-image atlas-metadata path screen-x screen-y screen-size rotation atlas-size))))
 
     ;; Draw UI overlay (not affected by camera)
     (let [paint (doto (Paint.)
@@ -282,7 +314,8 @@
           lod-description (case lod-level
                             :xs "XS atlas (64x64, far zoom)"
                             :small "Small atlas (128x128, medium zoom)"
-                            :medium "Medium atlas (256x256, close zoom - highest quality)")]
+                            :medium "Medium atlas (256x256, close zoom)"
+                            :full "Full resolution images (highest quality)")]
       (.drawString canvas "Silent King - Star Gallery" (float 20) (float 30) font paint)
       (.drawString canvas (str "Stars: " total-count " (visible: " visible-count ")") (float 20) (float 60) font paint)
       (.drawString canvas (str "Zoom: " (format "%.2f" zoom) "x") (float 20) (float 90) font paint)
@@ -361,6 +394,12 @@
     (when-let [atlas-image-medium (:atlas-image-medium assets)]
       (.close ^Image atlas-image-medium))
 
+    ;; Close all full-res star images
+    (when-let [star-images (:star-images assets)]
+      (doseq [star-data star-images]
+        (when-let [^Image image (:image star-data)]
+          (.close image))))
+
     ;; Destroy window
     (when window
       (GLFW/glfwDestroyWindow window))
@@ -396,12 +435,12 @@
 
       ;; Load assets
       (let [loaded-assets (assets/load-all-assets)
-            star-filenames (assets/load-star-filenames)]
-        (println "Loaded" (count star-filenames) "star filenames")
+            star-images (:star-images loaded-assets)]
+        (println "Loaded" (count star-images) "star images")
         (state/set-assets! game-state loaded-assets)
 
         ;; Generate star entities with noise-based clustering
-        (galaxy/generate-galaxy-entities! game-state star-filenames 10000))
+        (galaxy/generate-galaxy-entities! game-state star-images 10000))
 
       ;; Run render loop
       (render-loop game-state render-state))
