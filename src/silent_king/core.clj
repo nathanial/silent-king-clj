@@ -475,7 +475,7 @@
         (state/set-assets! game-state loaded-assets)
 
         ;; Generate star entities with noise-based clustering
-        (galaxy/generate-galaxy-entities! game-state star-images 10000)
+        (galaxy/generate-galaxy-entities! game-state star-images 1000)
 
         ;; Generate hyperlane connections using Delaunay triangulation
         (hyperlanes/generate-delaunay-hyperlanes! game-state)

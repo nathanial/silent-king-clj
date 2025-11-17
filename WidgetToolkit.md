@@ -589,20 +589,9 @@ Specialized Widgets (domain-specific)
 
 - Skija RRect requires `makeXYWH` factory method (not `makeComplexXYWH`) for uniform corner radii
 - `RRect` must be imported from `io.github.humbleui.types`, not `io.github.humbleui.skija`
-- All widget rendering methods now have defensive nil checks for bounds to prevent crashes
+- All widget rendering methods have defensive nil checks for bounds to prevent crashes
 - Mouse event routing checks widgets first (returns true if handled), then falls back to camera controls
-- The VStack layout uses `compute-vstack-layout` which works correctly - only the bounds application is broken
-
-**NEXT STEPS FOR CONTINUATION:**
-
-1. Fix the `update-vstack-layout!` function as described above
-2. Test that widgets are visible and interactive
-3. If still not visible, add debug logging to verify:
-   - Child IDs are being correctly mapped
-   - Bounds are being updated on entities
-   - Entities can be retrieved in render loop
-4. Once visible, test all interactions work correctly
-5. Consider adding debug overlay to show widget bounds (helpful for future development)
+- VStack layout uses dirty-tracking system for efficient updates (see `widgets/layout.clj`)
 
 ---
 

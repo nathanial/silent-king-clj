@@ -75,7 +75,7 @@
                 raw-value (+ min-val (* clamped (- max-val min-val)))
                 ;; Round to step
                 stepped-value (if step
-                               (* step (Math/round (/ raw-value step)))
+                               (* step (Math/round (double (/ raw-value step))))
                                raw-value)
                 new-value (max min-val (min max-val stepped-value))]
 
