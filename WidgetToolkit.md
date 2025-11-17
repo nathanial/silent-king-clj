@@ -489,200 +489,294 @@ Specialized Widgets (domain-specific)
 
 ## Implementation Plan
 
-### Phase 1: Core Infrastructure (Week 1)
-
-**Goal**: Establish widget system foundation
-
-**Tasks**:
-1. Create `silent-king.widgets.core` namespace
-   - Widget entity creation functions
-   - Component helpers
-   - Widget tree management
-
-2. Create `silent-king.widgets.render` namespace
-   - Multi-method dispatch on widget type
-   - Common rendering utilities (rounded rects, shadows)
-   - Paint/Font caching
-
-3. Create `silent-king.widgets.layout` namespace
-   - Bounds calculation for containers
-   - Layout algorithms (vstack, hstack, grid)
-   - Constraint solving
-
-4. Create `silent-king.widgets.interaction` namespace
-   - Mouse event routing (hit testing)
-   - Hover/pressed state management
-   - Focus management
-   - Callback invocation
-
-5. Integrate into render loop
-   - Widget rendering pass in `draw-frame`
-   - Input event handling in GLFW callbacks
-   - Widget state updates
-
-**Deliverables**:
-- Working Panel widget
-- Basic Button widget
-- Simple Label widget
-- Example: "Hello Widget" demo
+**Philosophy**: Each phase delivers a concrete, playable feature improvement to Silent King. Build infrastructure incrementally, only what's needed to support each phase's user-facing features.
 
 ---
 
-### Phase 2: Layout Containers (Week 2)
+### Phase 1: Interactive Control Panel (Week 1)
 
-**Goal**: Flexible layout system
+**Game Feature**: Replace text-only UI with interactive camera controls
 
-**Tasks**:
-1. Implement VStack/HStack
-   - Auto-sizing logic
-   - Gap and padding calculation
-   - Alignment options
+**What You'll See**:
+- Polished control panel in top-left corner with:
+  - Zoom slider (replaces text "Zoom: 1.5x")
+  - "Reset Camera" button (centers view, resets zoom to 1.0)
+  - "Toggle Hyperlanes" button (replaces 'H' key)
+  - FPS counter and stats
+- Smooth hover/pressed states on buttons
+- Real-time slider interaction
 
-2. Implement Grid
-   - Row/column definitions
-   - Cell spanning
-   - Auto-placement
+**Infrastructure Built**:
+1. Core widget system
+   - `silent-king.widgets.core`: Entity creation, component management
+   - `silent-king.widgets.render`: Multi-method rendering dispatch
+   - `silent-king.widgets.interaction`: Hit testing, mouse events
 
-3. Implement ScrollView
+2. Basic widgets
+   - Panel (rounded rect container)
+   - Label (text display)
+   - Button (clickable with hover states)
+   - Slider (horizontal value slider)
+   - VStack (vertical layout for control panel)
+
+3. Integration
+   - Widget rendering in `draw-frame`
+   - Mouse event routing (widgets first, then camera)
+   - Camera control callbacks
+
+**Deliverables**:
+```clojure
+;; In -main, after loading assets:
+(ui/create-control-panel! game-state)
+;; Adds interactive control panel to game
+```
+
+**Visual Impact**: Clean, modern control panel replaces debug text overlay
+
+---
+
+### Phase 2: Minimap Navigator (Week 2)
+
+**Game Feature**: Minimap in bottom-right corner for galaxy navigation
+
+**What You'll See**:
+- 250x250px minimap showing entire galaxy at small scale
+- Color-coded density visualization (bright = dense star clusters)
+- Red rectangle showing current camera viewport
+- Click minimap to jump camera to that location
+- Smooth camera transitions when clicking
+- Toggle button to show/hide minimap
+
+**Infrastructure Built**:
+1. Minimap widget
+   - Offscreen rendering of galaxy overview
+   - Density-based star aggregation (performance)
+   - Viewport overlay rectangle
+   - Click-to-navigate interaction
+
+2. Layout improvements
+   - Anchor system (bottom-right, top-left, etc.)
+   - Margin support
+   - Z-index for overlapping widgets
+
+3. Animation system (basic)
+   - Camera pan transitions
+   - Smooth easing (ease-in-out)
+
+**Deliverables**:
+```clojure
+;; Add to control panel or standalone:
+(ui/create-minimap! game-state)
+;; Adds minimap with click-to-navigate
+```
+
+**Visual Impact**: Professional navigation tool, see entire galaxy at a glance
+
+---
+
+### Phase 3: Star Selection & Inspector (Week 3)
+
+**Game Feature**: Click stars to select them, view details in side panel
+
+**What You'll See**:
+- Click any star to select it (highlights with glow)
+- Inspector panel slides in from left side showing:
+  - Star image/icon
+  - Star ID
+  - Position coordinates
+  - Size, density, rotation speed
+  - List of connected hyperlanes (with distances)
+- Click "Zoom to Star" button to center camera on selected star
+- Click background or press ESC to deselect
+
+**Infrastructure Built**:
+1. Star selection system
+   - World-space hit testing (transform screen → world coords)
+   - Selection state in game-state
+   - Selected star highlighting (glow effect)
+
+2. StarInspector widget
+   - Expandable side panel (slide-in animation)
+   - Property display (labels with values)
+   - Hyperlane connection list (VStack)
+   - "Zoom to Star" action button
+
+3. ScrollView (if needed for long hyperlane lists)
    - Viewport clipping
-   - Scroll offset management
+   - Vertical scrolling
    - Scrollbar rendering
-   - Mouse wheel handling
-
-4. Layout constraint solver
-   - Fill/auto/fixed sizing
-   - Percentage-based sizing
-   - Min/max constraints
 
 **Deliverables**:
-- All layout containers functional
-- Example: Complex nested layout demo
+```clojure
+;; Click handling in mouse callback:
+(ui/handle-star-click! game-state world-x world-y)
+;; Shows inspector for clicked star
+
+;; Inspector widget:
+(ui/create-star-inspector! game-state)
+;; Displays info for selected star
+```
+
+**Visual Impact**: Deep interactivity, explore individual stars and connections
 
 ---
 
-### Phase 3: Core Interactive Widgets (Week 3)
+### Phase 4: Hyperlane Visualization Controls (Week 4)
 
-**Goal**: Essential interaction widgets
+**Game Feature**: Advanced hyperlane visualization settings panel
 
-**Tasks**:
-1. Enhanced Button
-   - State transitions with animation
-   - Icon support
-   - Multiple visual styles
+**What You'll See**:
+- "Hyperlane Settings" panel (initially collapsed, click to expand)
+  - Master toggle: Enable/Disable hyperlanes
+  - Opacity slider: 0% (invisible) to 100% (solid)
+  - Color scheme dropdown: "Blue" (default), "Red", "Green", "Rainbow"
+  - Animation toggle: Enable/Disable pulsing animation
+  - Animation speed slider: Slow to Fast
+  - Line width slider: Thin to Thick
+- Real-time preview as you adjust settings
+- "Reset to Defaults" button
 
-2. Slider
-   - Drag interaction
-   - Value snapping
-   - Value label
+**Infrastructure Built**:
+1. Advanced interactive widgets
+   - Dropdown/Select (color scheme picker)
+   - Toggle/Checkbox (checkboxes for features)
+   - Collapsible panel (expand/collapse animation)
 
-3. Toggle (Checkbox/Switch)
-   - Animated transitions
-   - Custom checkmark rendering
+2. Settings integration
+   - Settings state in game-state
+   - Live update of hyperlane rendering
+   - Settings persistence (basic)
 
-4. TextField (basic)
-   - Text rendering
-   - Cursor positioning
-   - Basic editing (insert/delete)
+3. HStack layout
+   - Horizontal layout for labels + controls
 
 **Deliverables**:
-- All interactive widgets functional
-- Example: Settings panel demo
+```clojure
+;; Settings panel:
+(ui/create-hyperlane-settings! game-state)
+;; Interactive control panel for hyperlanes
+```
+
+**Visual Impact**: Fine-tuned control over hyperlane appearance, artistic customization
 
 ---
 
-### Phase 4: Display & Visualization (Week 4)
+### Phase 5: Performance Dashboard (Week 5)
 
-**Goal**: Information display widgets
+**Game Feature**: Comprehensive performance monitoring overlay
 
-**Tasks**:
-1. Enhanced Label
-   - Multi-line support
-   - Rich text styling (partial)
-   - Text measurement caching
+**What You'll See**:
+- Expandable performance dashboard (top-right corner)
+  - Collapsed: Just FPS counter
+  - Expanded: Full dashboard showing:
+    - FPS graph (last 60 frames, line chart)
+    - Frame time graph (ms)
+    - Entity counts (stars, hyperlanes, widgets)
+    - Visible entity counts (after culling)
+    - Memory usage estimate
+    - Render stats (draw calls, etc.)
+- Click/drag to move dashboard
+- Click pin icon to lock position
 
-2. ProgressBar
-   - Linear and circular variants
-   - Animated indeterminate mode
+**Infrastructure Built**:
+1. Chart widget
+   - Line chart for FPS/frame time
+   - Auto-scaling Y axis
+   - Real-time data updates
+   - Grid lines and labels
 
-3. Chart (basic)
-   - Line chart implementation
-   - Axis rendering
-   - Data point plotting
+2. Draggable window
+   - Drag from title bar
+   - Boundary constraints
+   - Drop shadow
 
-4. Minimap
-   - Scaled galaxy rendering
-   - Viewport indicator
-   - Navigation interaction
+3. Data collection
+   - Frame time tracking
+   - Entity count queries
+   - Render stats collection
 
 **Deliverables**:
-- Display widgets functional
-- Example: Dashboard demo with charts and minimap
+```clojure
+;; Performance overlay:
+(ui/create-performance-dashboard! game-state)
+;; Real-time performance monitoring
+```
+
+**Visual Impact**: Professional dev tools feel, understand performance at a glance
 
 ---
 
-### Phase 5: Specialized Widgets (Week 5)
+### Phase 6: Polish & Complete UI System (Week 6)
 
-**Goal**: Domain-specific widgets for Silent King
+**Game Feature**: Complete, polished UI with all features integrated
 
-**Tasks**:
-1. StarInspector
-   - Star detail display
-   - Hyperlane connection list
-   - Selection integration
+**What You'll See**:
+- Unified theme across all UI elements
+- Smooth animations everywhere (fade in/out, slide, scale)
+- Keyboard shortcuts overlay (press '?' to show)
+  - H: Toggle Hyperlanes
+  - M: Toggle Minimap
+  - I: Toggle Inspector
+  - P: Toggle Performance Dashboard
+  - R: Reset Camera
+  - ESC: Close panels/deselect
+- Tooltips on all interactive elements (hover to see)
+- High-contrast mode toggle (accessibility)
+- Resizable panels (drag edges to resize)
+- Multiple color themes: "Dark" (default), "Light", "Nord", "Dracula"
 
-2. HyperlaneControl
-   - Control panel for hyperlanes
-   - Integration with existing hyperlane system
-
-3. GalaxyMap
-   - Overview rendering
-   - Navigation integration
-
-4. DebugOverlay
-   - Performance metrics display
-   - Real-time graphs
-   - Expandable panel
-
-**Deliverables**:
-- All specialized widgets functional
-- Example: Full UI integration demo
-
----
-
-### Phase 6: Polish & Advanced Features (Week 6)
-
-**Goal**: Production-ready toolkit
-
-**Tasks**:
-1. Animation system
-   - Transition framework
-   - Easing functions
-   - Property interpolation
+**Infrastructure Built**:
+1. Complete animation system
+   - Multiple easing functions
+   - Chained animations
+   - Animation callbacks
 
 2. Theming system
-   - Color palette abstraction
-   - Style definitions
-   - Hot-reloadable themes
+   - Theme definitions (JSON/EDN)
+   - Hot-reload themes from file
+   - Theme switcher dropdown
 
-3. Accessibility
-   - Keyboard navigation
+3. Keyboard system
+   - Global keyboard shortcuts
+   - Keyboard navigation (tab between controls)
    - Focus indicators
-   - Screen reader hints (basic)
 
-4. Performance optimization
-   - Render caching
+4. Tooltip system
+   - Auto-positioning (avoid screen edges)
+   - Delay before showing
+   - Rich content support
+
+5. Advanced widgets
+   - Resizable panels (drag handles)
+   - Context menus (right-click)
+   - Dropdown menus
+
+6. Performance optimization
+   - Render caching for static widgets
    - Dirty rectangle tracking
-   - Widget pooling
-
-5. Developer tools
-   - Widget inspector (hover to debug)
-   - Layout visualizer
-   - Event logger
+   - Paint/Font object pooling
 
 **Deliverables**:
-- Polished, production-ready toolkit
-- Complete documentation
-- Example gallery application
+```clojure
+;; Complete UI setup:
+(ui/initialize-ui! game-state)
+;; Sets up all UI systems with keyboard shortcuts, theming, etc.
+```
+
+**Visual Impact**: Production-quality, professional UI that feels cohesive and polished
+
+---
+
+## Summary of Deliverables by Phase
+
+| Phase | Feature | Key Widgets | User Value |
+|-------|---------|-------------|------------|
+| 1 | Control Panel | Panel, Button, Slider, Label, VStack | Replace debug text with real controls |
+| 2 | Minimap | Minimap, Animation | Navigate galaxy with single click |
+| 3 | Star Inspector | Inspector, ScrollView, Selection | Explore individual stars and connections |
+| 4 | Hyperlane Settings | Dropdown, Toggle, Collapsible Panel | Customize hyperlane appearance |
+| 5 | Performance Dashboard | Chart, Draggable Window | Monitor performance in real-time |
+| 6 | Polish & Themes | Tooltips, Keyboard, Theming, Animations | Professional, cohesive experience |
 
 ---
 
