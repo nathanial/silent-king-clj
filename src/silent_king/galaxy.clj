@@ -1,5 +1,5 @@
 (ns silent-king.galaxy
-  "Galaxy generation using simplex noise for clustered star distribution"
+  "Galaxy generation using spiral arms blended with simplex noise for organic structure"
   (:require [silent-king.state :as state])
   (:import [silentking.noise FastNoiseLite FastNoiseLite$NoiseType]))
 
@@ -8,12 +8,26 @@
   {:center-x 2000.0
    :center-y 2000.0
    :max-radius 10000.0
-   :density-threshold 0.3  ; Only spawn stars where noise > this value
    :noise-seed 42
-   :noise-frequency 0.0003  ; Lower = larger features
+   :noise-frequency 0.0003
    :num-octaves 3
    :octave-gain 0.5
-   :octave-lacunarity 2.0})
+   :octave-lacunarity 2.0
+   ;; Spiral arm specific tuning
+   :arm-count 4
+   :arm-turns 0.85          ; revolutions from core to edge
+   :core-arm-spread 0.35    ; radians near the core before arms widen
+   :arm-spread 0.85         ; radians at the edge, controls arm thickness
+   :arm-flare-power 1.35    ; higher = arms widen more slowly with radius
+   :arm-alignment-weight 0.82
+   :arm-alignment-sharpness 1.8
+   :arm-randomness-core 0.05
+   :arm-randomness 0.18
+   :radial-bias 1.18        ; >1.0 concentrates more mass near the core
+   :radial-jitter 0.05      ; fraction of max radius used as jitter
+   :core-density-power 0.45
+   :noise-density-weight 0.08
+   :density-jitter 0.025})
 
 (defn create-noise-generator
   "Create a FastNoiseLite instance configured for OpenSimplex2 noise"
@@ -49,11 +63,80 @@
                  (+ total contribution)
                  (+ max-value amplitude)))))))
 
+(defn- clamp
+  [value min-value max-value]
+  (-> value
+      (max min-value)
+      (min max-value)))
+
+(defn- rand-normal
+  "Box-Muller transform for gaussian random values"
+  ([] (rand-normal 0.0 1.0))
+  ([mean stddev]
+   (let [u1 (max Double/MIN_VALUE (rand))
+         u2 (rand)
+         magnitude (Math/sqrt (* -2.0 (Math/log u1)))
+         theta (* 2.0 Math/PI u2)
+         z (* magnitude (Math/cos theta))]
+     (+ mean (* stddev z)))))
+
+(defn- sample-spiral-star
+  "Return {:x :y :density} sampled along spiral arms."
+  [noise-gen]
+  (let [{:keys [center-x center-y max-radius arm-count arm-turns arm-spread core-arm-spread
+                arm-flare-power arm-alignment-weight arm-alignment-sharpness
+                arm-randomness arm-randomness-core
+                radial-bias radial-jitter core-density-power
+                noise-density-weight density-jitter]}
+        galaxy-config
+        arm-count (max arm-count 1)
+        angle-step (/ (* 2.0 Math/PI) arm-count)
+        ;; Draw radius with slight preference for the core and add jitter to break symmetry
+        radius-factor (Math/pow (Math/sqrt (rand)) radial-bias)
+        base-radius (* max-radius radius-factor)
+        radius (+ base-radius (* max-radius radial-jitter (- (rand) 0.5)))
+        radius (clamp radius 0.0 max-radius)
+        normalized-radius (if (pos? max-radius) (/ radius max-radius) 0.0)
+        flare-power (max 0.1 (double arm-flare-power))
+        spread-blend (Math/pow normalized-radius flare-power)
+        base-spread (max 1.0e-3 (or core-arm-spread arm-spread))
+        spread-range (max 0.0 (- arm-spread base-spread))
+        effective-spread (+ base-spread (* spread-range spread-blend))
+        randomness-core (max 0.0 (double (or arm-randomness-core 0.0)))
+        randomness-edge (max randomness-core (double (or arm-randomness 0.0)))
+        randomness-scale (+ randomness-core
+                            (* (- randomness-edge randomness-core) spread-blend))
+        arm-index (rand-int arm-count)
+        spiral-angle (* normalized-radius arm-turns (* 2.0 Math/PI))
+        base-angle (+ (* arm-index angle-step) spiral-angle)
+        offset (+ (rand-normal 0.0 (* 0.7 effective-spread))
+                  (* randomness-scale (- (rand) 0.5)))
+        angle (+ base-angle offset)
+        x (+ center-x (* radius (Math/cos angle)))
+        y (+ center-y (* radius (Math/sin angle)))
+        ;; Reward stars that stay close to the ideal arm centerline
+        spread (max 1.0e-3 effective-spread)
+        gaussian (Math/exp (* -0.5 (Math/pow (/ offset spread) 2.0)))
+        sharpness (max 0.5 (double (or arm-alignment-sharpness 1.0)))
+        arm-alignment (Math/pow gaussian sharpness)
+        radial-density (Math/pow (- 1.0 normalized-radius) core-density-power)
+        alignment-weight (clamp arm-alignment-weight 0.0 1.0)
+        structure-density (+ (* alignment-weight arm-alignment)
+                             (* (- 1.0 alignment-weight) radial-density))
+        noise-density (sample-density noise-gen x y)
+        noise-weight (clamp noise-density-weight 0.0 1.0)
+        structural-weight (- 1.0 noise-weight)
+        raw-density (+ (* structural-weight structure-density)
+                       (* noise-weight noise-density)
+                       (* density-jitter (- (rand) 0.5)))
+        density (clamp raw-density 0.0 1.0)]
+    {:x x :y y :density density}))
+
 (defn- density->size
   "Map density value (0-1) to star size in pixels"
   [density]
-  (let [min-size 30
-        max-size 40
+  (let [min-size 40
+        max-size 50
         size-range (- max-size min-size)]
     (+ min-size (* density density size-range))))
 
@@ -75,48 +158,23 @@
     (nth base-images (min index (dec num-images)))))
 
 (defn generate-galaxy-entities!
-  "Generate star entities with noise-based clustered distribution.
-  Uses rejection sampling to create dense clusters with sparse regions."
+  "Generate star entities using spiral arm distribution blended with noise for texture."
   [game-state base-images num-stars]
-  (println "Generating" num-stars "star entities with clustered noise distribution...")
+  (println "Generating" num-stars "star entities with spiral arm distribution...")
   (let [noise-gen (create-noise-generator)
-        {:keys [center-x center-y max-radius density-threshold]} galaxy-config
         start-time (System/currentTimeMillis)]
-
-    ;; Use rejection sampling to generate stars only in high-density regions
-    (loop [generated 0
-           attempts 0
-           max-attempts (* num-stars 5)]  ; Safety limit
-      (when (and (< generated num-stars)
-                 (< attempts max-attempts))
-        (let [;; Random position within disk
-              angle (* (rand) 2.0 Math/PI)
-              radius (* (Math/sqrt (rand)) max-radius)
-              x (+ center-x (* radius (Math/cos angle)))
-              y (+ center-y (* radius (Math/sin angle)))
-
-              ;; Sample density at this position
-              density (sample-density noise-gen x y)]
-
-          (if (> density density-threshold)
-            ;; Accept this position - create star entity
-            (let [;; Normalize density to 0-1 range above threshold
-                  normalized-density (/ (- density density-threshold)
-                                       (- 1.0 density-threshold))
-                  base-image (density->star-image base-images normalized-density)
-                  size (density->size normalized-density)
-                  rotation-speed (density->rotation-speed normalized-density)
-                  entity (state/create-entity
-                          :position {:x x :y y}
-                          :renderable {:path (:path base-image)}
-                          :transform {:size size
-                                     :rotation 0.0}
-                          :physics {:rotation-speed rotation-speed})]
-              (state/add-entity! game-state entity)
-              (recur (inc generated) (inc attempts) max-attempts))
-
-            ;; Reject this position - try again
-            (recur generated (inc attempts) max-attempts)))))
+    (dotimes [_ num-stars]
+      (let [{:keys [x y density]} (sample-spiral-star noise-gen)
+            base-image (density->star-image base-images density)
+            size (density->size density)
+            rotation-speed (density->rotation-speed density)
+            entity (state/create-entity
+                    :position {:x x :y y}
+                    :renderable {:path (:path base-image)}
+                    :transform {:size size
+                               :rotation 0.0}
+                    :physics {:rotation-speed rotation-speed})]
+        (state/add-entity! game-state entity)))
 
     (let [elapsed (- (System/currentTimeMillis) start-time)]
       (println "Generated" (count (state/get-all-entities game-state))
