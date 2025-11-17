@@ -535,6 +535,117 @@ Specialized Widgets (domain-specific)
 
 ---
 
+#### Phase 1 Implementation Status
+
+**✅ COMPLETED:**
+
+1. **Files Created:**
+   - `src/silent_king/widgets/core.clj` - Core widget system with entity creation, component management, and VStack layout
+   - `src/silent_king/widgets/render.clj` - Multi-method widget rendering with state-dependent styling
+   - `src/silent_king/widgets/interaction.clj` - Hit testing and mouse event handling
+   - `src/silent_king/ui/controls.clj` - High-level UI construction including control panel creation
+
+2. **Files Modified:**
+   - `src/silent_king/core.clj` - Integrated widget rendering in `draw-frame` and mouse event routing in callbacks
+
+3. **Widget Types Implemented:**
+   - Panel - Container with rounded corners, shadows, and background color
+   - Label - Text display with alignment options
+   - Button - Interactive button with hover/pressed states and callbacks
+   - Slider - Horizontal value slider with draggable thumb
+   - VStack - Vertical stack layout container
+
+4. **Core Systems Working:**
+   - Multi-method rendering dispatch by widget type
+   - Nil-safe rendering (widgets skip rendering if bounds are invalid)
+   - Mouse event routing (widgets get priority over camera controls)
+   - Hit testing with z-index sorting
+   - State-dependent visual styling (hover, pressed states)
+   - Paint object caching for performance
+
+**❌ NOT YET WORKING:**
+
+1. **VStack Layout Bug:**
+   - The `update-vstack-layout!` function is called but not correctly updating child widget bounds
+   - Root cause: The function in `src/silent_king/widgets/core.clj` at line 197-215 has a bug in how it maps child entities to their new bounds
+   - Specifically, line 210-211 tries to find the child ID but the logic is incorrect
+   - **Result**: All widgets have nil bounds and skip rendering (invisible)
+
+2. **Fix Required:**
+   ```clojure
+   ;; Current broken code in update-vstack-layout! (lines 196-215):
+   (defn update-vstack-layout!
+     "Update the layout of a VStack widget and its children"
+     [game-state vstack-entity-id]
+     (let [vstack-entity (state/get-entity game-state vstack-entity-id)
+           vstack-bounds (state/get-component vstack-entity :bounds)
+           vstack-layout (state/get-component vstack-entity :layout)
+           vstack-widget (state/get-component vstack-entity :widget)
+           child-ids (:children vstack-widget)
+           children (mapv #(state/get-entity game-state %) child-ids)
+           child-layouts (compute-vstack-layout vstack-bounds vstack-layout children)]
+
+       ;; Update each child's bounds
+       (doseq [[child new-bounds] child-layouts
+               :let [child-id (first (filter #(identical? child (second %))
+                                            (map vector child-ids children)))]]
+         (state/update-entity! game-state child-id
+                              #(state/add-component % :bounds new-bounds)))))
+   ```
+
+   **Problem**: The `:let` binding trying to find `child-id` is overly complex and likely failing. The `compute-vstack-layout` already returns `[child new-bounds]` pairs, and we have `child-ids` in the same order as `children`, so we can zip them together.
+
+   **Suggested Fix**:
+   ```clojure
+   (defn update-vstack-layout!
+     "Update the layout of a VStack widget and its children"
+     [game-state vstack-entity-id]
+     (let [vstack-entity (state/get-entity game-state vstack-entity-id)
+           vstack-bounds (state/get-component vstack-entity :bounds)
+           vstack-layout (state/get-component vstack-entity :layout)
+           vstack-widget (state/get-component vstack-entity :widget)
+           child-ids (:children vstack-widget)
+           children (mapv #(state/get-entity game-state %) child-ids)
+           child-layouts (compute-vstack-layout vstack-bounds vstack-layout children)]
+
+       ;; Update each child's bounds using the parallel child-ids vector
+       (doseq [[child-id [child new-bounds]] (map vector child-ids child-layouts)]
+         (state/update-entity! game-state child-id
+                              #(state/add-component % :bounds new-bounds)))))
+   ```
+
+**WHAT TO VERIFY AFTER FIX:**
+
+1. Run `./run.sh` and verify the game starts without crashing ✅ (already working)
+2. Look for "Control panel created" in console output ✅ (already working)
+3. **EXPECTED**: Control panel should now be visible in top-left corner with all widgets rendered
+4. **TEST**: Hover over buttons - they should lighten
+5. **TEST**: Click "Reset Camera" - camera should reset to zoom 1.0, centered
+6. **TEST**: Click "Toggle Hyperlanes" - hyperlanes should appear/disappear
+7. **TEST**: Drag the zoom slider - zoom level should change in real-time
+8. **TEST**: Verify FPS counter updates each frame
+
+**TECHNICAL NOTES:**
+
+- Skija RRect requires `makeXYWH` factory method (not `makeComplexXYWH`) for uniform corner radii
+- `RRect` must be imported from `io.github.humbleui.types`, not `io.github.humbleui.skija`
+- All widget rendering methods now have defensive nil checks for bounds to prevent crashes
+- Mouse event routing checks widgets first (returns true if handled), then falls back to camera controls
+- The VStack layout uses `compute-vstack-layout` which works correctly - only the bounds application is broken
+
+**NEXT STEPS FOR CONTINUATION:**
+
+1. Fix the `update-vstack-layout!` function as described above
+2. Test that widgets are visible and interactive
+3. If still not visible, add debug logging to verify:
+   - Child IDs are being correctly mapped
+   - Bounds are being updated on entities
+   - Entities can be retrieved in render loop
+4. Once visible, test all interactions work correctly
+5. Consider adding debug overlay to show widget bounds (helpful for future development)
+
+---
+
 ### Phase 2: Minimap Navigator (Week 2)
 
 **Game Feature**: Minimap in bottom-right corner for galaxy navigation

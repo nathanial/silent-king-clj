@@ -3,6 +3,9 @@
             [silent-king.state :as state]
             [silent-king.galaxy :as galaxy]
             [silent-king.hyperlanes :as hyperlanes]
+            [silent-king.widgets.render :as wrender]
+            [silent-king.widgets.interaction :as winteraction]
+            [silent-king.ui.controls :as ui-controls]
             [nrepl.server :as nrepl]
             [cider.nrepl :refer [cider-nrepl-handler]])
   (:import [org.lwjgl.glfw GLFW GLFWErrorCallback GLFWCursorPosCallbackI GLFWMouseButtonCallbackI GLFWScrollCallbackI GLFWKeyCallbackI]
@@ -117,14 +120,19 @@
                old-x (:mouse-x input)
                old-y (:mouse-y input)
                dragging (:dragging input)]
-           (when dragging
-             (let [dx (- fb-xpos old-x)
-                   dy (- fb-ypos old-y)]
-               (state/update-camera! game-state
-                                     (fn [cam]
-                                       (-> cam
-                                           (update :pan-x #(+ % dx))
-                                           (update :pan-y #(+ % dy)))))))
+
+           ;; Try widget interaction first
+           (if-not (winteraction/handle-mouse-move game-state fb-xpos fb-ypos)
+             ;; If no widget handled the event, handle camera panning
+             (when dragging
+               (let [dx (- fb-xpos old-x)
+                     dy (- fb-ypos old-y)]
+                 (state/update-camera! game-state
+                                       (fn [cam]
+                                         (-> cam
+                                             (update :pan-x #(+ % dx))
+                                             (update :pan-y #(+ % dy))))))))
+
            (state/update-input! game-state assoc :mouse-x fb-xpos :mouse-y fb-ypos)))))
 
     ;; Mouse button callback
@@ -132,7 +140,14 @@
      (reify GLFWMouseButtonCallbackI
        (invoke [_ win button action mods]
          (when (= button GLFW/GLFW_MOUSE_BUTTON_LEFT)
-           (state/update-input! game-state assoc :dragging (= action GLFW/GLFW_PRESS))))))
+           (let [input (state/get-input game-state)
+                 x (:mouse-x input)
+                 y (:mouse-y input)
+                 pressed? (= action GLFW/GLFW_PRESS)]
+             ;; Try widget interaction first
+             (if-not (winteraction/handle-mouse-click game-state x y pressed?)
+               ;; If no widget handled the event, handle camera dragging
+               (state/update-input! game-state assoc :dragging pressed?)))))))
 
     ;; Scroll callback for zoom
     (GLFW/glfwSetScrollCallback
@@ -325,27 +340,21 @@
           ;; Draw from texture atlas
           (draw-star-from-atlas canvas atlas-image atlas-metadata path screen-x screen-y screen-size rotation atlas-size))))
 
-    ;; Draw UI overlay (not affected by camera)
-    (let [paint (doto (Paint.)
-                  (.setColor (unchecked-int 0xFFffffff)))
-          font (Font. (Typeface/makeDefault) (float 24))
-          lod-description (case lod-level
-                            :xs "XS atlas (64x64, far zoom)"
-                            :small "Small atlas (128x128, medium zoom)"
-                            :medium "Medium atlas (256x256, close zoom)"
-                            :full "Full resolution images (highest quality)")
-          hyperlanes-count (get-in @game-state [:debug :hyperlanes-rendered] 0)
-          hyperlane-text (if hyperlanes-enabled
-                           (str "Hyperlanes: " hyperlanes-count " rendered (press H to toggle)")
-                           "Hyperlanes: OFF (press H to toggle)")]
-      (.drawString canvas "Silent King - Star Gallery" (float 20) (float 30) font paint)
-      (.drawString canvas (str "Stars: " total-count " (visible: " visible-count ")") (float 20) (float 60) font paint)
-      (.drawString canvas hyperlane-text (float 20) (float 90) font paint)
-      (.drawString canvas (str "Zoom: " (format "%.2f" zoom) "x") (float 20) (float 120) font paint)
-      (.drawString canvas (str "LOD: " lod-description) (float 20) (float 150) font paint)
-      (.drawString canvas "Controls: Click-Drag=Pan, Scroll=Zoom, H=Toggle Hyperlanes" (float 20) (float 180) font paint)
-      (.close font)
-      (.close paint))))
+    ;; Calculate FPS
+    (let [time-state (state/get-time game-state)
+          frame-count (:frame-count time-state)
+          current-time (:current-time time-state)
+          fps (if (pos? current-time) (/ frame-count current-time) 0.0)
+          hyperlanes-count (get-in @game-state [:debug :hyperlanes-rendered] 0)]
+
+      ;; Update stats label in control panel
+      (ui-controls/update-stats-label! game-state fps total-count visible-count hyperlanes-count hyperlanes-enabled)
+
+      ;; Update zoom slider to match current camera zoom
+      (ui-controls/update-zoom-slider! game-state zoom))
+
+    ;; Render all widgets (control panel, etc.)
+    (wrender/render-all-widgets canvas game-state time)))
 
 (defn render-loop [game-state render-state]
   (println "Starting render loop...")
@@ -466,7 +475,10 @@
         (galaxy/generate-galaxy-entities! game-state star-images 10000)
 
         ;; Generate hyperlane connections using Delaunay triangulation
-        (hyperlanes/generate-delaunay-hyperlanes! game-state))
+        (hyperlanes/generate-delaunay-hyperlanes! game-state)
+
+        ;; Create the control panel UI
+        (ui-controls/create-control-panel! game-state))
 
       ;; Run render loop
       (render-loop game-state render-state))
