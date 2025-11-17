@@ -24,8 +24,8 @@
 ;; Non-Linear Transform Functions
 ;; =============================================================================
 
-(def ^:const position-exponent 2.0)  ;; How fast positions spread apart
-(def ^:const size-exponent 1.0)      ;; How fast star sizes grow (linear)
+(def ^:const position-exponent 2.5)  ;; How fast positions spread apart
+(def ^:const size-exponent 1.0)      ;; How fast star sizes grow
 
 (defn zoom->position-scale
   "Convert zoom to position scale factor using a power function.
@@ -178,25 +178,6 @@
      SurfaceOrigin/BOTTOM_LEFT
      SurfaceColorFormat/RGBA_8888
      (ColorSpace/getSRGB))))
-
-(defn draw-rotating-star
-  "Draw a rotating star at screen coordinates (x, y) with given size and rotation angle"
-  [^Canvas canvas ^Image image screen-x screen-y size angle]
-  (.save canvas)
-  (.translate canvas screen-x screen-y)
-  (.rotate canvas angle)
-  (let [img-width (.getWidth image)
-        img-height (.getHeight image)
-        scale (/ size (max img-width img-height))
-        scaled-width (* img-width scale)
-        scaled-height (* img-height scale)]
-    (.drawImageRect canvas image
-                    (Rect/makeXYWH 0 0 img-width img-height)
-                    (Rect/makeXYWH (- (/ scaled-width 2))
-                                   (- (/ scaled-height 2))
-                                   scaled-width
-                                   scaled-height)))
-  (.restore canvas))
 
 (defn draw-star-from-atlas
   "Draw a star from the texture atlas at screen coordinates (x, y)"
