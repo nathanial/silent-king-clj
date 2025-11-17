@@ -162,12 +162,11 @@
                              positions (wminimap/collect-star-positions game-state)
                              world-bounds (wminimap/compute-world-bounds positions)
                              transform (wminimap/compute-transform bounds world-bounds)
-                             {:keys [x y]} (wminimap/minimap->world transform x y)
+                             world-pos (wminimap/minimap->world transform x y)
                              camera (state/get-camera game-state)
-                             cam-zoom (:zoom camera)
-                             target-pan-x (- (* x cam-zoom))
-                             target-pan-y (- (* y cam-zoom))]
-                         (wanim/start-camera-pan! game-state target-pan-x target-pan-y 0.5)
+                             viewport-size (wminimap/get-viewport-size game-state)
+                             {:keys [pan-x pan-y]} (wminimap/target-pan world-pos (:zoom camera) viewport-size)]
+                         (wanim/start-camera-pan! game-state pan-x pan-y 0.5)
                          true)
 
                        :else false))

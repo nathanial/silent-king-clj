@@ -1,6 +1,7 @@
 (ns silent-king.hyperlanes
   "Hyperlane generation and rendering using Delaunay triangulation"
-  (:require [silent-king.state :as state])
+  (:require [silent-king.camera :as camera]
+            [silent-king.state :as state])
   (:import [org.locationtech.jts.triangulate DelaunayTriangulationBuilder]
            [org.locationtech.jts.geom Coordinate GeometryFactory LineString]
            [io.github.humbleui.skija Canvas Paint Shader PaintMode PaintStrokeCap]))
@@ -16,22 +17,6 @@
    :pulse-speed 0.5         ; Animation cycles per second
    :pulse-amplitude 0.3     ; Width variation (0-1)
    :min-visible-length 1.0}) ; Minimum screen-space length to render (pixels)
-
-;; Non-linear transform functions (must match core.clj)
-(def ^:private position-exponent 2.5)
-(def ^:private size-exponent 1.3)
-
-(defn- zoom->position-scale [zoom]
-  (Math/pow zoom position-exponent))
-
-(defn- zoom->size-scale [zoom]
-  (Math/pow zoom size-exponent))
-
-(defn- transform-position [world-pos zoom pan]
-  (+ (* world-pos (zoom->position-scale zoom)) pan))
-
-(defn- transform-size [base-size zoom]
-  (* base-size (zoom->size-scale zoom)))
 
 ;; Line segment frustum culling using Cohen-Sutherland algorithm
 (defn- compute-outcode [x y width height]
@@ -165,10 +150,10 @@
                 to-pos (state/get-component to-entity :position)
 
                 ;; Transform to screen coordinates with non-linear scaling
-                from-x (transform-position (:x from-pos) zoom pan-x)
-                from-y (transform-position (:y from-pos) zoom pan-y)
-                to-x (transform-position (:x to-pos) zoom pan-x)
-                to-y (transform-position (:y to-pos) zoom pan-y)
+                from-x (camera/transform-position (:x from-pos) zoom pan-x)
+                from-y (camera/transform-position (:y from-pos) zoom pan-y)
+                to-x (camera/transform-position (:x to-pos) zoom pan-x)
+                to-y (camera/transform-position (:y to-pos) zoom pan-y)
 
                 ;; Calculate screen-space length for distance culling
                 dx (- to-x from-x)
@@ -195,7 +180,7 @@
 
                 ;; Medium zoom: Thicker colored lines with rounded caps
                 :medium
-                (let [line-width (transform-size (:base-width visual) zoom)
+                (let [line-width (camera/transform-size (:base-width visual) zoom)
                       paint (doto (Paint.)
                               (.setColor (unchecked-int (:color-start visual)))
                               (.setStrokeWidth (float line-width))
@@ -207,7 +192,7 @@
 
                 ;; Close zoom: Gradient lines with glow effect and animated pulsing
                 :close
-                (let [line-width (transform-size (:base-width visual) zoom)
+                (let [line-width (camera/transform-size (:base-width visual) zoom)
 
                       ;; Animated pulsing width
                       animation-phase (+ (* current-time (:pulse-speed hyperlane-config) Math/PI 2)

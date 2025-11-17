@@ -1,6 +1,7 @@
 (ns silent-king.widgets.minimap
   "Pure math helpers for minimap layout, interaction, and density coloring."
-  (:require [silent-king.state :as state]))
+  (:require [silent-king.camera :as camera]
+            [silent-king.state :as state]))
 
 (set! *warn-on-reflection* true)
 
@@ -21,6 +22,16 @@
 (def ^:const default-density-resolution 48)
 (def ^:const default-screen-width 1280.0)
 (def ^:const default-screen-height 800.0)
+
+(def default-viewport-size
+  {:width default-screen-width
+   :height default-screen-height})
+
+(defn get-viewport-size
+  "Return the most recent viewport size saved in game-state, or defaults."
+  [game-state]
+  (or (get-in @game-state [:widgets :viewport-size])
+      default-viewport-size))
 
 (defn collect-star-positions
   "Return a vector of all star positions with {:x :y} data."
@@ -161,18 +172,26 @@
             b)))
 
 (defn camera->viewport
-  "Approximate the visible world rectangle for the current camera/zoom."
+  "Return the visible world rectangle for the current camera/zoom, accounting for the non-linear transform."
   ([camera]
-   (camera->viewport camera default-screen-width default-screen-height))
-  ([camera screen-width screen-height]
+   (camera->viewport camera default-viewport-size))
+  ([camera {:keys [width height] :or {width default-screen-width
+                                     height default-screen-height}}]
    (let [zoom (double (max 0.0001 (:zoom camera)))
-         world-width (/ screen-width zoom)
-         world-height (/ screen-height zoom)
-         half-w (/ world-width 2.0)
-         half-h (/ world-height 2.0)
-         center-x (/ (- (:pan-x camera)) zoom)
-         center-y (/ (- (:pan-y camera)) zoom)]
-     {:min-x (- center-x half-w)
-      :max-x (+ center-x half-w)
-      :min-y (- center-y half-h)
-      :max-y (+ center-y half-h)})))
+         pan-x (:pan-x camera)
+         pan-y (:pan-y camera)
+         left (camera/inverse-transform-position 0.0 zoom pan-x)
+         right (camera/inverse-transform-position (double width) zoom pan-x)
+         bottom (camera/inverse-transform-position 0.0 zoom pan-y)
+         top (camera/inverse-transform-position (double height) zoom pan-y)]
+     {:min-x (min left right)
+      :max-x (max left right)
+      :min-y (min bottom top)
+      :max-y (max bottom top)})))
+
+(defn target-pan
+  "Compute the pan values needed to center a world coordinate inside the viewport."
+  [world zoom {:keys [width height] :or {width default-screen-width
+                                         height default-screen-height}}]
+  {:pan-x (camera/center-pan (:x world) zoom width)
+   :pan-y (camera/center-pan (:y world) zoom height)})

@@ -24,8 +24,8 @@
                     (fn [& args]
                       (swap! pan-calls conj args))]
         (is (true? (winteraction/handle-mouse-click game-state 100 100 false)))
-        (is (= [[game-state 0.0 0.0 0.5]] @pan-calls)
-            "Expected camera to target the world center")))))
+        (is (= [[game-state 640.0 400.0 0.5]] @pan-calls)
+            "Expected camera to center on the world coordinate")))))
 
 (deftest minimap-click-centers-tall-galaxy
   (testing "Clicking the minimap center recenters even when the galaxy is taller than it is wide"
@@ -40,7 +40,7 @@
                     (fn [& args]
                       (swap! pan-calls conj args))]
         (is (true? (winteraction/handle-mouse-click game-state 100 100 false)))
-        (is (= [[game-state 0.0 0.0 0.5]] @pan-calls))))))
+        (is (= [[game-state 640.0 400.0 0.5]] @pan-calls))))))
 
 (deftest minimap-ignores-click-when-hidden
   (testing "Minimap clicks are ignored when the feature flag is disabled"

@@ -595,6 +595,33 @@ Specialized Widgets (domain-specific)
 
 ---
 
+#### Phase 2 Implementation Status
+
+**✅ COMPLETED:**
+
+1. **Files Created/Updated:**
+   - `src/silent_king/camera.clj` - Shared non-linear transform helpers reused by render, hyperlane, and minimap math
+   - `src/silent_king/widgets/minimap.clj` - Pure math helpers for bounds, density bucketing, and camera viewport projection
+   - `src/silent_king/widgets/render.clj` - Minimap renderer now draws density tiles and an accurate viewport rectangle
+   - `src/silent_king/widgets/interaction.clj` - Click-to-pan uses the shared minimap transform and centers the camera correctly
+   - `src/silent_king/core.clj` - Saves live viewport size for minimap usage
+
+2. **Features Complete:**
+   - Density-colored minimap that buckets all stars without an offscreen surface
+   - Accurate viewport rectangle that reflects the non-linear camera transform
+   - Click-to-navigate that pans the camera via animation while keeping world coordinates centered
+   - Minimap visibility toggle wired through the control panel
+
+3. **Tests Added:**
+   - `test/silent_king/widgets/minimap_test.clj` covers minimap click behavior and hidden-state handling
+
+4. **Verification Checklist:**
+   - `./run.sh` shows the minimap in the bottom-right corner with density shading and viewport rectangle
+   - Clicking inside the minimap recenters the camera smoothly
+   - `./run-tests.sh` passes, covering minimap math plus prior widget suites
+
+---
+
 ### Phase 2: Minimap Navigator (Week 2)
 
 **Game Feature**: Minimap in bottom-right corner for galaxy navigation
@@ -832,7 +859,7 @@ Specialized Widgets (domain-specific)
 | Phase | Feature | Key Widgets | User Value |
 |-------|---------|-------------|------------|
 | 1 | Control Panel | Panel, Button, Slider, Label, VStack | Replace debug text with real controls |
-| 2 | Minimap | Minimap, Animation | Navigate galaxy with single click |
+| 2 ✅ | Minimap | Minimap, Animation | Navigate galaxy with single click |
 | 3 | Star Inspector | Inspector, ScrollView, Selection | Explore individual stars and connections |
 | 4 | Hyperlane Settings | Dropdown, Toggle, Collapsible Panel | Customize hyperlane appearance |
 | 5 | Performance Dashboard | Chart, Draggable Window | Monitor performance in real-time |

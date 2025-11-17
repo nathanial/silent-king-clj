@@ -1,5 +1,6 @@
 (ns silent-king.core
   (:require [silent-king.assets :as assets]
+            [silent-king.camera :as camera]
             [silent-king.state :as state]
             [silent-king.galaxy :as galaxy]
             [silent-king.hyperlanes :as hyperlanes]
@@ -26,39 +27,12 @@
 (defonce game-state (atom (state/create-game-state)))
 (defonce render-state (atom (state/create-render-state)))
 
-;; =============================================================================
-;; Non-Linear Transform Functions
-;; =============================================================================
-
-(def ^:const position-exponent 2.5)  ;; How fast positions spread apart
-(def ^:const size-exponent 1.3)      ;; How fast star sizes grow
-
-(defn zoom->position-scale
-  "Convert zoom to position scale factor using a power function.
-  This makes stars spread apart more dramatically when zooming in."
-  [zoom]
-  (Math/pow zoom position-exponent))
-
-(defn zoom->size-scale
-  "Convert zoom to size scale factor.
-  Kept linear (exponent 1.0) so stars don't grow as fast as they spread."
-  [zoom]
-  (Math/pow zoom size-exponent))
-
-(defn transform-position
-  "Transform world position to screen position using non-linear scale"
-  [world-pos zoom pan]
-  (+ (* world-pos (zoom->position-scale zoom)) pan))
-
-(defn transform-size
-  "Transform base size to rendered size using size scale"
-  [base-size zoom]
-  (* base-size (zoom->size-scale zoom)))
-
-(defn inverse-transform-position
-  "Convert screen position back to world position (inverse of transform-position)"
-  [screen-pos zoom pan]
-  (/ (- screen-pos pan) (zoom->position-scale zoom)))
+;; Backwards-compatibility aliases for widely-referenced camera helpers
+(def zoom->position-scale camera/zoom->position-scale)
+(def zoom->size-scale camera/zoom->size-scale)
+(def transform-position camera/transform-position)
+(def transform-size camera/transform-size)
+(def inverse-transform-position camera/inverse-transform-position)
 
 ;; =============================================================================
 ;; GLFW Initialization
@@ -266,6 +240,8 @@
 
   ;; Update camera animations
   (wanim/update-camera-animation! game-state)
+
+  (swap! game-state assoc-in [:widgets :viewport-size] {:width width :height height})
 
   (let [camera (state/get-camera game-state)
         assets (state/get-assets game-state)

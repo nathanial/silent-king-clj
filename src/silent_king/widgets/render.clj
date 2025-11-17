@@ -258,12 +258,13 @@
             transform (wminimap/compute-transform bounds world-bounds)
             density (wminimap/build-density-grid positions world-bounds)
             camera (state/get-camera game-state)
-            viewport-world (wminimap/camera->viewport camera)
+            viewport-size (wminimap/get-viewport-size game-state)
+            viewport-world (wminimap/camera->viewport camera viewport-size)
             cells (:cells density)
             bucket-count (:bucket-count density)
             cell-width (:cell-width density)
             cell-height (:cell-height density)
-            max-density (double (max 1 (apply max 0 (vals cells))))]
+            max-density (double (max 1 (if (seq cells) (apply max (vals cells)) 0)))]
 
         ;; Background panel
         (draw-rounded-rect canvas bounds bg-color border-radius nil)
