@@ -3,7 +3,8 @@
   (:require [silent-king.state :as state]
             [silent-king.widgets.core :as wcore]
             [silent-king.widgets.draw-order :as draw-order]
-            [silent-king.widgets.animation :as wanim]))
+            [silent-king.widgets.animation :as wanim]
+            [silent-king.widgets.minimap :as wminimap]))
 
 (set! *warn-on-reflection* true)
 
@@ -157,50 +158,26 @@
 
                        ;; Handle minimap click-to-navigate
                        (and (= widget-type :minimap) (not pressed?) (state/minimap-visible? game-state))
-                       (do
-                         (let [bounds (state/get-component widget :bounds)
-                               ;; Get all star entities to calculate world bounds
-                               star-entities (state/filter-entities-with game-state [:position])
-                               positions (map (fn [[_ e]] (state/get-component e :position)) star-entities)
-                               world-min-x (if (seq positions) (apply min (map :x positions)) -5000.0)
-                               world-max-x (if (seq positions) (apply max (map :x positions)) 5000.0)
-                               world-min-y (if (seq positions) (apply min (map :y positions)) -5000.0)
-                               world-max-y (if (seq positions) (apply max (map :y positions)) 5000.0)
-                               world-width (- world-max-x world-min-x)
-                               world-height (- world-max-y world-min-y)
-
-                               ;; Calculate scaling
-                               scale-x (/ (:width bounds) world-width)
-                               scale-y (/ (:height bounds) world-height)
-                               scale (min scale-x scale-y)
-
-                               ;; Convert click position to minimap-relative coordinates
-                               click-x-rel (- x (:x bounds))
-                               click-y-rel (- y (:y bounds))
-
-                               ;; Convert minimap coordinates to world coordinates
-                               world-x (+ world-min-x (/ click-x-rel scale))
-                               world-y (+ world-min-y (/ click-y-rel scale))
-
-                               ;; Get current camera
-                               camera (state/get-camera game-state)
-                               cam-zoom (:zoom camera)
-
-                               ;; Calculate target pan to center clicked world position
-                               target-pan-x (- (* world-x cam-zoom))
-                               target-pan-y (- (* world-y cam-zoom))]
-
-                           ;; Start smooth camera pan animation
-                           (wanim/start-camera-pan! game-state target-pan-x target-pan-y 0.5)
-                           true))
+                       (let [bounds (state/get-component widget :bounds)
+                             positions (wminimap/collect-star-positions game-state)
+                             world-bounds (wminimap/compute-world-bounds positions)
+                             transform (wminimap/compute-transform bounds world-bounds)
+                             {:keys [x y]} (wminimap/minimap->world transform x y)
+                             camera (state/get-camera game-state)
+                             cam-zoom (:zoom camera)
+                             target-pan-x (- (* x cam-zoom))
+                             target-pan-y (- (* y cam-zoom))]
+                         (wanim/start-camera-pan! game-state target-pan-x target-pan-y 0.5)
+                         true)
 
                        :else false))
                    false)]
-    (if pressed?
-      handled?
-      (let [had-active? (any-active-interactions? widgets)]
-        (reset-pressed-and-dragging! game-state widgets)
-        (or handled? had-active?)))))
+    (boolean
+     (if pressed?
+       handled?
+       (let [had-active? (any-active-interactions? widgets)]
+         (reset-pressed-and-dragging! game-state widgets)
+         (or handled? had-active?))))))
 
 ;; =============================================================================
 ;; Helper Functions

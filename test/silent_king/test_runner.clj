@@ -3,6 +3,7 @@
             [silent-king.widgets.core-test]
             [silent-king.widgets.interaction-test]
             [silent-king.widgets.draw-order-test]
+            [silent-king.widgets.minimap-test]
             [silent-king.widgets.layout-test]
             [silent-king.widgets.animation-test]))
 
@@ -12,6 +13,7 @@
   (let [result (apply t/run-tests '[silent-king.widgets.core-test
                                     silent-king.widgets.interaction-test
                                     silent-king.widgets.draw-order-test
+                                    silent-king.widgets.minimap-test
                                     silent-king.widgets.layout-test
                                     silent-king.widgets.animation-test])
         failures (+ (:fail result 0) (:error result 0))]

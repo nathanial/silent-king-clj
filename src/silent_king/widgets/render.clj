@@ -2,7 +2,8 @@
   "Widget rendering system using multi-method dispatch"
   (:require [silent-king.state :as state]
             [silent-king.widgets.core :as wcore]
-            [silent-king.widgets.draw-order :as draw-order])
+            [silent-king.widgets.draw-order :as draw-order]
+            [silent-king.widgets.minimap :as wminimap])
   (:import [io.github.humbleui.skija Canvas Paint Font Typeface PaintMode]
            [io.github.humbleui.types Rect RRect]))
 
@@ -242,89 +243,77 @@
         (draw-rounded-rect canvas bounds bg-color border-radius nil)))))
 
 (defmethod render-widget :minimap
-  [^Canvas canvas widget-entity game-state time]
+  [^Canvas canvas widget-entity game-state _time]
   (let [bounds (state/get-component widget-entity :bounds)
         visual (state/get-component widget-entity :visual)]
     (when (and (state/minimap-visible? game-state)
-               bounds (:x bounds) (:y bounds) (:width bounds) (:height bounds))
-      (let [x (:x bounds)
-            y (:y bounds)
-            width (:width bounds)
-            height (:height bounds)
-            bg-color (:background-color visual)
+               bounds (:width bounds) (:height bounds))
+      (let [bg-color (:background-color visual)
             border-color (:border-color visual)
             border-width (:border-width visual)
             border-radius (:border-radius visual)
-            star-color (or (:star-color visual) 0xFFFFFFFF)
             viewport-color (or (:viewport-color visual) 0xFFFF0000)
-
-            ;; Get all star entities
-            star-entities (state/filter-entities-with game-state [:position])
-
-            ;; Calculate world bounds
-            positions (map (fn [[_ entity]] (state/get-component entity :position)) star-entities)
-            world-min-x (if (seq positions) (apply min (map :x positions)) -5000.0)
-            world-max-x (if (seq positions) (apply max (map :x positions)) 5000.0)
-            world-min-y (if (seq positions) (apply min (map :y positions)) -5000.0)
-            world-max-y (if (seq positions) (apply max (map :y positions)) 5000.0)
-            world-width (- world-max-x world-min-x)
-            world-height (- world-max-y world-min-y)
-
-            ;; Calculate scaling to fit minimap
-            scale-x (/ width world-width)
-            scale-y (/ height world-height)
-            scale (min scale-x scale-y)
-
-            ;; Get current camera state
+            positions (wminimap/collect-star-positions game-state)
+            world-bounds (wminimap/compute-world-bounds positions)
+            transform (wminimap/compute-transform bounds world-bounds)
+            density (wminimap/build-density-grid positions world-bounds)
             camera (state/get-camera game-state)
-            cam-pan-x (:pan-x camera)
-            cam-pan-y (:pan-y camera)
-            cam-zoom (:zoom camera)]
+            viewport-world (wminimap/camera->viewport camera)
+            cells (:cells density)
+            bucket-count (:bucket-count density)
+            cell-width (:cell-width density)
+            cell-height (:cell-height density)
+            max-density (double (max 1 (apply max 0 (vals cells))))]
 
-        ;; Draw background
+        ;; Background panel
         (draw-rounded-rect canvas bounds bg-color border-radius nil)
 
-        ;; Draw all stars as small points
-        (.save canvas)
-        (doseq [[_ entity] star-entities]
-          (let [pos (state/get-component entity :position)
-                world-x (:x pos)
-                world-y (:y pos)
-                ;; Map world coordinates to minimap coordinates
-                map-x (+ x (* (- world-x world-min-x) scale))
-                map-y (+ y (* (- world-y world-min-y) scale))
-                star-paint (get-or-create-paint star-color)]
-            (.drawCircle canvas map-x map-y 1.0 star-paint)))
-        (.restore canvas)
+        ;; Density-based coloring
+        (doseq [[[ix iy] cell-count] cells]
+          (let [intensity (/ cell-count max-density)
+                color (wminimap/density-color intensity)
+                paint (get-or-create-paint color)
+                world-x0 (+ (:min-x world-bounds) (* ix cell-width))
+                world-y0 (+ (:min-y world-bounds) (* iy cell-height))
+                world-x1 (if (= (dec bucket-count) ix)
+                           (+ (:min-x world-bounds) (:span-x world-bounds))
+                           (+ world-x0 cell-width))
+                world-y1 (if (= (dec bucket-count) iy)
+                           (+ (:min-y world-bounds) (:span-y world-bounds))
+                           (+ world-y0 cell-height))
+                [map-x0 map-y0] (wminimap/world->minimap transform world-x0 world-y0)
+                [map-x1 map-y1] (wminimap/world->minimap transform world-x1 world-y1)
+                rect-x (float (min map-x0 map-x1))
+                rect-y (float (min map-y0 map-y1))
+                rect-w (float (max 1.0 (Math/abs (- map-x1 map-x0))))
+                rect-h (float (max 1.0 (Math/abs (- map-y1 map-y0))))]
+            (.drawRect canvas (Rect/makeXYWH rect-x rect-y rect-w rect-h) paint)))
 
-        ;; Draw viewport rectangle (showing current camera view)
-        ;; This is a simplified version - viewport calculation would need to account for non-linear transforms
-        (let [viewport-paint (get-or-create-paint viewport-color)
-              ;; Estimate viewport size in world space
-              ;; This is approximate - actual viewport depends on non-linear transform
-              viewport-world-width (/ 1280.0 cam-zoom)
-              viewport-world-height (/ 800.0 cam-zoom)
-              viewport-world-x (- (/ (- cam-pan-x) cam-zoom) (/ viewport-world-width 2))
-              viewport-world-y (- (/ (- cam-pan-y) cam-zoom) (/ viewport-world-height 2))
-              viewport-map-x (+ x (* (- viewport-world-x world-min-x) scale))
-              viewport-map-y (+ y (* (- viewport-world-y world-min-y) scale))
-              viewport-map-width (* viewport-world-width scale)
-              viewport-map-height (* viewport-world-height scale)]
-          (doto viewport-paint (.setMode PaintMode/STROKE) (.setStrokeWidth 2.0))
-          (.drawRect canvas (Rect/makeXYWH viewport-map-x viewport-map-y
-                                          viewport-map-width viewport-map-height)
-                    viewport-paint)
+        ;; Camera viewport rectangle
+        (let [[vx0 vy0] (wminimap/world->minimap transform (:min-x viewport-world) (:min-y viewport-world))
+              [vx1 vy1] (wminimap/world->minimap transform (:max-x viewport-world) (:max-y viewport-world))
+              rect (Rect/makeXYWH (float (min vx0 vx1))
+                                  (float (min vy0 vy1))
+                                  (float (Math/abs (- vx1 vx0)))
+                                  (float (Math/abs (- vy1 vy0))))
+              viewport-paint (doto (get-or-create-paint viewport-color)
+                               (.setMode PaintMode/STROKE)
+                               (.setStrokeWidth 2.0))]
+          (.drawRect canvas rect viewport-paint)
           (doto viewport-paint (.setMode PaintMode/FILL)))
 
-        ;; Draw border (if specified)
+        ;; Border
         (when (and border-color border-width)
           (let [border-paint (doto (get-or-create-paint border-color)
                               (.setMode PaintMode/STROKE)
                               (.setStrokeWidth (float border-width)))
-                rrect (RRect/makeXYWH (float x) (float y) (float width) (float height) (float border-radius))]
+                rrect (RRect/makeXYWH (float (:x bounds))
+                                      (float (:y bounds))
+                                      (float (:width bounds))
+                                      (float (:height bounds))
+                                      (float border-radius))]
             (.drawRRect canvas rrect border-paint)
-            (doto border-paint (.setMode PaintMode/FILL))  ; Reset to FILL mode
-            ))))))
+            (doto border-paint (.setMode PaintMode/FILL))))))))
 
 ;; Default rendering (for unknown widget types)
 (defmethod render-widget :default
