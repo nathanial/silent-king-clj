@@ -2,6 +2,7 @@
   (:require [silent-king.assets :as assets]
             [silent-king.state :as state]
             [silent-king.galaxy :as galaxy]
+            [silent-king.hyperlanes :as hyperlanes]
             [nrepl.server :as nrepl]
             [cider.nrepl :refer [cider-nrepl-handler]])
   (:import [org.lwjgl.glfw GLFW GLFWErrorCallback GLFWCursorPosCallbackI GLFWMouseButtonCallbackI GLFWScrollCallbackI]
@@ -285,6 +286,11 @@
 
     ;; Note: No canvas transform needed - we calculate screen positions per-star with non-linear scaling
 
+    ;; Draw hyperlanes BEFORE stars (so they appear as background connections)
+    (let [hyperlanes-rendered (hyperlanes/draw-all-hyperlanes canvas width height zoom pan-x pan-y game-state time)]
+      ;; Store hyperlane count for UI display
+      (swap! game-state assoc-in [:debug :hyperlanes-rendered] hyperlanes-rendered))
+
     ;; Draw visible stars using 4-level LOD
     (doseq [[_ entity] visible-stars]
       (let [pos (state/get-component entity :position)
@@ -315,12 +321,14 @@
                             :xs "XS atlas (64x64, far zoom)"
                             :small "Small atlas (128x128, medium zoom)"
                             :medium "Medium atlas (256x256, close zoom)"
-                            :full "Full resolution images (highest quality)")]
+                            :full "Full resolution images (highest quality)")
+          hyperlanes-count (get-in @game-state [:debug :hyperlanes-rendered] 0)]
       (.drawString canvas "Silent King - Star Gallery" (float 20) (float 30) font paint)
       (.drawString canvas (str "Stars: " total-count " (visible: " visible-count ")") (float 20) (float 60) font paint)
-      (.drawString canvas (str "Zoom: " (format "%.2f" zoom) "x") (float 20) (float 90) font paint)
-      (.drawString canvas (str "LOD: " lod-description) (float 20) (float 120) font paint)
-      (.drawString canvas "Controls: Click-Drag=Pan, Scroll=Zoom" (float 20) (float 150) font paint)
+      (.drawString canvas (str "Hyperlanes: " hyperlanes-count " rendered") (float 20) (float 90) font paint)
+      (.drawString canvas (str "Zoom: " (format "%.2f" zoom) "x") (float 20) (float 120) font paint)
+      (.drawString canvas (str "LOD: " lod-description) (float 20) (float 150) font paint)
+      (.drawString canvas "Controls: Click-Drag=Pan, Scroll=Zoom" (float 20) (float 180) font paint)
       (.close font)
       (.close paint))))
 
@@ -440,7 +448,10 @@
         (state/set-assets! game-state loaded-assets)
 
         ;; Generate star entities with noise-based clustering
-        (galaxy/generate-galaxy-entities! game-state star-images 10000))
+        (galaxy/generate-galaxy-entities! game-state star-images 10000)
+
+        ;; Generate hyperlane connections using Delaunay triangulation
+        (hyperlanes/generate-delaunay-hyperlanes! game-state))
 
       ;; Run render loop
       (render-loop game-state render-state))
