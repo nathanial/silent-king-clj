@@ -107,7 +107,6 @@
         ;; Approximate vertical centering (font metrics would be more accurate)
         y (+ (:y bounds) (/ (:height bounds) 2.0) (/ font-size 3.0))]
     (.drawString canvas (str text) (float x) (float y) font paint)
-    (.close text-line)
     (.close font)))
 
 ;; =============================================================================
