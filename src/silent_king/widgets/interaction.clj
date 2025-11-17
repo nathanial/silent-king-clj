@@ -1,7 +1,8 @@
 (ns silent-king.widgets.interaction
   "Widget interaction system - hit testing and event handling"
   (:require [silent-king.state :as state]
-            [silent-king.widgets.core :as wcore]))
+            [silent-king.widgets.core :as wcore]
+            [silent-king.widgets.draw-order :as draw-order]))
 
 (set! *warn-on-reflection* true)
 
@@ -22,11 +23,7 @@
 (defn- widget-at-point
   "Return the first widget matching the screen coordinate from a cached list."
   [widgets x y]
-  (let [sorted-widgets (sort-by
-                        (fn [[_ w]]
-                          (get-in (state/get-component w :layout) [:z-index] 0))
-                        >
-                        widgets)]
+  (let [sorted-widgets (reverse widgets)]
     (some (fn [[entity-id widget]]
             (let [bounds (state/get-component widget :bounds)
                   interaction (state/get-component widget :interaction)]
@@ -39,7 +36,8 @@
   "Find topmost widget at screen coordinates (x, y).
   Returns [entity-id widget-entity] or nil if no widget found."
   [game-state x y]
-  (widget-at-point (wcore/get-all-widgets game-state) x y))
+  (let [widgets (draw-order/sort-for-render game-state (wcore/get-all-widgets game-state))]
+    (widget-at-point widgets x y)))
 
 ;; =============================================================================
 ;; Mouse Event Handlers
@@ -48,7 +46,7 @@
 (defn handle-mouse-move
   "Handle mouse move event. Returns true if a widget handled the event."
   [game-state x y]
-  (let [widgets (wcore/get-all-widgets game-state)
+  (let [widgets (draw-order/sort-for-render game-state (wcore/get-all-widgets game-state))
         hovered-widget (widget-at-point widgets x y)]
 
     ;; Update hover state for all widgets
@@ -114,7 +112,7 @@
 (defn handle-mouse-click
   "Handle mouse button press/release. Returns true if a widget handled the event."
   [game-state x y pressed?]
-  (let [widgets (wcore/get-all-widgets game-state)
+  (let [widgets (draw-order/sort-for-render game-state (wcore/get-all-widgets game-state))
         target-widget (widget-at-point widgets x y)
         handled? (if-let [[entity-id widget] target-widget]
                    (let [widget-data (state/get-component widget :widget)
