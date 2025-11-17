@@ -23,6 +23,7 @@
    :arm-alignment-sharpness 1.8
    :arm-randomness-core 0.05
    :arm-randomness 0.18
+   :arm-edge-tightening 0.35 ; 0..1 - lower keeps outer arms tighter
    :radial-bias 1.18        ; >1.0 concentrates more mass near the core
    :radial-jitter 0.05      ; fraction of max radius used as jitter
    :core-density-power 0.45
@@ -95,7 +96,7 @@
   [noise-gen]
   (let [{:keys [center-x center-y max-radius arm-count arm-turns arm-spread core-arm-spread
                 arm-flare-power arm-alignment-weight arm-alignment-sharpness
-                arm-randomness arm-randomness-core
+                arm-randomness arm-randomness-core arm-edge-tightening
                 radial-bias radial-jitter core-density-power
                 noise-density-weight density-jitter]}
         galaxy-config
@@ -116,11 +117,15 @@
         randomness-edge (max randomness-core (double (or arm-randomness 0.0)))
         randomness-scale (+ randomness-core
                             (* (- randomness-edge randomness-core) spread-blend))
+        tightening (clamp (or arm-edge-tightening 1.0) 0.0 1.0)
+        edge-factor (+ (* (- 1.0 normalized-radius) (- 1.0 tightening))
+                       tightening)
         arm-index (rand-int arm-count)
         spiral-angle (* normalized-radius arm-turns (* 2.0 Math/PI))
         base-angle (+ (* arm-index angle-step) spiral-angle)
-        offset (+ (rand-normal 0.0 (* 0.7 effective-spread))
-                  (* randomness-scale (- (rand) 0.5)))
+        gaussian-offset (rand-normal 0.0 (* 0.7 effective-spread edge-factor))
+        jitter-offset (* randomness-scale edge-factor (- (rand) 0.5))
+        offset (+ gaussian-offset jitter-offset)
         angle (+ base-angle offset)
         x (+ center-x (* radius (Math/cos angle)))
         y (+ center-y (* radius (Math/sin angle)))
