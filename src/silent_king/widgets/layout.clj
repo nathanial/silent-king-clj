@@ -1,6 +1,7 @@
 (ns silent-king.widgets.layout
   "Layout invalidation and processing system"
-  (:require [silent-king.state :as state]))
+  (:require [silent-king.state :as state]
+            [silent-king.widgets.config :as wconfig]))
 
 (set! *warn-on-reflection* true)
 
@@ -10,7 +11,10 @@
 
 (defn apply-anchor-position
   "Apply anchor positioning to widget bounds based on viewport size.
-  Anchors: :top-left, :top-right, :bottom-left, :bottom-right, :center"
+  Anchors: :top-left, :top-right, :bottom-left, :bottom-right, :center
+
+  NOTE: Viewport dimensions are in screen space, but widget bounds are in widget space.
+  We need to convert viewport dimensions to widget space by dividing by ui-scale."
   [bounds layout viewport-width viewport-height]
   (let [{:keys [anchor margin]} layout
         margin-top (or (:top margin) (:all margin) 0)
@@ -18,7 +22,10 @@
         margin-bottom (or (:bottom margin) (:all margin) 0)
         margin-left (or (:left margin) (:all margin) 0)
         widget-width (:width bounds)
-        widget-height (:height bounds)]
+        widget-height (:height bounds)
+        ;; Convert viewport from screen space to widget space
+        widget-space-width (/ viewport-width wconfig/ui-scale)
+        widget-space-height (/ viewport-height wconfig/ui-scale)]
 
     (case (or anchor :top-left)
       :top-left
@@ -28,23 +35,23 @@
 
       :top-right
       (assoc bounds
-             :x (- viewport-width widget-width margin-right)
+             :x (- widget-space-width widget-width margin-right)
              :y (+ margin-top (:y bounds 0)))
 
       :bottom-left
       (assoc bounds
              :x (+ margin-left (:x bounds 0))
-             :y (- viewport-height widget-height margin-bottom))
+             :y (- widget-space-height widget-height margin-bottom))
 
       :bottom-right
       (assoc bounds
-             :x (- viewport-width widget-width margin-right)
-             :y (- viewport-height widget-height margin-bottom))
+             :x (- widget-space-width widget-width margin-right)
+             :y (- widget-space-height widget-height margin-bottom))
 
       :center
       (assoc bounds
-             :x (/ (- viewport-width widget-width) 2)
-             :y (/ (- viewport-height widget-height) 2))
+             :x (/ (- widget-space-width widget-width) 2)
+             :y (/ (- widget-space-height widget-height) 2))
 
       ;; Default: use provided x/y with margins
       (assoc bounds

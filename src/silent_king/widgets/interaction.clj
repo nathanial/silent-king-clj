@@ -4,13 +4,19 @@
             [silent-king.widgets.core :as wcore]
             [silent-king.widgets.draw-order :as draw-order]
             [silent-king.widgets.animation :as wanim]
-            [silent-king.widgets.minimap :as wminimap]))
+            [silent-king.widgets.minimap :as wminimap]
+            [silent-king.widgets.config :as wconfig]))
 
 (set! *warn-on-reflection* true)
 
 ;; =============================================================================
 ;; Hit Testing
 ;; =============================================================================
+
+(defn screen->widget-coords
+  "Transform screen coordinates to widget coordinate space (accounting for UI scale)"
+  [x y]
+  [(/ x wconfig/ui-scale) (/ y wconfig/ui-scale)])
 
 (defn point-in-bounds?
   "Check if point (x, y) is inside bounds"
@@ -23,14 +29,16 @@
        (<= y (+ (:y bounds) (:height bounds)))))
 
 (defn- widget-at-point
-  "Return the first widget matching the screen coordinate from a cached list."
+  "Return the first widget matching the screen coordinate from a cached list.
+  Screen coordinates are automatically transformed to widget space."
   [widgets x y]
-  (let [sorted-widgets (reverse widgets)]
+  (let [sorted-widgets (reverse widgets)
+        [widget-x widget-y] (screen->widget-coords x y)]
     (some (fn [[entity-id widget]]
             (let [bounds (state/get-component widget :bounds)
                   interaction (state/get-component widget :interaction)]
               (when (and (:enabled interaction)
-                         (point-in-bounds? x y bounds))
+                         (point-in-bounds? widget-x widget-y bounds))
                 [entity-id widget])))
           sorted-widgets)))
 
@@ -49,7 +57,9 @@
   "Handle mouse move event. Returns true if a widget handled the event."
   [game-state x y]
   (let [widgets (draw-order/sort-for-render game-state (wcore/get-all-widgets game-state))
-        hovered-widget (widget-at-point widgets x y)]
+        hovered-widget (widget-at-point widgets x y)
+        ;; Transform screen coordinates to widget space for slider dragging
+        [widget-x widget-y] (screen->widget-coords x y)]
 
     ;; Update hover state for all widgets
     (doseq [[entity-id widget] widgets]
@@ -71,8 +81,8 @@
                 min-val (:min value-data)
                 max-val (:max value-data)
                 step (:step value-data)
-                ;; Calculate new value based on mouse position
-                normalized (/ (- x (:x bounds)) (:width bounds))
+                ;; Calculate new value based on mouse position (using widget-space coordinates)
+                normalized (/ (- widget-x (:x bounds)) (:width bounds))
                 clamped (max 0.0 (min 1.0 normalized))
                 raw-value (+ min-val (* clamped (- max-val min-val)))
                 ;; Round to step
@@ -116,6 +126,8 @@
   [game-state x y pressed?]
   (let [widgets (draw-order/sort-for-render game-state (wcore/get-all-widgets game-state))
         target-widget (widget-at-point widgets x y)
+        ;; Transform screen coordinates to widget space
+        [widget-x widget-y] (screen->widget-coords x y)
         handled? (if-let [[entity-id widget] target-widget]
                    (let [widget-data (state/get-component widget :widget)
                          interaction (state/get-component widget :interaction)
@@ -156,13 +168,13 @@
                                               #(assoc-in % [:components :interaction :dragging] false))
                          true)
 
-                       ;; Handle minimap click-to-navigate
+                       ;; Handle minimap click-to-navigate (uses widget-space coordinates)
                        (and (= widget-type :minimap) (not pressed?) (state/minimap-visible? game-state))
                        (let [bounds (state/get-component widget :bounds)
                              positions (wminimap/collect-star-positions game-state)
                              world-bounds (wminimap/compute-world-bounds positions)
                              transform (wminimap/compute-transform bounds world-bounds)
-                             world-pos (wminimap/minimap->world transform x y)
+                             world-pos (wminimap/minimap->world transform widget-x widget-y)
                              camera (state/get-camera game-state)
                              viewport-size (wminimap/get-viewport-size game-state)
                              {:keys [pan-x pan-y]} (wminimap/target-pan world-pos (:zoom camera) viewport-size)]

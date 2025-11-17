@@ -3,7 +3,8 @@
   (:require [silent-king.state :as state]
             [silent-king.widgets.core :as wcore]
             [silent-king.widgets.draw-order :as draw-order]
-            [silent-king.widgets.minimap :as wminimap])
+            [silent-king.widgets.minimap :as wminimap]
+            [silent-king.widgets.config :as wconfig])
   (:import [io.github.humbleui.skija Canvas Paint Font Typeface PaintMode]
            [io.github.humbleui.types Rect RRect]))
 
@@ -326,11 +327,18 @@
 ;; =============================================================================
 
 (defn render-all-widgets
-  "Render all widgets sorted by z-index and hierarchy depth"
+  "Render all widgets sorted by z-index and hierarchy depth.
+  Applies global UI scale using canvas transformation."
   [^Canvas canvas game-state time]
   (let [widgets (wcore/get-all-widgets game-state)
         sorted-widgets (draw-order/sort-for-render game-state widgets)]
 
-    ;; Render each widget
+    ;; Save canvas state, apply UI scale, render widgets, then restore
+    (.save canvas)
+    (.scale canvas (float wconfig/ui-scale) (float wconfig/ui-scale))
+
+    ;; Render each widget (widgets use their base coordinates, Skia scales them)
     (doseq [[entity-id widget] sorted-widgets]
-      (render-widget canvas widget game-state time))))
+      (render-widget canvas widget game-state time))
+
+    (.restore canvas)))
