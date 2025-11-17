@@ -17,6 +17,14 @@
   "Reset entity ID counter (useful for testing)"
   (reset! entity-id-counter 0))
 
+(def default-hyperlane-settings
+  {:enabled? true
+   :opacity 0.9
+   :color-scheme :blue
+   :animation? true
+   :animation-speed 1.0
+   :line-width 1.0})
+
 ;; =============================================================================
 ;; Game State Structure
 ;; =============================================================================
@@ -59,9 +67,18 @@
                          :current-x 0.0
                          :target-x 0.0
                          :slide-speed 10.0
-                         :panel-entity nil}}
+                         :panel-entity nil}
+        :hyperlane-settings {:expanded? false
+                             :target 0.0
+                             :progress 0.0
+                             :collapsed-height 64.0
+                             :expanded-height 320.0
+                             :animation-speed 8.0
+                             :panel-entity nil
+                             :body-entities []}}
    :features {:hyperlanes? true
-              :minimap? true}})
+              :minimap? true}
+   :hyperlane-settings default-hyperlane-settings})
 
 (defn create-render-state []
   "Create initial render state structure"
@@ -175,10 +192,31 @@
   [game-state]
   (:assets @game-state))
 
+(defn hyperlane-settings
+  "Return merged hyperlane settings."
+  [game-state]
+  (merge default-hyperlane-settings
+         (:hyperlane-settings @game-state)))
+
+(defn set-hyperlane-setting!
+  "Set a single hyperlane setting (e.g., :opacity, :line-width)."
+  [game-state key value]
+  (swap! game-state update :hyperlane-settings
+         (fn [settings]
+           (assoc (merge default-hyperlane-settings settings) key value)))
+  (when (= key :enabled?)
+    (swap! game-state assoc-in [:features :hyperlanes?] (boolean value))))
+
+(defn reset-hyperlane-settings!
+  "Reset hyperlane settings to defaults."
+  [game-state]
+  (swap! game-state assoc :hyperlane-settings default-hyperlane-settings)
+  (swap! game-state assoc-in [:features :hyperlanes?] (:enabled? default-hyperlane-settings)))
+
 (defn hyperlanes-enabled?
   "Return true if hyperlanes should be rendered"
   [game-state]
-  (get-in @game-state [:features :hyperlanes?] true))
+  (get (hyperlane-settings game-state) :enabled? true))
 
 (defn minimap-visible?
   "Return true if minimap should be rendered"
@@ -212,7 +250,8 @@
 (defn toggle-hyperlanes!
   "Toggle hyperlane visibility flag"
   [game-state]
-  (swap! game-state update-in [:features :hyperlanes?] not))
+  (let [current (hyperlanes-enabled? game-state)]
+    (set-hyperlane-setting! game-state :enabled? (not current))))
 
 (defn toggle-minimap!
   "Toggle minimap visibility flag"

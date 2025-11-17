@@ -244,6 +244,116 @@
           thumb-size (if (:hovered interaction) (* thumb-radius 1.1) thumb-radius)]
       (.drawCircle canvas (float thumb-x) (float thumb-y) (float thumb-size) paint))))
 
+(defmethod render-widget :toggle
+  [^Canvas canvas widget-entity _game-state _time]
+  (let [bounds (state/get-component widget-entity :bounds)
+        visual (state/get-component widget-entity :visual)
+        value (state/get-component widget-entity :value)
+        interaction (state/get-component widget-entity :interaction)]
+    (when (and bounds (:width bounds) (:height bounds))
+      (let [label (:label visual "Toggle")
+            label-color (:label-color visual 0xFFEEEEEE)
+            checked? (:checked? value)
+            track-width 48.0
+            track-height 22.0
+            track-x (+ (:x bounds) (- (:width bounds) track-width))
+            track-y (+ (:y bounds) (/ (- (:height bounds) track-height) 2.0))
+            base-color (if checked?
+                         (:track-on-color visual 0xFF3DD598)
+                         (:track-off-color visual 0xFF555555))
+            track-color (cond
+                          (:pressed interaction) (darken base-color 0.1)
+                          (:hovered interaction) (lighten base-color 0.1)
+                          :else base-color)
+            thumb-radius 10.0
+            thumb-x (if checked?
+                      (+ track-x track-width -12.0)
+                      (+ track-x 12.0))
+            thumb-y (+ track-y (/ track-height 2.0))]
+        (draw-text canvas label (+ (:x bounds) 4) (+ (:y bounds) 22) label-color 14)
+        (let [paint (get-or-create-paint track-color)
+              rrect (RRect/makeXYWH (float track-x) (float track-y)
+                                    (float track-width) (float track-height) (float (/ track-height 2.0)))]
+          (.drawRRect canvas rrect paint))
+        (let [paint (get-or-create-paint (:thumb-color visual 0xFFFFFFFF))]
+          (.drawCircle canvas (float thumb-x) (float thumb-y) (float thumb-radius) paint))))))
+
+(defn- dropdown-selected-label
+  [value]
+  (let [{:keys [options selected]} value]
+    (if-let [match (some #(when (= (:value %) selected) %) options)]
+      (:label match)
+      "Select")))
+
+(defmethod render-widget :dropdown
+  [^Canvas canvas widget-entity _game-state _time]
+  (let [bounds (state/get-component widget-entity :bounds)
+        visual (state/get-component widget-entity :visual)
+        value (state/get-component widget-entity :value)]
+    (when (and bounds (:width bounds) (:height bounds))
+      (let [bg-color (:background-color visual 0xFF1E1E1E)
+            border-color (:border-color visual 0xFF444444)
+            text-color (:text-color visual 0xFFEEEEEE)
+            option-hover-color (:option-hover-color visual 0x33222222)
+            options (:options value)
+            expanded? (:expanded? value)
+            option-height (double (:option-height value))
+            base-height (double (:base-height value))]
+        (draw-rounded-rect canvas
+                           {:x (:x bounds)
+                            :y (:y bounds)
+                            :width (:width bounds)
+                            :height base-height}
+                           bg-color 8.0 nil)
+        (let [border-paint (doto (Paint.)
+                             (.setColor (unchecked-int border-color))
+                             (.setMode PaintMode/STROKE)
+                             (.setStrokeWidth 1.5))
+              rect (RRect/makeXYWH (float (:x bounds))
+                                   (float (:y bounds))
+                                   (float (:width bounds))
+                                   (float base-height)
+                                   8.0)]
+          (.drawRRect canvas rect border-paint)
+          (.close border-paint))
+        (draw-text canvas (dropdown-selected-label value)
+                   (+ (:x bounds) 12)
+                   (+ (:y bounds) 24)
+                   text-color 14)
+        (let [arrow-x (+ (:x bounds) (- (:width bounds) 24))
+              arrow-y (+ (:y bounds) 18)
+              arrow-paint (get-or-create-paint text-color)]
+          (.drawLine canvas (float (- arrow-x 6)) (float arrow-y)
+                     (float arrow-x) (float (+ arrow-y 6)) arrow-paint)
+          (.drawLine canvas (float arrow-x) (float (+ arrow-y 6))
+                     (float (+ arrow-x 6)) (float arrow-y) arrow-paint))
+        (when expanded?
+          (let [options-y (+ (:y bounds) base-height)
+                width (:width bounds)
+                drop-height (+ base-height (* option-height (count options)))]
+            (draw-rounded-rect canvas
+                               {:x (:x bounds)
+                                :y options-y
+                                :width width
+                                :height (- drop-height base-height)}
+                               0xFF151515 8.0 nil)
+            (doseq [[idx {:keys [label]}] (map-indexed vector options)]
+              (let [item-y (+ options-y (* idx option-height))
+                    hover? (= (:hover-index value) idx)]
+                (when hover?
+                  (let [paint (get-or-create-paint option-hover-color)]
+                    (.drawRect canvas
+                               (Rect/makeXYWH (float (:x bounds))
+                                              (float item-y)
+                                              (float width)
+                                              (float option-height))
+                               paint)))
+                (draw-text canvas label
+                           (+ (:x bounds) 12)
+                           (+ item-y 22)
+                           text-color
+                           14)))))))))
+
 ;; VStack rendering (renders container, children rendered separately)
 (defmethod render-widget :vstack
   [^Canvas canvas widget-entity game-state time]

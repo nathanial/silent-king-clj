@@ -11,12 +11,32 @@
 ;; Hyperlane visual configuration
 (def ^:private hyperlane-config
   {:base-width 2.0
-   :color-start 0xFF6699FF  ; Light blue
-   :color-end 0xFF3366CC    ; Dark blue
-   :glow-color 0x406699FF   ; Transparent light blue for glow
-   :pulse-speed 0.5         ; Animation cycles per second
-   :pulse-amplitude 0.3     ; Width variation (0-1)
-   :min-visible-length 1.0}) ; Minimum screen-space length to render (pixels)
+   :color-start 0xFF6699FF
+   :color-end 0xFF3366CC
+   :glow-color 0x406699FF
+   :pulse-speed 0.5
+   :pulse-amplitude 0.3
+   :min-visible-length 1.0})
+
+(def ^:private color-schemes
+  {:blue {:start 0xFF6699FF
+          :end 0xFF3366CC
+          :glow 0x406699FF}
+   :red {:start 0xFFFF5D5D
+         :end 0xFFC0392B
+         :glow 0x40FF5D5D}
+   :green {:start 0xFF66FF99
+           :end 0xFF2ECC71
+           :glow 0x4066FF99}
+   :rainbow {:start 0xFFFFC857
+             :end 0xFF00C2FF
+             :glow 0x40FFC857}})
+
+(defn- apply-opacity
+  [color opacity]
+  (let [alpha (int (Math/round (* 255.0 (max 0.0 (min 1.0 opacity)))))
+        rgb (bit-and color 0x00FFFFFF)]
+    (unchecked-int (bit-or (bit-shift-left alpha 24) rgb))))
 
 ;; Line segment frustum culling using Cohen-Sutherland algorithm
 (defn- compute-outcode [x y width height]
@@ -118,121 +138,91 @@
   "Draw all hyperlanes with LOD based on zoom level.
   Renders hyperlanes BEFORE stars so they appear as background connections."
   [^Canvas canvas width height zoom pan-x pan-y game-state current-time]
-  (let [;; Query all hyperlane entities
-        hyperlane-entities (state/filter-entities-with game-state [:hyperlane])
+  (let [hyperlane-entities (state/filter-entities-with game-state [:hyperlane])
         all-entities @game-state
-
-        ;; Determine LOD level based on zoom
+        settings (state/hyperlane-settings game-state)
+        scheme (get color-schemes (:color-scheme settings) (:blue color-schemes))
+        opacity (double (max 0.05 (min 1.0 (:opacity settings 0.9))))
+        animation? (:animation? settings true)
+        animation-speed (double (max 0.1 (min 3.0 (:animation-speed settings 1.0))))
+        width-scale (double (max 0.4 (min 3.0 (:line-width settings 1.0))))
+        start-color (apply-opacity (:start scheme (:color-start hyperlane-config)) opacity)
+        end-color (apply-opacity (:end scheme (:color-end hyperlane-config)) opacity)
+        glow-color (apply-opacity (:glow scheme (:glow-color hyperlane-config)) opacity)
         lod-level (cond
-                    (< zoom 0.8) :far     ; Simple thin lines
-                    (< zoom 2.0) :medium  ; Thicker colored lines
-                    :else :close)         ; Gradient lines with glow and animation
-
-        ;; Count rendered hyperlanes for debugging
-        rendered (atom 0)]
-
+                    (< zoom 0.8) :far
+                    (< zoom 2.0) :medium
+                    :else :close)
+        rendered (atom 0)
+        pulse-frequency (* (:pulse-speed hyperlane-config) animation-speed)]
     (doseq [[_ hyperlane-entity] hyperlane-entities]
       (let [hyperlane-data (state/get-component hyperlane-entity :hyperlane)
             visual (state/get-component hyperlane-entity :visual)
-
-            ;; Get star entities and positions
             from-entity (get-in all-entities [:entities (:from-id hyperlane-data)])
-            to-entity (get-in all-entities [:entities (:to-id hyperlane-data)])
-
-            ;; Skip if either star doesn't exist
-            _ (when (or (nil? from-entity) (nil? to-entity))
-                (throw (ex-info "Invalid hyperlane: missing star entity"
-                                {:from-id (:from-id hyperlane-data)
-                                 :to-id (:to-id hyperlane-data)})))]
-
+            to-entity (get-in all-entities [:entities (:to-id hyperlane-data)])]
         (when (and from-entity to-entity)
           (let [from-pos (state/get-component from-entity :position)
                 to-pos (state/get-component to-entity :position)
-
-                ;; Transform to screen coordinates with non-linear scaling
                 from-x (camera/transform-position (:x from-pos) zoom pan-x)
                 from-y (camera/transform-position (:y from-pos) zoom pan-y)
                 to-x (camera/transform-position (:x to-pos) zoom pan-x)
                 to-y (camera/transform-position (:y to-pos) zoom pan-y)
-
-                ;; Calculate screen-space length for distance culling
                 dx (- to-x from-x)
                 dy (- to-y from-y)
                 screen-length (Math/sqrt (+ (* dx dx) (* dy dy)))]
-
-            ;; Frustum culling and distance culling
             (when (and (line-segment-visible? from-x from-y to-x to-y width height)
                        (> screen-length (:min-visible-length hyperlane-config)))
-
               (swap! rendered inc)
+              (let [line-width-base (camera/transform-size (* (:base-width visual) width-scale) zoom)]
+                (case lod-level
+                  :far
+                  (let [paint (doto (Paint.)
+                                (.setColor (unchecked-int start-color))
+                                (.setStrokeWidth (float (max 1.0 (* width-scale 1.0))))
+                                (.setMode PaintMode/STROKE))]
+                    (.drawLine canvas (float from-x) (float from-y)
+                               (float to-x) (float to-y) paint)
+                    (.close paint))
 
-              ;; Render based on LOD level
-              (case lod-level
-                ;; Far zoom: Simple thin lines (1px, solid color)
-                :far
-                (let [paint (doto (Paint.)
-                              (.setColor (unchecked-int (:color-start visual)))
-                              (.setStrokeWidth (float 1.0))
-                              (.setMode PaintMode/STROKE))]
-                  (.drawLine canvas (float from-x) (float from-y)
-                             (float to-x) (float to-y) paint)
-                  (.close paint))
+                  :medium
+                  (let [paint (doto (Paint.)
+                                (.setColor (unchecked-int start-color))
+                                (.setStrokeWidth (float line-width-base))
+                                (.setStrokeCap PaintStrokeCap/ROUND)
+                                (.setMode PaintMode/STROKE))]
+                    (.drawLine canvas (float from-x) (float from-y)
+                               (float to-x) (float to-y) paint)
+                    (.close paint))
 
-                ;; Medium zoom: Thicker colored lines with rounded caps
-                :medium
-                (let [line-width (camera/transform-size (:base-width visual) zoom)
-                      paint (doto (Paint.)
-                              (.setColor (unchecked-int (:color-start visual)))
-                              (.setStrokeWidth (float line-width))
-                              (.setStrokeCap PaintStrokeCap/ROUND)
-                              (.setMode PaintMode/STROKE))]
-                  (.drawLine canvas (float from-x) (float from-y)
-                             (float to-x) (float to-y) paint)
-                  (.close paint))
-
-                ;; Close zoom: Gradient lines with glow effect and animated pulsing
-                :close
-                (let [line-width (camera/transform-size (:base-width visual) zoom)
-
-                      ;; Animated pulsing width
-                      animation-phase (+ (* current-time (:pulse-speed hyperlane-config) Math/PI 2)
-                                        (:animation-offset visual))
-                      pulse (Math/sin animation-phase)
-                      width-multiplier (+ 1.0 (* pulse (:pulse-amplitude hyperlane-config)))
-                      animated-width (* line-width width-multiplier)
-
-                      ;; Glow effect (draw wider transparent line underneath)
-                      glow-width (* animated-width 3.0)
-                      glow-paint (doto (Paint.)
-                                   (.setColor (unchecked-int (:glow-color visual)))
-                                   (.setStrokeWidth (float glow-width))
-                                   (.setStrokeCap PaintStrokeCap/ROUND)
-                                   (.setMode PaintMode/STROKE))
-
-                      ;; Gradient shader
-                      colors (int-array [(:color-start visual) (:color-end visual)])
-                      shader (Shader/makeLinearGradient
-                              (float from-x) (float from-y)
-                              (float to-x) (float to-y)
-                              colors nil)
-
-                      ;; Main line with gradient
-                      main-paint (doto (Paint.)
-                                   (.setShader shader)
-                                   (.setStrokeWidth (float animated-width))
-                                   (.setStrokeCap PaintStrokeCap/ROUND)
-                                   (.setMode PaintMode/STROKE))]
-
-                  ;; Draw glow first (underneath)
-                  (.drawLine canvas (float from-x) (float from-y)
-                             (float to-x) (float to-y) glow-paint)
-                  (.close glow-paint)
-
-                  ;; Draw main line on top
-                  (.drawLine canvas (float from-x) (float from-y)
-                             (float to-x) (float to-y) main-paint)
-                  (.close shader)
-                  (.close main-paint))))))))
-
-    ;; Return count for debugging/UI
+                  :close
+                  (let [animation-phase (+ (* current-time pulse-frequency Math/PI 2)
+                                           (:animation-offset visual))
+                        pulse (if animation? (Math/sin animation-phase) 0.0)
+                        width-multiplier (if animation?
+                                           (+ 1.0 (* pulse (:pulse-amplitude hyperlane-config)))
+                                           1.0)
+                        animated-width (* line-width-base width-multiplier)
+                        glow-width (* animated-width 3.0)
+                        glow-paint (doto (Paint.)
+                                     (.setColor (unchecked-int glow-color))
+                                     (.setStrokeWidth (float glow-width))
+                                     (.setStrokeCap PaintStrokeCap/ROUND)
+                                     (.setMode PaintMode/STROKE))
+                        colors (int-array [start-color end-color])
+                        shader (Shader/makeLinearGradient
+                                (float from-x) (float from-y)
+                                (float to-x) (float to-y)
+                                colors nil)
+                        main-paint (doto (Paint.)
+                                     (.setShader shader)
+                                     (.setStrokeWidth (float animated-width))
+                                     (.setStrokeCap PaintStrokeCap/ROUND)
+                                     (.setMode PaintMode/STROKE))]
+                    (.drawLine canvas (float from-x) (float from-y)
+                               (float to-x) (float to-y) glow-paint)
+                    (.close glow-paint)
+                    (.drawLine canvas (float from-x) (float from-y)
+                               (float to-x) (float to-y) main-paint)
+                    (.close shader)
+                    (.close main-paint)))))))))
     @rendered))

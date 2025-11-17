@@ -10,13 +10,14 @@
 ;; =============================================================================
 
 (defn create-widget
-  "Create a widget entity with given components"
-  [widget-type & {:keys [id bounds layout visual interaction value]}]
+  "Create a widget entity with given components. Widgets default to visible."
+  [widget-type & {:keys [id bounds layout visual interaction value visible?]}]
   (state/create-entity
    :widget {:type widget-type
             :id (or id (keyword (str (name widget-type) "-" (rand-int 999999))))
             :parent-id nil
-            :children []}
+            :children []
+            :visible? (if (nil? visible?) true visible?)}
    :bounds (or bounds {:x 0 :y 0 :width 100 :height 40})
    :layout (or layout {:padding {:top 0 :right 0 :bottom 0 :left 0}
                        :margin {:top 0 :right 0 :bottom 0 :left 0}
@@ -162,22 +163,83 @@
                                 :gap 6.0}
                                value)))
 
+(defn toggle
+  "Create a toggle switch widget with a label."
+  [label checked? on-toggle & {:keys [id bounds visual]}]
+  (create-widget :toggle
+                 :id id
+                 :bounds (or bounds {:width 260 :height 32})
+                 :visual (merge {:label label
+                                 :label-color 0xFFEEEEEE
+                                 :track-on-color 0xFF3DD598
+                                 :track-off-color 0xFF555555
+                                 :thumb-color 0xFFFFFFFF}
+                                visual)
+                 :value {:checked? (boolean checked?)}
+                 :interaction {:enabled true
+                               :hovered false
+                               :pressed false
+                               :focused false
+                               :hover-cursor :pointer
+                               :on-toggle on-toggle}))
+
+(defn dropdown
+  "Create a dropdown widget with labeled options. Options must be maps with :value and :label."
+  [options selected on-select & {:keys [id bounds visual]}]
+  (let [normalized (mapv (fn [opt]
+                           (cond
+                             (and (map? opt) (contains? opt :value)) opt
+                             :else {:value opt :label (name opt)}))
+                         options)]
+    (create-widget :dropdown
+                   :id id
+                   :bounds (or bounds {:width 260 :height 36})
+                   :visual (merge {:label-color 0xFFEEEEEE
+                                   :background-color 0xFF1E1E1E
+                                   :border-color 0xFF444444
+                                   :text-color 0xFFEEEEEE
+                                   :option-hover-color 0x33222222}
+                                  visual)
+                   :value {:options normalized
+                           :selected selected
+                           :expanded? false
+                           :hover-index nil
+                           :option-height 32.0
+                           :base-height (double (or (:height bounds) 36.0))}
+                   :interaction {:enabled true
+                                 :hovered false
+                                 :pressed false
+                                 :focused false
+                                 :hover-cursor :pointer
+                                 :on-select on-select})))
+
 ;; =============================================================================
 ;; Layout Containers
 ;; =============================================================================
 
 (defn vstack
   "Create a vertical stack container"
-  [children & {:keys [id bounds layout visual]}]
+  [& {:keys [id bounds layout visual]}]
   (create-widget :vstack
                  :id id
                  :bounds bounds
                  :layout (merge {:padding {:top 12 :right 12 :bottom 12 :left 12}
-                                :gap 8
-                                :align :stretch}
-                               layout)
-                 :visual (or visual {})
-                 :value {:children children}))
+                                 :gap 8
+                                 :align :stretch}
+                                layout)
+                 :visual (or visual {})))
+
+(defn hstack
+  "Create a horizontal stack container"
+  [& {:keys [id bounds layout visual]}]
+  (create-widget :hstack
+                 :id id
+                 :bounds bounds
+                 :layout (merge {:padding {:top 12 :bottom 12 :left 12 :right 12}
+                                 :gap 8
+                                 :align :center}
+                                layout)
+                 :visual (or visual {})))
 
 ;; =============================================================================
 ;; Widget Management
@@ -255,6 +317,40 @@
               [child new-bounds]))
           children)))
 
+(defn compute-hstack-layout
+  "Compute bounds for children in an HStack layout."
+  [parent-bounds parent-layout children]
+  (let [{:keys [gap padding align]} parent-layout
+        gap-val (or gap 0)
+        padding-top (or (:top padding) (:all padding) 0)
+        padding-bottom (or (:bottom padding) (:all padding) 0)
+        padding-left (or (:left padding) (:all padding) 0)
+        parent-x (double (or (:x parent-bounds) 0.0))
+        parent-y (double (or (:y parent-bounds) 0.0))
+        parent-height (double (or (:height parent-bounds) 0.0))
+        x-offset (atom (+ parent-x padding-left))
+        content-height (- parent-height padding-top padding-bottom)]
+    (mapv (fn [child]
+            (let [child-bounds (or (state/get-component child :bounds) {})
+                  child-width (double (or (:width child-bounds) 0.0))
+                  intrinsic-height (double (or (:height child-bounds) 0.0))
+                  child-height (case align
+                                 :stretch content-height
+                                 :fill content-height
+                                 intrinsic-height)
+                  child-y (case align
+                            :start (+ parent-y padding-top)
+                            :center (+ parent-y padding-top (/ (- content-height child-height) 2))
+                            :end (+ parent-y (- parent-height padding-bottom child-height))
+                            (+ parent-y padding-top))
+                  new-bounds {:x @x-offset
+                              :y child-y
+                              :width child-width
+                              :height child-height}]
+              (swap! x-offset + child-width gap-val)
+              [child new-bounds]))
+          children)))
+
 (defn update-vstack-layout!
   "Update the layout of a VStack widget and its children"
   [game-state vstack-entity-id]
@@ -279,6 +375,23 @@
   [game-state entity-id _entity _viewport-width _viewport-height]
   (update-vstack-layout! game-state entity-id))
 
+(defn update-hstack-layout!
+  [game-state hstack-entity-id]
+  (let [hstack-entity (state/get-entity game-state hstack-entity-id)
+        hstack-bounds (state/get-component hstack-entity :bounds)
+        hstack-layout (state/get-component hstack-entity :layout)
+        hstack-widget (state/get-component hstack-entity :widget)
+        child-ids (:children hstack-widget)
+        children (mapv #(state/get-entity game-state %) child-ids)
+        child-layouts (compute-hstack-layout hstack-bounds hstack-layout children)]
+    (doseq [[child-id [_child new-bounds]] (map vector child-ids child-layouts)]
+      (state/update-entity! game-state child-id
+                            #(state/add-component % :bounds new-bounds)))))
+
+(defmethod wlayout/perform-layout :hstack
+  [game-state entity-id _entity _viewport-width _viewport-height]
+  (update-hstack-layout! game-state entity-id))
+
 (defmethod wlayout/perform-layout :minimap
   [game-state entity-id entity viewport-width viewport-height]
   ;; Apply anchor positioning for minimap
@@ -292,3 +405,23 @@
   "Mark a widget entity to recompute its layout before the next frame."
   [game-state entity-id]
   (wlayout/mark-dirty! game-state entity-id))
+
+(defn request-parent-layout!
+  "Mark a widget's parent as dirty so siblings reposition."
+  [game-state entity-id]
+  (when-let [entity (state/get-entity game-state entity-id)]
+    (when-let [parent-id (get-in entity [:components :widget :parent-id])]
+      (request-layout! game-state parent-id))))
+
+(defn set-visibility!
+  "Update widget visibility, optionally cascading to children."
+  ([game-state entity-id visible?]
+   (set-visibility! game-state entity-id visible? true))
+  ([game-state entity-id visible? cascade?]
+   (when entity-id
+     (state/update-entity! game-state entity-id
+                           #(assoc-in % [:components :widget :visible?] (boolean visible?)))
+     (when cascade?
+       (when-let [entity (state/get-entity game-state entity-id)]
+         (doseq [child-id (get-in entity [:components :widget :children])]
+           (set-visibility! game-state child-id visible? true)))))))

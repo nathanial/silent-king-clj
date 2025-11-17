@@ -10,6 +10,7 @@
             [silent-king.widgets.animation :as wanim]
             [silent-king.ui.controls :as ui-controls]
             [silent-king.ui.star-inspector :as ui-inspector]
+            [silent-king.ui.hyperlane-settings :as ui-hsettings]
             [nrepl.server :as nrepl]
             [cider.nrepl :refer [cider-nrepl-handler]])
   (:import [org.lwjgl.glfw GLFW GLFWErrorCallback GLFWCursorPosCallbackI GLFWMouseButtonCallbackI GLFWScrollCallbackI GLFWKeyCallbackI]
@@ -363,7 +364,10 @@
       (ui-controls/update-zoom-slider! game-state zoom)
 
       ;; Animate star inspector panel
-      (ui-inspector/update-panel! game-state))
+      (ui-inspector/update-panel! game-state)
+
+      ;; Animate hyperlane settings panel
+      (ui-hsettings/update! game-state))
 
     ;; Recompute dirty widget layouts before rendering
     (wlayout/process-layouts! game-state width height)
@@ -498,7 +502,10 @@
         (ui-controls/create-minimap! game-state)
 
         ;; Create the star inspector panel (hidden by default)
-        (ui-inspector/create-star-inspector! game-state))
+        (ui-inspector/create-star-inspector! game-state)
+
+        ;; Create hyperlane settings panel (collapsible)
+        (ui-hsettings/create-hyperlane-settings! game-state))
 
       ;; Run render loop
       (render-loop game-state render-state))

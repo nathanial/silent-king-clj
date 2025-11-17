@@ -18,9 +18,12 @@
 (defn sort-for-render
   "Sort widgets by z-index, hierarchy depth, then entity-id for determinism."
   [game-state widgets]
-  (sort-by
-   (fn [[entity-id widget]]
-     [(get-in (state/get-component widget :layout) [:z-index] 0)
-      (widget-depth game-state widget)
-      entity-id])
-   widgets))
+  (let [visible (filter (fn [[_ widget]]
+                          (get-in (state/get-component widget :widget) [:visible?] true))
+                        widgets)]
+    (sort-by
+     (fn [[entity-id widget]]
+       [(get-in (state/get-component widget :layout) [:z-index] 0)
+        (widget-depth game-state widget)
+        entity-id])
+     visible)))

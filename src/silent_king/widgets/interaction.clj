@@ -35,6 +35,41 @@
        (* (max 0 (dec item-count)) gap))
     0.0))
 
+(defn- dropdown-total-height
+  [{:keys [base-height option-height options]} expanded?]
+  (if expanded?
+    (+ base-height (* option-height (count options)))
+    base-height))
+
+(defn- set-dropdown-expanded!
+  [game-state entity-id expanded?]
+  (state/update-entity! game-state entity-id
+                        (fn [entity]
+                          (let [value (state/get-component entity :value)
+                                base-height (double (:base-height value))
+                                option-height (double (:option-height value))
+                                options (:options value)
+                                new-height (dropdown-total-height {:base-height base-height
+                                                                   :option-height option-height
+                                                                   :options options}
+                                                                  expanded?)]
+                            (-> entity
+                                (assoc-in [:components :value :expanded?] expanded?)
+                                (assoc-in [:components :value :hover-index] nil)
+                                (assoc-in [:components :bounds :height] new-height)))))
+  (wcore/request-layout! game-state entity-id)
+  (wcore/request-parent-layout! game-state entity-id))
+
+(defn- collapse-all-dropdowns!
+  [game-state except-entity-id]
+  (doseq [[entity-id widget] (wcore/get-all-widgets game-state)]
+    (let [widget-data (state/get-component widget :widget)]
+      (when (and (= (:type widget-data) :dropdown)
+                 (not= entity-id except-entity-id))
+        (let [value (state/get-component widget :value)]
+          (when (:expanded? value)
+            (set-dropdown-expanded! game-state entity-id false)))))))
+
 (defn- widget-at-point
   "Return the first widget matching the screen coordinate from a cached list.
   Screen coordinates are automatically transformed to widget space."
@@ -106,6 +141,27 @@
             (when-let [on-change (:on-change interaction)]
               (on-change new-value))))))
 
+    ;; Update dropdown hover state if expanded
+    (doseq [[entity-id widget] widgets]
+      (let [widget-data (state/get-component widget :widget)]
+        (when (= (:type widget-data) :dropdown)
+          (let [value (state/get-component widget :value)
+                bounds (state/get-component widget :bounds)
+                expanded? (:expanded? value)
+                base-height (double (:base-height value))
+                option-height (double (:option-height value))
+                relative-y (- widget-y (:y bounds))]
+            (if (and expanded?
+                     (>= relative-y base-height)
+                     (< relative-y (+ base-height (* option-height (count (:options value))))))
+              (let [hover-idx (int (/ (- relative-y base-height) option-height))
+                    clamped (-> hover-idx (max 0) (min (dec (count (:options value)))))]
+                (state/update-entity! game-state entity-id
+                                      #(assoc-in % [:components :value :hover-index] clamped)))
+              (when (:hover-index value)
+                (state/update-entity! game-state entity-id
+                                      #(assoc-in % [:components :value :hover-index] nil))))))))
+
     ;; Return true if a widget was hovered
     (boolean hovered-widget)))
 
@@ -135,6 +191,8 @@
         target-widget (widget-at-point widgets x y)
         ;; Transform screen coordinates to widget space
         [widget-x widget-y] (screen->widget-coords x y)
+        target-type (when-let [[_ target-entity] target-widget]
+                      (get-in (state/get-component target-entity :widget) [:type]))
         handled? (if-let [[entity-id widget] target-widget]
                    (let [widget-data (state/get-component widget :widget)
                          interaction (state/get-component widget :interaction)
@@ -159,6 +217,25 @@
                                               #(assoc-in % [:components :interaction :pressed] true))
                          true)
 
+                       ;; Toggle press
+                       (and (= widget-type :toggle) pressed?)
+                       (do
+                         (state/update-entity! game-state entity-id
+                                               #(assoc-in % [:components :interaction :pressed] true))
+                         true)
+
+                       ;; Toggle release
+                       (and (= widget-type :toggle) (not pressed?))
+                       (let [current (get-in widget [:components :value :checked?])
+                             new-value (not (boolean current))]
+                         (state/update-entity! game-state entity-id
+                                               #(-> %
+                                                    (assoc-in [:components :value :checked?] new-value)
+                                                    (assoc-in [:components :interaction :pressed] false)))
+                         (when-let [on-toggle (:on-toggle interaction)]
+                           (on-toggle new-value))
+                         true)
+
                        ;; Handle slider drag start
                        (and (= widget-type :slider) pressed?)
                        (do
@@ -174,6 +251,54 @@
                          (state/update-entity! game-state entity-id
                                               #(assoc-in % [:components :interaction :dragging] false))
                          true)
+
+                       ;; Dropdown press
+                       (and (= widget-type :dropdown) pressed?)
+                       (do
+                         (state/update-entity! game-state entity-id
+                                               #(assoc-in % [:components :interaction :pressed] true))
+                         true)
+
+                       ;; Dropdown release
+                       (and (= widget-type :dropdown) (not pressed?))
+                       (let [value (state/get-component widget :value)
+                             bounds (state/get-component widget :bounds)
+                             base-height (double (:base-height value))
+                             option-height (double (:option-height value))
+                             options (:options value)
+                             expanded? (:expanded? value)
+                             relative-y (- widget-y (:y bounds))
+                             total-height (+ base-height (* option-height (count options)))]
+                         (cond
+                           ;; Selecting option
+                           (and expanded?
+                                (>= relative-y base-height)
+                                (< relative-y total-height))
+                           (let [option-index (-> (int (/ (- relative-y base-height) option-height))
+                                                  (max 0)
+                                                  (min (dec (count options))))
+                                 option (nth options option-index nil)]
+                             (when option
+                               (state/update-entity! game-state entity-id
+                                                     #(-> %
+                                                          (assoc-in [:components :value :selected] (:value option))
+                                                          (assoc-in [:components :interaction :pressed] false))))
+                             (set-dropdown-expanded! game-state entity-id false)
+                             (when-let [on-select (:on-select interaction)]
+                               (when option
+                                 (on-select (:value option))))
+                             true)
+
+                           ;; Toggle expanded/collapsed
+                           :else
+                           (do
+                             (let [new-state (not expanded?)]
+                               (when new-state
+                                 (collapse-all-dropdowns! game-state entity-id))
+                               (set-dropdown-expanded! game-state entity-id new-state)
+                               (state/update-entity! game-state entity-id
+                                                     #(assoc-in % [:components :interaction :pressed] false)))
+                             true)))
 
                        ;; Handle minimap click-to-navigate (uses widget-space coordinates)
                        (and (= widget-type :minimap) (not pressed?) (state/minimap-visible? game-state))
@@ -194,6 +319,9 @@
      (if pressed?
        handled?
        (let [had-active? (any-active-interactions? widgets)]
+         (when (or (nil? target-widget)
+                   (not= target-type :dropdown))
+           (collapse-all-dropdowns! game-state nil))
          (reset-pressed-and-dragging! game-state widgets)
          (or handled? had-active?))))))
 
