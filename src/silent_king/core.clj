@@ -1,6 +1,8 @@
 (ns silent-king.core
   (:require [silent-king.assets :as assets]
-            [silent-king.state :as state])
+            [silent-king.state :as state]
+            [nrepl.server :as nrepl]
+            [cider.nrepl :refer [cider-nrepl-handler]])
   (:import [org.lwjgl.glfw GLFW GLFWErrorCallback GLFWCursorPosCallbackI GLFWMouseButtonCallbackI GLFWScrollCallbackI]
            [org.lwjgl.opengl GL GL11 GL30]
            [org.lwjgl.system MemoryUtil]
@@ -9,6 +11,13 @@
            [java.io File]))
 
 (set! *warn-on-reflection* true)
+
+;; =============================================================================
+;; Global State
+;; =============================================================================
+
+(defonce game-state (atom (state/create-game-state)))
+(defonce render-state (atom (state/create-render-state)))
 
 (defn generate-star-entities! [game-state base-images num-stars]
   "Generate star entities with components and add them to game state in a disk pattern"
@@ -446,41 +455,48 @@
 (defn -main [& args]
   (println "Starting Silent King...")
 
-  ;; Initialize state
-  (let [game-state (atom (state/create-game-state))
-        render-state (atom (state/create-render-state))]
-    (try
-      ;; Initialize GLFW
-      (init-glfw)
+  ;; Start nREPL server for interactive development
+  (let [nrepl-port 7888
+        nrepl-server (nrepl/start-server :port nrepl-port :handler cider-nrepl-handler)]
+    (println (format "nREPL server started on port %d" nrepl-port))
+    (spit ".nrepl-port" nrepl-port))
 
-      ;; Create window and context
-      (let [window (create-window 1280 800 "Silent King - Star Gallery")
-            context (create-skija-context)]
-        (state/set-window! render-state window)
-        (state/set-context! render-state context)
+  ;; Reset global state atoms
+  (reset! game-state (state/create-game-state))
+  (reset! render-state (state/create-render-state))
 
-        ;; Setup input callbacks
-        (setup-mouse-callbacks window game-state)
+  (try
+    ;; Initialize GLFW
+    (init-glfw)
 
-        ;; Load assets
-        (let [loaded-assets (assets/load-all-assets)
-              base-images (:individual-images loaded-assets)]
-          (println "Loaded" (count base-images) "base star images")
-          (state/set-assets! game-state loaded-assets)
+    ;; Create window and context
+    (let [window (create-window 1280 800 "Silent King - Star Gallery")
+          context (create-skija-context)]
+      (state/set-window! render-state window)
+      (state/set-context! render-state context)
 
-          ;; Generate star entities
-          (generate-star-entities! game-state base-images 10000)
-          (println "Generated" (count (state/get-all-entities game-state)) "star entities"))
+      ;; Setup input callbacks
+      (setup-mouse-callbacks window game-state)
 
-        ;; Run render loop
-        (render-loop game-state render-state))
+      ;; Load assets
+      (let [loaded-assets (assets/load-all-assets)
+            base-images (:individual-images loaded-assets)]
+        (println "Loaded" (count base-images) "base star images")
+        (state/set-assets! game-state loaded-assets)
 
-      (catch Exception e
-        (println "Error:" (.getMessage e))
-        (.printStackTrace e))
+        ;; Generate star entities
+        (generate-star-entities! game-state base-images 10000)
+        (println "Generated" (count (state/get-all-entities game-state)) "star entities"))
 
-      (finally
-        (cleanup game-state render-state))))
+      ;; Run render loop
+      (render-loop game-state render-state))
+
+    (catch Exception e
+      (println "Error:" (.getMessage e))
+      (.printStackTrace e))
+
+    (finally
+      (cleanup game-state render-state)))
 
   (println "Goodbye!")
   (System/exit 0))
