@@ -667,7 +667,7 @@ Specialized Widgets (domain-specific)
 
 **What You'll See**:
 - Click any star to select it (highlights with glow)
-- Inspector panel slides in from left side showing:
+- Inspector panel slides in from the right edge showing:
   - Star image/icon
   - Star ID
   - Position coordinates
@@ -705,6 +705,8 @@ Specialized Widgets (domain-specific)
 ```
 
 **Visual Impact**: Deep interactivity, explore individual stars and connections
+
+**Status**: ✅ Implemented in `silent_king.core`, `silent_king/ui/star_inspector.clj`, and the widget subsystems. Includes right-side slide-in panel, world-space selection, glow highlight, hyperlane scroll list, and `./run-tests.sh` coverage (see `silent-king.ui.star-inspector-test` & updated interaction tests).
 
 ---
 
