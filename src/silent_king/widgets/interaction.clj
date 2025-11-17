@@ -19,13 +19,10 @@
        (<= x (+ (:x bounds) (:width bounds)))
        (<= y (+ (:y bounds) (:height bounds)))))
 
-(defn find-widget-at-point
-  "Find topmost widget at screen coordinates (x, y).
-  Returns [entity-id widget-entity] or nil if no widget found."
-  [game-state x y]
-  (let [widgets (wcore/get-all-widgets game-state)
-        ;; Sort by z-index (highest first) to find topmost widget
-        sorted-widgets (sort-by
+(defn- widget-at-point
+  "Return the first widget matching the screen coordinate from a cached list."
+  [widgets x y]
+  (let [sorted-widgets (sort-by
                         (fn [[_ w]]
                           (get-in (state/get-component w :layout) [:z-index] 0))
                         >
@@ -34,9 +31,15 @@
             (let [bounds (state/get-component widget :bounds)
                   interaction (state/get-component widget :interaction)]
               (when (and (:enabled interaction)
-                        (point-in-bounds? x y bounds))
+                         (point-in-bounds? x y bounds))
                 [entity-id widget])))
           sorted-widgets)))
+
+(defn find-widget-at-point
+  "Find topmost widget at screen coordinates (x, y).
+  Returns [entity-id widget-entity] or nil if no widget found."
+  [game-state x y]
+  (widget-at-point (wcore/get-all-widgets game-state) x y))
 
 ;; =============================================================================
 ;; Mouse Event Handlers
@@ -46,13 +49,13 @@
   "Handle mouse move event. Returns true if a widget handled the event."
   [game-state x y]
   (let [widgets (wcore/get-all-widgets game-state)
-        widget-at-point (find-widget-at-point game-state x y)]
+        hovered-widget (widget-at-point widgets x y)]
 
     ;; Update hover state for all widgets
     (doseq [[entity-id widget] widgets]
       (let [interaction (state/get-component widget :interaction)
-            is-hovered (and widget-at-point
-                           (= entity-id (first widget-at-point)))]
+            is-hovered (and hovered-widget
+                            (= entity-id (first hovered-widget)))]
         (when (not= (:hovered interaction) is-hovered)
           (state/update-entity! game-state entity-id
                                #(assoc-in % [:components :interaction :hovered] is-hovered)))))
@@ -87,65 +90,79 @@
               (on-change new-value))))))
 
     ;; Return true if a widget was hovered
-    (boolean widget-at-point)))
+    (boolean hovered-widget)))
+
+(defn- any-active-interactions?
+  "Return true if any widget currently has pressed or dragging state."
+  [widgets]
+  (some (fn [[_ widget]]
+          (let [interaction (state/get-component widget :interaction)]
+            (or (:pressed interaction) (:dragging interaction))))
+        widgets))
+
+(defn- reset-pressed-and-dragging!
+  "Clear pressed/dragging state for all widgets."
+  [game-state widgets]
+  (doseq [[entity-id widget] widgets]
+    (let [interaction (state/get-component widget :interaction)]
+      (when (or (:pressed interaction) (:dragging interaction))
+        (state/update-entity! game-state entity-id
+                              #(-> %
+                                   (assoc-in [:components :interaction :pressed] false)
+                                   (assoc-in [:components :interaction :dragging] false)))))))
 
 (defn handle-mouse-click
   "Handle mouse button press/release. Returns true if a widget handled the event."
   [game-state x y pressed?]
-  (if-let [[entity-id widget] (find-widget-at-point game-state x y)]
-    (let [widget-data (state/get-component widget :widget)
-          interaction (state/get-component widget :interaction)
-          widget-type (:type widget-data)]
+  (let [widgets (wcore/get-all-widgets game-state)
+        target-widget (widget-at-point widgets x y)
+        handled? (if-let [[entity-id widget] target-widget]
+                   (let [widget-data (state/get-component widget :widget)
+                         interaction (state/get-component widget :interaction)
+                         widget-type (:type widget-data)]
 
-      (cond
-        ;; Handle button clicks
-        (and (= widget-type :button) (not pressed?))
-        (do
-          ;; Update pressed state
-          (state/update-entity! game-state entity-id
-                               #(assoc-in % [:components :interaction :pressed] false))
-          ;; Call on-click callback if mouse was released on button
-          (when-let [on-click (:on-click interaction)]
-            (on-click))
-          true)
+                     (cond
+                       ;; Handle button clicks
+                       (and (= widget-type :button) (not pressed?))
+                       (do
+                         ;; Update pressed state
+                         (state/update-entity! game-state entity-id
+                                              #(assoc-in % [:components :interaction :pressed] false))
+                         ;; Call on-click callback if mouse was released on button
+                         (when-let [on-click (:on-click interaction)]
+                           (on-click))
+                         true)
 
-        ;; Handle button press
-        (and (= widget-type :button) pressed?)
-        (do
-          (state/update-entity! game-state entity-id
-                               #(assoc-in % [:components :interaction :pressed] true))
-          true)
+                       ;; Handle button press
+                       (and (= widget-type :button) pressed?)
+                       (do
+                         (state/update-entity! game-state entity-id
+                                              #(assoc-in % [:components :interaction :pressed] true))
+                         true)
 
-        ;; Handle slider drag start
-        (and (= widget-type :slider) pressed?)
-        (do
-          (state/update-entity! game-state entity-id
-                               #(assoc-in % [:components :interaction :dragging] true))
-          ;; Immediately update slider value to mouse position
-          (handle-mouse-move game-state x y)
-          true)
+                       ;; Handle slider drag start
+                       (and (= widget-type :slider) pressed?)
+                       (do
+                         (state/update-entity! game-state entity-id
+                                              #(assoc-in % [:components :interaction :dragging] true))
+                         ;; Immediately update slider value to mouse position
+                         (handle-mouse-move game-state x y)
+                         true)
 
-        ;; Handle slider drag end
-        (and (= widget-type :slider) (not pressed?))
-        (do
-          (state/update-entity! game-state entity-id
-                               #(assoc-in % [:components :interaction :dragging] false))
-          true)
+                       ;; Handle slider drag end
+                       (and (= widget-type :slider) (not pressed?))
+                       (do
+                         (state/update-entity! game-state entity-id
+                                              #(assoc-in % [:components :interaction :dragging] false))
+                         true)
 
-        :else false))
-
-    ;; No widget at point - reset all dragging/pressed states
-    (do
-      (when-not pressed?
-        (let [widgets (wcore/get-all-widgets game-state)]
-          (doseq [[entity-id widget] widgets]
-            (let [interaction (state/get-component widget :interaction)]
-              (when (or (:pressed interaction) (:dragging interaction))
-                (state/update-entity! game-state entity-id
-                                     #(-> %
-                                          (assoc-in [:components :interaction :pressed] false)
-                                          (assoc-in [:components :interaction :dragging] false))))))))
-      false)))
+                       :else false))
+                   false)]
+    (if pressed?
+      handled?
+      (let [had-active? (any-active-interactions? widgets)]
+        (reset-pressed-and-dragging! game-state widgets)
+        (or handled? had-active?)))))
 
 ;; =============================================================================
 ;; Helper Functions

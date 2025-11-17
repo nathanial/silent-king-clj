@@ -45,4 +45,8 @@
    {io.github.humbleui/skija-windows-x64 {:mvn/version "0.116.1"}
     org.lwjgl/lwjgl$natives-windows {:mvn/version "3.3.1"}
     org.lwjgl/lwjgl-glfw$natives-windows {:mvn/version "3.3.1"}
-    org.lwjgl/lwjgl-opengl$natives-windows {:mvn/version "3.3.1"}}}}}
+    org.lwjgl/lwjgl-opengl$natives-windows {:mvn/version "3.3.1"}}}
+
+  :test
+  {:extra-paths ["test"]
+   :main-opts ["-m" "silent-king.test-runner"]}}}

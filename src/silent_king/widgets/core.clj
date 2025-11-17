@@ -205,9 +205,7 @@
         children (mapv #(state/get-entity game-state %) child-ids)
         child-layouts (compute-vstack-layout vstack-bounds vstack-layout children)]
 
-    ;; Update each child's bounds
-    (doseq [[child new-bounds] child-layouts
-            :let [child-id (first (filter #(identical? child (second %))
-                                          (map vector child-ids children)))]]
+    ;; Update each child's bounds using associated child-id
+    (doseq [[child-id [_child new-bounds]] (map vector child-ids child-layouts)]
       (state/update-entity! game-state child-id
                            #(state/add-component % :bounds new-bounds)))))
