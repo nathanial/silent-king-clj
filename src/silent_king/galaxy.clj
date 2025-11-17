@@ -52,8 +52,8 @@
 (defn- density->size
   "Map density value (0-1) to star size in pixels"
   [density]
-  (let [min-size 60
-        max-size 180
+  (let [min-size 20
+        max-size 30
         size-range (- max-size min-size)]
     (+ min-size (* density density size-range))))
 
