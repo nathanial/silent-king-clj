@@ -6,6 +6,7 @@
             [silent-king.widgets.render :as wrender]
             [silent-king.widgets.interaction :as winteraction]
             [silent-king.widgets.layout :as wlayout]
+            [silent-king.widgets.animation :as wanim]
             [silent-king.ui.controls :as ui-controls]
             [nrepl.server :as nrepl]
             [cider.nrepl :refer [cider-nrepl-handler]])
@@ -263,6 +264,9 @@
   ;; Clear background
   (.clear canvas (unchecked-int 0xFF000000))
 
+  ;; Update camera animations
+  (wanim/update-camera-animation! game-state)
+
   (let [camera (state/get-camera game-state)
         assets (state/get-assets game-state)
         zoom (:zoom camera)
@@ -355,7 +359,7 @@
       (ui-controls/update-zoom-slider! game-state zoom))
 
     ;; Recompute dirty widget layouts before rendering
-    (wlayout/process-layouts! game-state)
+    (wlayout/process-layouts! game-state width height)
     ;; Render all widgets (control panel, etc.)
     (wrender/render-all-widgets canvas game-state time)))
 
@@ -481,7 +485,10 @@
         (hyperlanes/generate-delaunay-hyperlanes! game-state)
 
         ;; Create the control panel UI
-        (ui-controls/create-control-panel! game-state))
+        (ui-controls/create-control-panel! game-state)
+
+        ;; Create the minimap for galaxy navigation
+        (ui-controls/create-minimap! game-state))
 
       ;; Run render loop
       (render-loop game-state render-state))

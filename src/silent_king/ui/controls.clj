@@ -32,12 +32,12 @@
 ;; =============================================================================
 
 (defn create-control-panel!
-  "Create the main control panel UI with zoom slider, reset button, hyperlane toggle, and stats"
+  "Create the main control panel UI with zoom slider, reset button, hyperlane toggle, minimap toggle, and stats"
   [game-state]
   (let [;; Panel background
         panel (wcore/panel
                :id :control-panel
-               :bounds {:x 20 :y 20 :width 280 :height 220}
+               :bounds {:x 20 :y 20 :width 280 :height 264}
                :visual {:background-color 0xCC222222
                        :border-radius 12.0
                        :shadow {:offset-x 0 :offset-y 4 :blur 12 :color 0x80000000}})
@@ -71,6 +71,14 @@
                                        :visual {:background-color 0xFF6699FF
                                                :border-radius 6.0})
 
+        ;; Minimap toggle button
+        minimap-button (wcore/button "Toggle Minimap"
+                                     #(state/toggle-minimap! game-state)
+                                     :id :minimap-toggle
+                                     :bounds {:width 260 :height 36}
+                                     :visual {:background-color 0xFF66CCFF
+                                             :border-radius 6.0})
+
         ;; Reset camera button
         reset-button (wcore/button "Reset Camera"
                                   #(reset-camera! game-state)
@@ -87,7 +95,7 @@
                                         :font-size 12})
 
         ;; Create VStack with all children
-        children [title zoom-label zoom-slider hyperlane-button reset-button stats-label]]
+        children [title zoom-label zoom-slider hyperlane-button minimap-button reset-button stats-label]]
 
     ;; Add panel and children to game state (layout will run automatically)
     (wcore/add-widget-tree! game-state panel children)
@@ -117,3 +125,18 @@
   (when-let [[entity-id _] (wcore/get-widget-by-id game-state :zoom-slider)]
     (state/update-entity! game-state entity-id
                          #(assoc-in % [:components :value :current] current-zoom))))
+
+;; =============================================================================
+;; Minimap Creation
+;; =============================================================================
+
+(defn create-minimap!
+  "Create the minimap widget for galaxy navigation.
+  The minimap appears in the bottom-right corner and shows the entire galaxy.
+  Click the minimap to smoothly pan the camera to that location."
+  [game-state]
+  (let [minimap (wcore/minimap
+                 :id :galaxy-minimap
+                 :bounds {:width 250 :height 250})]
+    (wcore/add-widget! game-state minimap)
+    (println "Minimap created")))

@@ -105,6 +105,29 @@
                               :on-change on-change
                               :dragging false}))
 
+(defn minimap
+  "Create a minimap widget for galaxy navigation"
+  [& {:keys [id bounds layout visual]}]
+  (create-widget :minimap
+                 :id id
+                 :bounds (or bounds {:x 0 :y 0 :width 250 :height 250})
+                 :layout (merge {:anchor :bottom-right
+                                :margin {:all 20}}
+                               layout)
+                 :visual (merge {:background-color 0xCC1A1A1A
+                                :border-color 0xFF444444
+                                :border-width 2.0
+                                :border-radius 8.0
+                                :viewport-color 0xFFFF0000
+                                :star-color 0xFFFFFFFF}
+                               visual)
+                 :interaction {:enabled true
+                              :hovered false
+                              :pressed false
+                              :focused false
+                              :hover-cursor :pointer
+                              :on-click nil}))
+
 ;; =============================================================================
 ;; Layout Containers
 ;; =============================================================================
@@ -129,7 +152,9 @@
 (defn add-widget!
   "Add a widget entity to the game state and return the entity ID"
   [game-state widget-entity]
-  (state/add-entity! game-state widget-entity))
+  (let [entity-id (state/add-entity! game-state widget-entity)]
+    (wlayout/mark-dirty! game-state entity-id)
+    entity-id))
 
 (defn add-widget-tree!
   "Add a widget and its children to the game state"
@@ -213,12 +238,21 @@
                            #(state/add-component % :bounds new-bounds)))))
 
 (defmethod wlayout/perform-layout :vstack
-  [game-state entity-id _entity]
+  [game-state entity-id _entity _viewport-width _viewport-height]
   (update-vstack-layout! game-state entity-id))
 
 (defmethod wlayout/perform-layout :panel
-  [game-state entity-id _entity]
+  [game-state entity-id _entity _viewport-width _viewport-height]
   (update-vstack-layout! game-state entity-id))
+
+(defmethod wlayout/perform-layout :minimap
+  [game-state entity-id entity viewport-width viewport-height]
+  ;; Apply anchor positioning for minimap
+  (let [bounds (state/get-component entity :bounds)
+        layout (state/get-component entity :layout)
+        anchored-bounds (wlayout/apply-anchor-position bounds layout viewport-width viewport-height)]
+    (state/update-entity! game-state entity-id
+                         #(state/add-component % :bounds anchored-bounds))))
 
 (defn request-layout!
   "Mark a widget entity to recompute its layout before the next frame."

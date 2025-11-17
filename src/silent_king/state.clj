@@ -47,7 +47,8 @@
            :atlas-metadata-lg {}
            :atlas-size-lg 8192}
    :widgets {:layout-dirty #{}}
-   :features {:hyperlanes? true}})
+   :features {:hyperlanes? true
+              :minimap? true}})
 
 (defn create-render-state []
   "Create initial render state structure"
@@ -166,6 +167,11 @@
   [game-state]
   (get-in @game-state [:features :hyperlanes?] true))
 
+(defn minimap-visible?
+  "Return true if minimap should be rendered"
+  [game-state]
+  (get-in @game-state [:features :minimap?] true))
+
 ;; =============================================================================
 ;; State Updaters
 ;; =============================================================================
@@ -194,6 +200,11 @@
   "Toggle hyperlane visibility flag"
   [game-state]
   (swap! game-state update-in [:features :hyperlanes?] not))
+
+(defn toggle-minimap!
+  "Toggle minimap visibility flag"
+  [game-state]
+  (swap! game-state update-in [:features :minimap?] not))
 
 ;; =============================================================================
 ;; Render State Accessors
