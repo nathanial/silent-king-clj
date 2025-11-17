@@ -30,13 +30,14 @@
    :density-jitter 0.025
    ;; Bulge/core tuning
    :core-radius-fraction 0.28
-   :core-star-probability 0.32
+   :core-star-probability 0.2
    :core-density-base 0.78
    :core-density-noise-weight 0.2
    :core-density-jitter 0.08
-   :core-density-center-weight 0.35
-   :core-density-falloff 1.4
-   :core-density-edge 0.35})
+   :core-density-center-weight 0.75
+   :core-density-falloff 3.0
+   :core-density-edge 0.22
+   :core-radius-distribution 1.35})
 
 (defn create-noise-generator
   "Create a FastNoiseLite instance configured for OpenSimplex2 noise"
@@ -146,20 +147,26 @@
   [noise-gen]
   (let [{:keys [center-x center-y max-radius core-radius-fraction
                 core-density-base core-density-noise-weight core-density-jitter
-                core-density-center-weight core-density-falloff core-density-edge]}
+                core-density-center-weight core-density-falloff core-density-edge
+                core-radius-distribution]}
         galaxy-config
         radius-fraction (clamp core-radius-fraction 0.02 0.5)
         edge-density (clamp (or core-density-edge 0.0) 0.0 1.0)
         center-weight (clamp (or core-density-center-weight 0.0) 0.0 1.0)
         falloff (max 0.1 (double (or core-density-falloff 1.0)))
         core-radius (* max-radius radius-fraction)
-        radius (* core-radius (Math/sqrt (rand)))
+        radius-exponent (max 0.1 (double (or core-radius-distribution 2.0)))
+        radius-factor (Math/pow (rand) (/ 1.0 radius-exponent))
+        radius (* core-radius radius-factor)
         normalized-radius (if (pos? core-radius) (/ radius core-radius) 0.0)
-        structure-falloff (Math/pow normalized-radius falloff)
-        center-prominence (+ (* center-weight (- 1.0 structure-falloff))
-                             (* (- 1.0 center-weight) (- 1.0 normalized-radius)))
-        structural-density (+ (* center-prominence core-density-base)
-                              (* (- 1.0 center-prominence) edge-density))
+        center-shape (Math/pow (- 1.0 normalized-radius) falloff)
+        secondary-shape (- 1.0 normalized-radius)
+        center-prominence (clamp (+ (* center-weight center-shape)
+                                    (* (- 1.0 center-weight) secondary-shape))
+                                 0.0
+                                 1.0)
+        structural-density (+ edge-density
+                              (* center-prominence (- core-density-base edge-density)))
         angle (* 2.0 Math/PI (rand))
         x (+ center-x (* radius (Math/cos angle)))
         y (+ center-y (* radius (Math/sin angle)))
