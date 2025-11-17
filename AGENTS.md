@@ -13,6 +13,9 @@ Silent King mixes Clojure UI/gameplay code under `src/silent_king` and supportin
 ## Coding Style & Naming Conventions
 Namespaces use kebab-case and start with `silent-king.`; file paths must match. Stick to two-space indentation, vertically align maps, and keep reducer pipelines small and pure. Provide docstrings and reuse the existing section banners (`;; =============================================================================`) to flag domains. Keywords stay kebab-case (`:hover-cursor`), and `*warn-on-reflection*` is enabled, so add type hints if reflection warnings surface. Java files follow the same package path (`silentking`) and compile cleanly with JDK `javac`.
 
+## Parenthesis Safety Check
+Anytime you edit a `.clj`, `.cljc`, or `.cljs` file you **must** run the balance helper before considering the change complete. Execute `python3 scripts/check_parens.py path/to/changed_file.clj` (you can point it at directories, too) and make sure it reports `balanced`. The script annotates unmatched delimiters with the top-level form (e.g. `defn player-hud`) so you can immediately find the offending function—treat failures as blockers until fixed.
+
 ## Testing Guidelines
 Unit tests rely on `clojure.test`; mirror source namespaces (`widgets/layout_test.clj`) and name vars after the function under test. Run `./run-tests.sh` before committing, and append new namespaces to `silent-king.test-runner` so they execute in CI. Favor deterministic tests—use the state helpers from the existing widget suites to avoid real rendering or file IO.
 
