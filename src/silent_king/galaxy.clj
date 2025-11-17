@@ -27,7 +27,16 @@
    :radial-jitter 0.05      ; fraction of max radius used as jitter
    :core-density-power 0.45
    :noise-density-weight 0.08
-   :density-jitter 0.025})
+   :density-jitter 0.025
+   ;; Bulge/core tuning
+   :core-radius-fraction 0.28
+   :core-star-probability 0.32
+   :core-density-base 0.78
+   :core-density-noise-weight 0.2
+   :core-density-jitter 0.08
+   :core-density-center-weight 0.35
+   :core-density-falloff 1.4
+   :core-density-edge 0.35})
 
 (defn create-noise-generator
   "Create a FastNoiseLite instance configured for OpenSimplex2 noise"
@@ -132,11 +141,42 @@
         density (clamp raw-density 0.0 1.0)]
     {:x x :y y :density density}))
 
+(defn- sample-core-star
+  "Return {:x :y :density} sampled inside bright galactic core."
+  [noise-gen]
+  (let [{:keys [center-x center-y max-radius core-radius-fraction
+                core-density-base core-density-noise-weight core-density-jitter
+                core-density-center-weight core-density-falloff core-density-edge]}
+        galaxy-config
+        radius-fraction (clamp core-radius-fraction 0.02 0.5)
+        edge-density (clamp (or core-density-edge 0.0) 0.0 1.0)
+        center-weight (clamp (or core-density-center-weight 0.0) 0.0 1.0)
+        falloff (max 0.1 (double (or core-density-falloff 1.0)))
+        core-radius (* max-radius radius-fraction)
+        radius (* core-radius (Math/sqrt (rand)))
+        normalized-radius (if (pos? core-radius) (/ radius core-radius) 0.0)
+        structure-falloff (Math/pow normalized-radius falloff)
+        center-prominence (+ (* center-weight (- 1.0 structure-falloff))
+                             (* (- 1.0 center-weight) (- 1.0 normalized-radius)))
+        structural-density (+ (* center-prominence core-density-base)
+                              (* (- 1.0 center-prominence) edge-density))
+        angle (* 2.0 Math/PI (rand))
+        x (+ center-x (* radius (Math/cos angle)))
+        y (+ center-y (* radius (Math/sin angle)))
+        noise-density (sample-density noise-gen x y)
+        noise-weight (clamp core-density-noise-weight 0.0 1.0)
+        structural-weight (- 1.0 noise-weight)
+        raw-density (+ (* structural-weight structural-density)
+                       (* noise-weight noise-density)
+                       (* core-density-jitter (- (rand) 0.5)))
+        density (clamp raw-density 0.0 1.0)]
+    {:x x :y y :density density}))
+
 (defn- density->size
   "Map density value (0-1) to star size in pixels"
   [density]
-  (let [min-size 40
-        max-size 50
+  (let [min-size 30
+        max-size 40
         size-range (- max-size min-size)]
     (+ min-size (* density density size-range))))
 
@@ -162,9 +202,14 @@
   [game-state base-images num-stars]
   (println "Generating" num-stars "star entities with spiral arm distribution...")
   (let [noise-gen (create-noise-generator)
+        {:keys [core-star-probability]} galaxy-config
+        core-prob (clamp (or core-star-probability 0.0) 0.0 1.0)
         start-time (System/currentTimeMillis)]
     (dotimes [_ num-stars]
-      (let [{:keys [x y density]} (sample-spiral-star noise-gen)
+      (let [{:keys [x y density]}
+            (if (< (rand) core-prob)
+              (sample-core-star noise-gen)
+              (sample-spiral-star noise-gen))
             base-image (density->star-image base-images density)
             size (density->size density)
             rotation-speed (density->rotation-speed density)
