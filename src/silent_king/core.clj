@@ -5,7 +5,7 @@
             [silent-king.hyperlanes :as hyperlanes]
             [nrepl.server :as nrepl]
             [cider.nrepl :refer [cider-nrepl-handler]])
-  (:import [org.lwjgl.glfw GLFW GLFWErrorCallback GLFWCursorPosCallbackI GLFWMouseButtonCallbackI GLFWScrollCallbackI]
+  (:import [org.lwjgl.glfw GLFW GLFWErrorCallback GLFWCursorPosCallbackI GLFWMouseButtonCallbackI GLFWScrollCallbackI GLFWKeyCallbackI]
            [org.lwjgl.opengl GL GL11 GL30]
            [org.lwjgl.system MemoryUtil]
            [io.github.humbleui.skija Canvas Color4f Paint Surface DirectContext BackendRenderTarget FramebufferFormat ColorSpace SurfaceOrigin SurfaceColorFormat Font Typeface Image Data]
@@ -97,68 +97,77 @@
     window))
 
 (defn setup-mouse-callbacks [window game-state]
-  ;; Mouse cursor position callback
-  (GLFW/glfwSetCursorPosCallback window
-    (reify GLFWCursorPosCallbackI
-      (invoke [this win xpos ypos]
-        ;; Convert mouse coordinates from window space to framebuffer space
-        (let [win-width-arr (int-array 1)
-              win-height-arr (int-array 1)
-              fb-width-arr (int-array 1)
-              fb-height-arr (int-array 1)
-              _ (GLFW/glfwGetWindowSize window win-width-arr win-height-arr)
-              _ (GLFW/glfwGetFramebufferSize window fb-width-arr fb-height-arr)
-              scale-x (/ (aget fb-width-arr 0) (double (aget win-width-arr 0)))
-              scale-y (/ (aget fb-height-arr 0) (double (aget win-height-arr 0)))
-              fb-xpos (* xpos scale-x)
-              fb-ypos (* ypos scale-y)
-              input (state/get-input game-state)
-              old-x (:mouse-x input)
-              old-y (:mouse-y input)
-              dragging (:dragging input)]
-          (when dragging
-            (let [dx (- fb-xpos old-x)
-                  dy (- fb-ypos old-y)]
-              (state/update-camera! game-state
-                                   (fn [cam]
-                                     (-> cam
-                                         (update :pan-x #(+ % dx))
-                                         (update :pan-y #(+ % dy)))))))
-          (state/update-input! game-state assoc :mouse-x fb-xpos :mouse-y fb-ypos)))))
+  (doto window
+    ;; Mouse cursor position callback
+    (GLFW/glfwSetCursorPosCallback
+     (reify GLFWCursorPosCallbackI
+       (invoke [_ win xpos ypos]
+         ;; Convert mouse coordinates from window space to framebuffer space
+         (let [win-width-arr (int-array 1)
+               win-height-arr (int-array 1)
+               fb-width-arr (int-array 1)
+               fb-height-arr (int-array 1)
+               _ (GLFW/glfwGetWindowSize win win-width-arr win-height-arr)
+               _ (GLFW/glfwGetFramebufferSize win fb-width-arr fb-height-arr)
+               scale-x (/ (aget fb-width-arr 0) (double (aget win-width-arr 0)))
+               scale-y (/ (aget fb-height-arr 0) (double (aget win-height-arr 0)))
+               fb-xpos (* xpos scale-x)
+               fb-ypos (* ypos scale-y)
+               input (state/get-input game-state)
+               old-x (:mouse-x input)
+               old-y (:mouse-y input)
+               dragging (:dragging input)]
+           (when dragging
+             (let [dx (- fb-xpos old-x)
+                   dy (- fb-ypos old-y)]
+               (state/update-camera! game-state
+                                     (fn [cam]
+                                       (-> cam
+                                           (update :pan-x #(+ % dx))
+                                           (update :pan-y #(+ % dy)))))))
+           (state/update-input! game-state assoc :mouse-x fb-xpos :mouse-y fb-ypos)))))
 
-  ;; Mouse button callback
-  (GLFW/glfwSetMouseButtonCallback window
-    (reify GLFWMouseButtonCallbackI
-      (invoke [this win button action mods]
-        (when (= button GLFW/GLFW_MOUSE_BUTTON_LEFT)
-          (state/update-input! game-state assoc :dragging (= action GLFW/GLFW_PRESS))))))
+    ;; Mouse button callback
+    (GLFW/glfwSetMouseButtonCallback
+     (reify GLFWMouseButtonCallbackI
+       (invoke [_ win button action mods]
+         (when (= button GLFW/GLFW_MOUSE_BUTTON_LEFT)
+           (state/update-input! game-state assoc :dragging (= action GLFW/GLFW_PRESS))))))
 
-  ;; Scroll callback for zoom
-  (GLFW/glfwSetScrollCallback window
-    (reify GLFWScrollCallbackI
-      (invoke [this win xoffset yoffset]
-        (let [input (state/get-input game-state)
-              camera (state/get-camera game-state)
-              mouse-x (:mouse-x input)
-              mouse-y (:mouse-y input)
-              old-zoom (:zoom camera)
-              zoom-factor (Math/pow 1.1 yoffset)
-              new-zoom (max 0.4 (min 10.0 (* old-zoom zoom-factor)))
+    ;; Scroll callback for zoom
+    (GLFW/glfwSetScrollCallback
+     (reify GLFWScrollCallbackI
+       (invoke [_ win xoffset yoffset]
+         (let [input (state/get-input game-state)
+               camera (state/get-camera game-state)
+               mouse-x (:mouse-x input)
+               mouse-y (:mouse-y input)
+               old-zoom (:zoom camera)
+               zoom-factor (Math/pow 1.1 yoffset)
+               new-zoom (max 0.4 (min 10.0 (* old-zoom zoom-factor)))
 
-              ;; Calculate world position before zoom using non-linear transform
-              old-pan-x (:pan-x camera)
-              old-pan-y (:pan-y camera)
-              world-x (inverse-transform-position mouse-x old-zoom old-pan-x)
-              world-y (inverse-transform-position mouse-y old-zoom old-pan-y)
+               ;; Calculate world position before zoom using non-linear transform
+               old-pan-x (:pan-x camera)
+               old-pan-y (:pan-y camera)
+               world-x (inverse-transform-position mouse-x old-zoom old-pan-x)
+               world-y (inverse-transform-position mouse-y old-zoom old-pan-y)
 
-              ;; Calculate new pan to keep world position under cursor with non-linear transform
-              new-pan-x (- mouse-x (* world-x (zoom->position-scale new-zoom)))
-              new-pan-y (- mouse-y (* world-y (zoom->position-scale new-zoom)))]
+               ;; Calculate new pan to keep world position under cursor with non-linear transform
+               new-pan-x (- mouse-x (* world-x (zoom->position-scale new-zoom)))
+               new-pan-y (- mouse-y (* world-y (zoom->position-scale new-zoom)))]
 
-          (state/update-camera! game-state assoc
-                               :zoom new-zoom
-                               :pan-x new-pan-x
-                               :pan-y new-pan-y))))))
+           (state/update-camera! game-state assoc
+                                 :zoom new-zoom
+                                 :pan-x new-pan-x
+                                 :pan-y new-pan-y)))))
+
+    ;; Keyboard callback for simple feature toggles
+    (GLFW/glfwSetKeyCallback
+     (reify GLFWKeyCallbackI
+       (invoke [_ win key scancode action mods]
+         (when (and (= action GLFW/GLFW_PRESS)
+                    (= key GLFW/GLFW_KEY_H))
+           (state/toggle-hyperlanes! game-state)))))))
 
 (defn create-skija-context []
   (println "Creating Skija DirectContext...")
@@ -243,6 +252,7 @@
         zoom (:zoom camera)
         pan-x (:pan-x camera)
         pan-y (:pan-y camera)
+        hyperlanes-enabled (state/hyperlanes-enabled? game-state)
 
         ;; 4-Level LOD system
         lod-level (cond
@@ -287,9 +297,11 @@
     ;; Note: No canvas transform needed - we calculate screen positions per-star with non-linear scaling
 
     ;; Draw hyperlanes BEFORE stars (so they appear as background connections)
-    (let [hyperlanes-rendered (hyperlanes/draw-all-hyperlanes canvas width height zoom pan-x pan-y game-state time)]
-      ;; Store hyperlane count for UI display
-      (swap! game-state assoc-in [:debug :hyperlanes-rendered] hyperlanes-rendered))
+    (if hyperlanes-enabled
+      (let [hyperlanes-rendered (hyperlanes/draw-all-hyperlanes canvas width height zoom pan-x pan-y game-state time)]
+        ;; Store hyperlane count for UI display
+        (swap! game-state assoc-in [:debug :hyperlanes-rendered] hyperlanes-rendered))
+      (swap! game-state assoc-in [:debug :hyperlanes-rendered] 0))
 
     ;; Draw visible stars using 4-level LOD
     (doseq [[_ entity] visible-stars]
@@ -322,13 +334,16 @@
                             :small "Small atlas (128x128, medium zoom)"
                             :medium "Medium atlas (256x256, close zoom)"
                             :full "Full resolution images (highest quality)")
-          hyperlanes-count (get-in @game-state [:debug :hyperlanes-rendered] 0)]
+          hyperlanes-count (get-in @game-state [:debug :hyperlanes-rendered] 0)
+          hyperlane-text (if hyperlanes-enabled
+                           (str "Hyperlanes: " hyperlanes-count " rendered (press H to toggle)")
+                           "Hyperlanes: OFF (press H to toggle)")]
       (.drawString canvas "Silent King - Star Gallery" (float 20) (float 30) font paint)
       (.drawString canvas (str "Stars: " total-count " (visible: " visible-count ")") (float 20) (float 60) font paint)
-      (.drawString canvas (str "Hyperlanes: " hyperlanes-count " rendered") (float 20) (float 90) font paint)
+      (.drawString canvas hyperlane-text (float 20) (float 90) font paint)
       (.drawString canvas (str "Zoom: " (format "%.2f" zoom) "x") (float 20) (float 120) font paint)
       (.drawString canvas (str "LOD: " lod-description) (float 20) (float 150) font paint)
-      (.drawString canvas "Controls: Click-Drag=Pan, Scroll=Zoom" (float 20) (float 180) font paint)
+      (.drawString canvas "Controls: Click-Drag=Pan, Scroll=Zoom, H=Toggle Hyperlanes" (float 20) (float 180) font paint)
       (.close font)
       (.close paint))))
 

@@ -43,9 +43,10 @@
             :atlas-image-medium nil
             :atlas-metadata-medium {}
             :atlas-size-medium 4096
-            :atlas-image-lg nil
-            :atlas-metadata-lg {}
-            :atlas-size-lg 8192}})
+           :atlas-image-lg nil
+           :atlas-metadata-lg {}
+           :atlas-size-lg 8192}
+   :features {:hyperlanes? true}})
 
 (defn create-render-state []
   "Create initial render state structure"
@@ -159,6 +160,11 @@
   [game-state]
   (:assets @game-state))
 
+(defn hyperlanes-enabled?
+  "Return true if hyperlanes should be rendered"
+  [game-state]
+  (get-in @game-state [:features :hyperlanes?] true))
+
 ;; =============================================================================
 ;; State Updaters
 ;; =============================================================================
@@ -182,6 +188,11 @@
   "Set the assets in game state"
   [game-state assets]
   (swap! game-state assoc :assets assets))
+
+(defn toggle-hyperlanes!
+  "Toggle hyperlane visibility flag"
+  [game-state]
+  (swap! game-state update-in [:features :hyperlanes?] not))
 
 ;; =============================================================================
 ;; Render State Accessors
