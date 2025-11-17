@@ -6,6 +6,11 @@ echo "Silent King - Build Script"
 echo "=========================="
 echo ""
 
+# Step 0: Compile Java sources
+echo "Step 0: Compiling Java sources..."
+./compile-java.sh
+echo ""
+
 # Step 1: Preprocess individual star images
 echo "Step 1: Preprocessing star images (removing black backgrounds)..."
 clojure scripts/preprocess-stars.clj
@@ -35,6 +40,7 @@ echo "=========================="
 echo "Build complete!"
 echo ""
 echo "Generated assets:"
+echo "  - classes/                        (Compiled Java classes)"
 echo "  - assets/stars-processed/         (159 preprocessed PNG images)"
 echo "  - assets/star-atlas-xs.png        (4096x4096, 64x64 tiles)"
 echo "  - assets/star-atlas-xs.json       (xs atlas metadata)"

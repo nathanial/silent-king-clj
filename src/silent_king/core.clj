@@ -1,6 +1,7 @@
 (ns silent-king.core
   (:require [silent-king.assets :as assets]
             [silent-king.state :as state]
+            [silent-king.galaxy :as galaxy]
             [nrepl.server :as nrepl]
             [cider.nrepl :refer [cider-nrepl-handler]])
   (:import [org.lwjgl.glfw GLFW GLFWErrorCallback GLFWCursorPosCallbackI GLFWMouseButtonCallbackI GLFWScrollCallbackI]
@@ -18,28 +19,6 @@
 
 (defonce game-state (atom (state/create-game-state)))
 (defonce render-state (atom (state/create-render-state)))
-
-(defn generate-star-entities! [game-state base-images num-stars]
-  "Generate star entities with components and add them to game state in a disk pattern"
-  (println "Generating" num-stars "star entities in a disk pattern...")
-  (let [center-x 2000.0
-        center-y 2000.0
-        max-radius 10000.0]  ;; Disk radius
-    (doseq [i (range num-stars)]
-      (let [base-image (rand-nth base-images)
-            ;; Use polar coordinates for uniform disk distribution
-            angle (* (rand) 2.0 Math/PI)
-            ;; sqrt ensures uniform distribution (not just radial)
-            radius (* (Math/sqrt (rand)) max-radius)
-            x (+ center-x (* radius (Math/cos angle)))
-            y (+ center-y (* radius (Math/sin angle)))
-            entity (state/create-entity
-                    :position {:x x :y y}
-                    :renderable {:path (:path base-image)}  ;; Only store path, not image
-                    :transform {:size (+ 80 (rand 80))
-                               :rotation 0.0}
-                    :physics {:rotation-speed (+ 0.5 (rand 1.5))})]
-        (state/add-entity! game-state entity)))))
 
 (defn init-glfw []
   (println "Initializing GLFW...")
@@ -484,9 +463,8 @@
         (println "Loaded" (count base-images) "base star images")
         (state/set-assets! game-state loaded-assets)
 
-        ;; Generate star entities
-        (generate-star-entities! game-state base-images 10000)
-        (println "Generated" (count (state/get-all-entities game-state)) "star entities"))
+        ;; Generate star entities with noise-based clustering
+        (galaxy/generate-galaxy-entities! game-state base-images 10000))
 
       ;; Run render loop
       (render-loop game-state render-state))
