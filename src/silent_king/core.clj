@@ -20,6 +20,44 @@
 (defonce game-state (atom (state/create-game-state)))
 (defonce render-state (atom (state/create-render-state)))
 
+;; =============================================================================
+;; Non-Linear Transform Functions
+;; =============================================================================
+
+(def ^:const position-exponent 2.0)  ;; How fast positions spread apart
+(def ^:const size-exponent 1.0)      ;; How fast star sizes grow (linear)
+
+(defn zoom->position-scale
+  "Convert zoom to position scale factor using a power function.
+  This makes stars spread apart more dramatically when zooming in."
+  [zoom]
+  (Math/pow zoom position-exponent))
+
+(defn zoom->size-scale
+  "Convert zoom to size scale factor.
+  Kept linear (exponent 1.0) so stars don't grow as fast as they spread."
+  [zoom]
+  (Math/pow zoom size-exponent))
+
+(defn transform-position
+  "Transform world position to screen position using non-linear scale"
+  [world-pos zoom pan]
+  (+ (* world-pos (zoom->position-scale zoom)) pan))
+
+(defn transform-size
+  "Transform base size to rendered size using size scale"
+  [base-size zoom]
+  (* base-size (zoom->size-scale zoom)))
+
+(defn inverse-transform-position
+  "Convert screen position back to world position (inverse of transform-position)"
+  [screen-pos zoom pan]
+  (/ (- screen-pos pan) (zoom->position-scale zoom)))
+
+;; =============================================================================
+;; GLFW Initialization
+;; =============================================================================
+
 (defn init-glfw []
   (println "Initializing GLFW...")
   (GLFWErrorCallback/createPrint System/err)
@@ -106,15 +144,15 @@
               zoom-factor (Math/pow 1.1 yoffset)
               new-zoom (max 0.1 (min 10.0 (* old-zoom zoom-factor)))
 
-              ;; Calculate world position before zoom
+              ;; Calculate world position before zoom using non-linear transform
               old-pan-x (:pan-x camera)
               old-pan-y (:pan-y camera)
-              world-x (/ (- mouse-x old-pan-x) old-zoom)
-              world-y (/ (- mouse-y old-pan-y) old-zoom)
+              world-x (inverse-transform-position mouse-x old-zoom old-pan-x)
+              world-y (inverse-transform-position mouse-y old-zoom old-pan-y)
 
-              ;; Calculate new pan to keep world position under cursor
-              new-pan-x (- mouse-x (* world-x new-zoom))
-              new-pan-y (- mouse-y (* world-y new-zoom))]
+              ;; Calculate new pan to keep world position under cursor with non-linear transform
+              new-pan-x (- mouse-x (* world-x (zoom->position-scale new-zoom)))
+              new-pan-y (- mouse-y (* world-y (zoom->position-scale new-zoom)))]
 
           (state/update-camera! game-state assoc
                                :zoom new-zoom
@@ -141,9 +179,11 @@
      SurfaceColorFormat/RGBA_8888
      (ColorSpace/getSRGB))))
 
-(defn draw-rotating-star [^Canvas canvas ^Image image x y size angle]
+(defn draw-rotating-star
+  "Draw a rotating star at screen coordinates (x, y) with given size and rotation angle"
+  [^Canvas canvas ^Image image screen-x screen-y size angle]
   (.save canvas)
-  (.translate canvas x y)
+  (.translate canvas screen-x screen-y)
   (.rotate canvas angle)
   (let [img-width (.getWidth image)
         img-height (.getHeight image)
@@ -158,11 +198,12 @@
                                    scaled-height)))
   (.restore canvas))
 
-(defn draw-star-from-atlas [^Canvas canvas ^Image atlas-image atlas-metadata path x y size angle atlas-size]
-  "Draw a star from the texture atlas"
+(defn draw-star-from-atlas
+  "Draw a star from the texture atlas at screen coordinates (x, y)"
+  [^Canvas canvas ^Image atlas-image atlas-metadata path screen-x screen-y size angle atlas-size]
   (when-let [coords (get atlas-metadata path)]
     (.save canvas)
-    (.translate canvas x y)
+    (.translate canvas screen-x screen-y)
     (.rotate canvas angle)
     (let [tile-size (:size coords)
           scale (/ size tile-size)
@@ -175,17 +216,20 @@
                                      scaled-size)))
     (.restore canvas)))
 
-(defn star-visible? [star-x star-y star-size viewport-x viewport-y viewport-width viewport-height zoom]
-  "Check if a star is visible in the current viewport (with margin for safety)"
-  (let [margin (* star-size 2)  ;; Extra margin to avoid pop-in
-        world-min-x (/ (- viewport-x) zoom)
-        world-max-x (/ (+ (- viewport-x) viewport-width) zoom)
-        world-min-y (/ (- viewport-y) zoom)
-        world-max-y (/ (+ (- viewport-y) viewport-height) zoom)]
-    (and (> (+ star-x margin) world-min-x)
-         (< (- star-x margin) world-max-x)
-         (> (+ star-y margin) world-min-y)
-         (< (- star-y margin) world-max-y))))
+(defn star-visible?
+  "Check if a star is visible in the current viewport using non-linear transform"
+  [star-world-x star-world-y star-base-size pan-x pan-y viewport-width viewport-height zoom]
+  (let [;; Transform world position to screen position
+        screen-x (transform-position star-world-x zoom pan-x)
+        screen-y (transform-position star-world-y zoom pan-y)
+        ;; Transform size
+        screen-size (transform-size star-base-size zoom)
+        ;; Extra margin to avoid pop-in
+        margin (* screen-size 2)]
+    (and (> (+ screen-x margin) 0)
+         (< (- screen-x margin) viewport-width)
+         (> (+ screen-y margin) 0)
+         (< (- screen-y margin) viewport-height))))
 
 (defn draw-frame [^Canvas canvas width height time game-state]
   ;; Clear background
@@ -228,7 +272,7 @@
         ;; Get all star entities (those with position, renderable, and transform components)
         star-entities (state/filter-entities-with game-state [:position :renderable :transform :physics])
 
-        ;; Frustum culling: filter visible stars
+        ;; Frustum culling: filter visible stars using non-linear transform
         visible-stars (filter (fn [[_ entity]]
                                 (let [pos (state/get-component entity :position)
                                       transform (state/get-component entity :transform)]
@@ -238,10 +282,7 @@
         visible-count (count visible-stars)
         total-count (count star-entities)]
 
-    ;; Save canvas state and apply camera transform
-    (.save canvas)
-    (.translate canvas (float pan-x) (float pan-y))
-    (.scale canvas (float zoom) (float zoom))
+    ;; Note: No canvas transform needed - we calculate screen positions per-star with non-linear scaling
 
     ;; Draw visible stars using 5-level LOD
     (case lod-level
@@ -253,12 +294,16 @@
               transform (state/get-component entity :transform)
               physics (state/get-component entity :physics)
               path (:path renderable)
-              x (:x pos)
-              y (:y pos)
-              size (:size transform)
+              world-x (:x pos)
+              world-y (:y pos)
+              base-size (:size transform)
+              ;; Transform to screen coordinates with non-linear scaling
+              screen-x (transform-position world-x zoom pan-x)
+              screen-y (transform-position world-y zoom pan-y)
+              screen-size (transform-size base-size zoom)
               rotation-speed (:rotation-speed physics)
               rotation (* time 30 rotation-speed)]
-          (draw-star-from-atlas canvas atlas-image atlas-metadata path x y size rotation atlas-size)))
+          (draw-star-from-atlas canvas atlas-image atlas-metadata path screen-x screen-y screen-size rotation atlas-size)))
 
       ;; Small atlas (far zoom, low detail)
       :small
@@ -268,12 +313,16 @@
               transform (state/get-component entity :transform)
               physics (state/get-component entity :physics)
               path (:path renderable)
-              x (:x pos)
-              y (:y pos)
-              size (:size transform)
+              world-x (:x pos)
+              world-y (:y pos)
+              base-size (:size transform)
+              ;; Transform to screen coordinates with non-linear scaling
+              screen-x (transform-position world-x zoom pan-x)
+              screen-y (transform-position world-y zoom pan-y)
+              screen-size (transform-size base-size zoom)
               rotation-speed (:rotation-speed physics)
               rotation (* time 30 rotation-speed)]
-          (draw-star-from-atlas canvas atlas-image atlas-metadata path x y size rotation atlas-size)))
+          (draw-star-from-atlas canvas atlas-image atlas-metadata path screen-x screen-y screen-size rotation atlas-size)))
 
       ;; Medium atlas (medium zoom, medium detail)
       :medium
@@ -283,12 +332,16 @@
               transform (state/get-component entity :transform)
               physics (state/get-component entity :physics)
               path (:path renderable)
-              x (:x pos)
-              y (:y pos)
-              size (:size transform)
+              world-x (:x pos)
+              world-y (:y pos)
+              base-size (:size transform)
+              ;; Transform to screen coordinates with non-linear scaling
+              screen-x (transform-position world-x zoom pan-x)
+              screen-y (transform-position world-y zoom pan-y)
+              screen-size (transform-size base-size zoom)
               rotation-speed (:rotation-speed physics)
               rotation (* time 30 rotation-speed)]
-          (draw-star-from-atlas canvas atlas-image atlas-metadata path x y size rotation atlas-size)))
+          (draw-star-from-atlas canvas atlas-image atlas-metadata path screen-x screen-y screen-size rotation atlas-size)))
 
       ;; LG atlas (close zoom, high detail)
       :lg
@@ -298,12 +351,16 @@
               transform (state/get-component entity :transform)
               physics (state/get-component entity :physics)
               path (:path renderable)
-              x (:x pos)
-              y (:y pos)
-              size (:size transform)
+              world-x (:x pos)
+              world-y (:y pos)
+              base-size (:size transform)
+              ;; Transform to screen coordinates with non-linear scaling
+              screen-x (transform-position world-x zoom pan-x)
+              screen-y (transform-position world-y zoom pan-y)
+              screen-size (transform-size base-size zoom)
               rotation-speed (:rotation-speed physics)
               rotation (* time 30 rotation-speed)]
-          (draw-star-from-atlas canvas atlas-image atlas-metadata path x y size rotation atlas-size)))
+          (draw-star-from-atlas canvas atlas-image atlas-metadata path screen-x screen-y screen-size rotation atlas-size)))
 
       ;; Full-res images (very close zoom, highest detail)
       :high
@@ -318,15 +375,16 @@
                              (filter #(= (:path %) path))
                              first
                              :image)
-              x (:x pos)
-              y (:y pos)
-              size (:size transform)
+              world-x (:x pos)
+              world-y (:y pos)
+              base-size (:size transform)
+              ;; Transform to screen coordinates with non-linear scaling
+              screen-x (transform-position world-x zoom pan-x)
+              screen-y (transform-position world-y zoom pan-y)
+              screen-size (transform-size base-size zoom)
               rotation-speed (:rotation-speed physics)
               rotation (* time 30 rotation-speed)]
-          (draw-rotating-star canvas star-image x y size rotation))))
-
-    ;; Restore canvas state
-    (.restore canvas)
+          (draw-rotating-star canvas star-image screen-x screen-y screen-size rotation))))
 
     ;; Draw UI overlay (not affected by camera)
     (let [paint (doto (Paint.)
