@@ -1,7 +1,8 @@
 (ns silent-king.widgets.render
   "Widget rendering system using multi-method dispatch"
   (:require [silent-king.state :as state]
-            [silent-king.widgets.core :as wcore])
+            [silent-king.widgets.core :as wcore]
+            [silent-king.widgets.draw-order :as draw-order])
   (:import [io.github.humbleui.skija Canvas Paint Font Typeface PaintMode]
            [io.github.humbleui.types Rect RRect]))
 
@@ -250,14 +251,10 @@
 ;; =============================================================================
 
 (defn render-all-widgets
-  "Render all widgets sorted by z-index"
+  "Render all widgets sorted by z-index and hierarchy depth"
   [^Canvas canvas game-state time]
   (let [widgets (wcore/get-all-widgets game-state)
-        ;; Sort by z-index (lowest first)
-        sorted-widgets (sort-by
-                        (fn [[_ w]]
-                          (get-in (state/get-component w :layout) [:z-index] 0))
-                        widgets)]
+        sorted-widgets (draw-order/sort-for-render game-state widgets)]
 
     ;; Render each widget
     (doseq [[entity-id widget] sorted-widgets]

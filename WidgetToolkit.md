@@ -544,9 +544,13 @@ Specialized Widgets (domain-specific)
    - `src/silent_king/widgets/render.clj` - Multi-method widget rendering with state-dependent styling
    - `src/silent_king/widgets/interaction.clj` - Hit testing and mouse event handling
    - `src/silent_king/ui/controls.clj` - High-level UI construction including control panel creation
+   - `src/silent_king/widgets/draw_order.clj` - Deterministic render ordering helpers that keep parent containers behind their children
 
 2. **Files Modified:**
    - `src/silent_king/core.clj` - Integrated widget rendering in `draw-frame` and mouse event routing in callbacks
+   - `src/silent_king/widgets/core.clj` - Fixed VStack layout updates so child bounds are always written back to the right entities
+   - `src/silent_king/widgets/render.clj` - Switched to the shared draw-order helper and removed invalid Skija `close` calls
+   - `src/silent_king/widgets/interaction.clj` - Smarter hover/capture handling so sliders/buttons release state even when the mouse-up happens elsewhere
 
 3. **Widget Types Implemented:**
    - Panel - Container with rounded corners, shadows, and background color
@@ -559,65 +563,21 @@ Specialized Widgets (domain-specific)
    - Multi-method rendering dispatch by widget type
    - Nil-safe rendering (widgets skip rendering if bounds are invalid)
    - Mouse event routing (widgets get priority over camera controls)
-   - Hit testing with z-index sorting
+   - Hit testing with deterministic z-index/ancestry sorting so panel backgrounds paint before children
    - State-dependent visual styling (hover, pressed states)
    - Paint object caching for performance
 
-**❌ NOT YET WORKING:**
+5. **Regression Tests in Place:**
+   - `test/silent_king/widgets/core_test.clj` validates VStack layout spacing and stretch calculations
+   - `test/silent_king/widgets/interaction_test.clj` covers hover/click/drag edge cases (e.g., releasing outside the widget)
+   - `test/silent_king/widgets/draw_order_test.clj` ensures parent containers always render before their children
+   - `run-tests.sh` / `clj -M:test` provide a fast way to run the suite headlessly
 
-1. **VStack Layout Bug:**
-   - The `update-vstack-layout!` function is called but not correctly updating child widget bounds
-   - Root cause: The function in `src/silent_king/widgets/core.clj` at line 197-215 has a bug in how it maps child entities to their new bounds
-   - Specifically, line 210-211 tries to find the child ID but the logic is incorrect
-   - **Result**: All widgets have nil bounds and skip rendering (invisible)
+**Verification Checklist:**
 
-2. **Fix Required:**
-   ```clojure
-   ;; Current broken code in update-vstack-layout! (lines 196-215):
-   (defn update-vstack-layout!
-     "Update the layout of a VStack widget and its children"
-     [game-state vstack-entity-id]
-     (let [vstack-entity (state/get-entity game-state vstack-entity-id)
-           vstack-bounds (state/get-component vstack-entity :bounds)
-           vstack-layout (state/get-component vstack-entity :layout)
-           vstack-widget (state/get-component vstack-entity :widget)
-           child-ids (:children vstack-widget)
-           children (mapv #(state/get-entity game-state %) child-ids)
-           child-layouts (compute-vstack-layout vstack-bounds vstack-layout children)]
-
-       ;; Update each child's bounds
-       (doseq [[child new-bounds] child-layouts
-               :let [child-id (first (filter #(identical? child (second %))
-                                            (map vector child-ids children)))]]
-         (state/update-entity! game-state child-id
-                              #(state/add-component % :bounds new-bounds)))))
-   ```
-
-   **Problem**: The `:let` binding trying to find `child-id` is overly complex and likely failing. The `compute-vstack-layout` already returns `[child new-bounds]` pairs, and we have `child-ids` in the same order as `children`, so we can zip them together.
-
-   **Suggested Fix**:
-   ```clojure
-   (defn update-vstack-layout!
-     "Update the layout of a VStack widget and its children"
-     [game-state vstack-entity-id]
-     (let [vstack-entity (state/get-entity game-state vstack-entity-id)
-           vstack-bounds (state/get-component vstack-entity :bounds)
-           vstack-layout (state/get-component vstack-entity :layout)
-           vstack-widget (state/get-component vstack-entity :widget)
-           child-ids (:children vstack-widget)
-           children (mapv #(state/get-entity game-state %) child-ids)
-           child-layouts (compute-vstack-layout vstack-bounds vstack-layout children)]
-
-       ;; Update each child's bounds using the parallel child-ids vector
-       (doseq [[child-id [child new-bounds]] (map vector child-ids child-layouts)]
-         (state/update-entity! game-state child-id
-                              #(state/add-component % :bounds new-bounds)))))
-   ```
-
-**WHAT TO VERIFY AFTER FIX:**
-
-1. Run `./run.sh` and verify the game starts without crashing ✅ (already working)
-2. Look for "Control panel created" in console output ✅ (already working)
+1. `./run.sh` launches successfully, prints "Control panel created", and displays a visible panel with correctly stacked children
+2. Widgets respond to hover/drag without locking up, and releasing outside a widget resets interaction state
+3. `./run-tests.sh` (or `clj -M:test`) passes to prove layout, interaction, and draw-order invariants
 3. **EXPECTED**: Control panel should now be visible in top-left corner with all widgets rendered
 4. **TEST**: Hover over buttons - they should lighten
 5. **TEST**: Click "Reset Camera" - camera should reset to zoom 1.0, centered
