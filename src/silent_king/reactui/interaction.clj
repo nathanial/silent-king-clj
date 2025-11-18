@@ -1,6 +1,7 @@
 (ns silent-king.reactui.interaction
   "Hit testing and pointer interaction helpers for Reactified primitives."
-  (:require [silent-king.reactui.layout :as layout]))
+  (:require [silent-king.reactui.events :as ui-events]
+            [silent-king.reactui.layout :as layout]))
 
 (set! *warn-on-reflection* true)
 
@@ -16,14 +17,12 @@
        (>= py y)
        (<= py (+ y height))))
 
-(defn- hit-node
+(defn node-at
   [node px py]
   (when node
     (let [bounds (layout/bounds node)]
       (when (contains-point? bounds px py)
-        (or (some (fn [child]
-                    (hit-node child px py))
-                  (reverse (:children node)))
+        (or (some #(node-at % px py) (reverse (:children node)))
             (when (interactive-types (:type node))
               node))))))
 
@@ -54,7 +53,7 @@
 (defn click->events
   "Return any event vectors produced by clicking at px/py."
   [layout-tree px py]
-  (if-let [node (hit-node layout-tree px py)]
+  (if-let [node (node-at layout-tree px py)]
     (case (:type node)
       :button (if-let [event (-> node :props :on-click)]
                 (if (vector? event) [event] [])
@@ -66,3 +65,18 @@
                 [])
       [])
     []))
+
+(defn slider-drag!
+  [node game-state px]
+  (when-let [event (-> node :props :on-change)]
+    (when (vector? event)
+      (let [value (slider-value-from-point node px)]
+        (ui-events/dispatch-event! game-state (conj event value))))))
+
+(defn activate-button!
+  [node game-state px py]
+  (let [bounds (layout/bounds node)]
+    (when (contains-point? bounds px py)
+      (when-let [event (-> node :props :on-click)]
+        (when (vector? event)
+          (ui-events/dispatch-event! game-state event))))))

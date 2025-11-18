@@ -8,6 +8,7 @@
 (set! *warn-on-reflection* true)
 
 (defonce ^:private last-layout (atom nil))
+(defonce ^:private pointer-capture (atom nil))
 
 (defn- text-fragment?
   [value]
@@ -125,11 +126,45 @@
   []
   @last-layout)
 
-(defn handle-pointer-click!
-  "Run hit testing on the latest layout tree and dispatch resulting UI events."
+(defn- capture-node!
+  [node]
+  (reset! pointer-capture node))
+
+(defn release-capture!
+  []
+  (reset! pointer-capture nil))
+
+(defn captured-node
+  []
+  @pointer-capture)
+
+(defn handle-pointer-down!
   [game-state x y]
   (when-let [layout-tree (current-layout)]
-    (let [events (interaction/click->events layout-tree (double x) (double y))]
-      (doseq [event events]
-        (ui-events/dispatch-event! game-state event))))
+    (when-let [node (interaction/node-at layout-tree (double x) (double y))]
+      (case (:type node)
+        :slider (do
+                  (capture-node! node)
+                  (interaction/slider-drag! node game-state (double x))
+                  true)
+        :button (do
+                  (capture-node! node)
+                  true)
+        false))))
+
+(defn handle-pointer-up!
+  [game-state x y]
+  (when-let [node (captured-node)]
+    (case (:type node)
+      :button (interaction/activate-button! node game-state (double x) (double y))
+      :slider (interaction/slider-drag! node game-state (double x))
+      nil))
+  (release-capture!)
   nil)
+
+(defn handle-pointer-drag!
+  [game-state x _y]
+  (when-let [node (captured-node)]
+    (when (= (:type node) :slider)
+      (interaction/slider-drag! node game-state (double x))
+      true)))

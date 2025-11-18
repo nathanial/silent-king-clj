@@ -90,8 +90,9 @@
              input (state/get-input game-state)
              old-x (:mouse-x input)
              old-y (:mouse-y input)
-             dragging (:dragging input)]
-         (when dragging
+             dragging (:dragging input)
+             slider-handled? (boolean (reactui/handle-pointer-drag! game-state fb-xpos fb-ypos))]
+         (when (and dragging (not slider-handled?))
            (let [dx (- fb-xpos old-x)
                  dy (- fb-ypos old-y)]
              (state/update-camera! game-state
@@ -111,13 +112,14 @@
              y (:mouse-y input)
              pressed? (= action GLFW/GLFW_PRESS)]
          (if pressed?
-           (state/update-input! game-state assoc
-                                :dragging true
-                                :mouse-down-x x
-                                :mouse-down-y y)
+           (let [handled? (reactui/handle-pointer-down! game-state x y)]
+             (state/update-input! game-state assoc
+                                  :dragging (not handled?)
+                                  :mouse-down-x x
+                                  :mouse-down-y y))
             (do
-              (state/update-input! game-state assoc :dragging false)
-              (reactui/handle-pointer-click! game-state x y))))))))
+              (reactui/handle-pointer-up! game-state x y)
+              (state/update-input! game-state assoc :dragging false))))))))
 
   (GLFW/glfwSetScrollCallback
    window

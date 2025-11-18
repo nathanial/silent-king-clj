@@ -1,7 +1,6 @@
 (ns silent-king.reactui.app-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.test :refer [deftest is]]
             [silent-king.reactui.app :as app]
-            [silent-king.reactui.components.control-panel :as control-panel]
             [silent-king.reactui.core :as ui-core]
             [silent-king.reactui.events :as events]
             [silent-king.reactui.interaction :as interaction]
