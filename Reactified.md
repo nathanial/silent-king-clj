@@ -82,76 +82,30 @@ The Reactified UI will reintroduce the useful behaviors documented above, but wi
 
 ## 3. Primitive Element Representation
 
-We need a canonical shape for the “Reactified” primitive elements. Here are two main options.
-
-### Option A: Hiccup‑Like Vectors
+We will use **Hiccup‑like vectors** as the canonical primitive representation.
 
 **Shape**
 ```clojure
 [:panel {:key :control-panel
          :bounds {:x 16 :y 16 :width 320 :height 260}
-         :style {:background-color (theme/get-color :background :panel-secondary)
-                 :border-radius (theme/get-border-radius :xl)
-                 :shadow (theme/get-shadow :md)}}
+         :style {:background-color 0xCC222222
+                 :border-radius 12.0}}
   [:vstack {:gap 8 :padding {:all 12}}
-    [:label {:text "Silent King Controls"
-             :style {:color (theme/get-color :text :primary)
-                     :font-size (theme/get-font-size :heading)
-                     :font-weight :bold}}]
-    [:label {:text "Zoom"
-             :style {:color (theme/get-color :text :tertiary)}}]
-    [:slider {:value zoom
-              :range (:zoom theme/ranges)
-              :on-change [:ui/zoom-changed]}]
-    [:button {:on-click [:ui/toggle-hyperlanes]} "Toggle Hyperlanes"]
-    [:button {:on-click [:ui/toggle-minimap]} "Toggle Minimap"]
-    [:button {:on-click [:ui/reset-camera]} "Reset Camera"]
-    [:label {:text stats-text
-             :style {:color (theme/get-color :text :tertiary)
-                     :font-size (theme/get-font-size :tiny)}}]]]
+    [:button {:on-click [:ui/toggle-hyperlanes]}
+     "Toggle Hyperlanes"]
+    [:hstack {:gap 8}
+      [:label {:text "Zoom"}]
+      [:slider {:value zoom
+                :min 0.4
+                :max 10.0
+                :step 0.1
+                :on-change [:ui/set-zoom]}]]]]
 ```
 
-**Pros**
-- Very idiomatic in Clojure (similar to Reagent/rum).
-- Simple to read and compose.
-- Easy to extend with context data, metadata, etc.
-
-**Cons**
-- We need conventions around map keys (e.g. `:props` vs `:attrs` vs `:style`).
-- Slightly more “convention‑heavy” for nesting and children.
-
-### Option B: Explicit Maps
-
-**Shape**
-```clojure
-{:type :panel
- :key :control-panel
- :props {:bounds {:x 16 :y 16 :width 320 :height 260}
-         :style {:background-color (theme/get-color :background :panel-secondary)
-                 :border-radius (theme/get-border-radius :xl)
-                 :shadow (theme/get-shadow :md)}}
- :children
- [{:type :label
-   :key :title
-   :props {:text "Silent King Controls"
-           :style {:color (theme/get-color :text :primary)
-                   :font-size (theme/get-font-size :heading)
-                   :font-weight :bold}}}
-  ;; ...
-  ]}
-```
-
-**Pros**
-- Uniform shape; easy to spec/validate.
-- Direct mapping to multimethod dispatch (`defmulti render-primitive :type`).
-
-**Cons**
-- Heavier syntax than Hiccup.
-- Slightly more boilerplate in simple UIs.
-
-**Clarifying questions**
-- Do you prefer **Hiccup‑like** (`[:panel props child ...]`) or **map‑based** (`{:type :panel ...}`) primitives?
-- How important is **Spec validation** of UI trees for you in this first iteration?
+**Rationale**
+- Hiccup is idiomatic in Clojure and reads cleanly at the REPL.
+- It matches the desired “components return trees” style.
+- It keeps syntax light for authoring panels like the hyperlane toggle + zoom slider.
 
 ---
 
@@ -159,151 +113,87 @@ We need a canonical shape for the “Reactified” primitive elements. Here are 
 
 ### 4.1 Basic Component Shape
 
-We can define components as **pure functions from props → element tree**.
+We define components as **pure functions from props → Hiccup tree**.
 
-Example, control panel as a single component:
+Example: a minimal control panel with a hyperlane toggle and zoom slider:
 ```clojure
 (defn control-panel
-  [{:keys [zoom stats ranges theme]}]
+  [{:keys [zoom hyperlanes-enabled]}]
   [:panel {:key :control-panel
-           :bounds {:x (theme/get-panel-dimension :control :margin)
-                    :y (theme/get-panel-dimension :control :margin)
-                    :width (theme/get-panel-dimension :control :width)
-                    :height (theme/get-panel-dimension :control :height)}
-           :style {:background-color (theme/get-color :background :panel-secondary)
-                   :border-radius (theme/get-border-radius :xl)
-                   :shadow (theme/get-shadow :md)}}
-   ;; children...])
+           :bounds {:x 16 :y 16 :width 320 :height 120}
+           :style {:background-color 0xCC222222
+                   :border-radius 12.0}}
+   [:vstack {:gap 8 :padding {:all 12}}
+    [:button {:on-click [:ui/toggle-hyperlanes]}
+     (if hyperlanes-enabled "Disable Hyperlanes" "Enable Hyperlanes")]
+    [:hstack {:gap 8}
+     [:label {:text "Zoom"}]
+     [:slider {:value zoom
+               :min 0.4
+               :max 10.0
+               :step 0.1
+               :on-change [:ui/set-zoom]}]]]])
 ```
 
-### 4.2 Event Props as Data, Not Functions
+### 4.2 Event Props as Data (Event Vectors)
 
-Instead of passing raw fns that close over `game-state`, components should emit **event descriptors**:
+Instead of passing raw fns that close over `game-state`, components emit **event descriptors**:
 
 ```clojure
 [:button {:on-click [:ui/reset-camera]} "Reset Camera"]
 [:slider {:value zoom
-          :range (:zoom ranges)
+          :min 0.4
+          :max 10.0
+          :step 0.1
           :on-change [:ui/set-zoom]}]
 ```
 
-The runtime then interprets `:on-click` / `:on-change` as **messages** that the app turns into **state updates**.
-
-**Clarifying questions**
-- Do you want **all callbacks** to be “event vectors” (like Re-frame), or do you want to allow raw fns in some cases?
-- Should we encourage **namespaced event keywords** (`:ui.control/reset-camera`) for clarity?
+The runtime interprets `:on-click` / `:on-change` as **messages** that the app turns into **state updates**. All callbacks use **event vectors**, and we will prefer namespaced event keywords (e.g. `:ui.controls/reset-camera`).
 
 ---
 
-## 5. Rendering Architecture Options
+## 5. Rendering Architecture
 
-We need to decide how the Reactified primitives map to actual drawing. There are two main approaches, plus a hybrid.
-
-### Option 1: Immediate‑Mode Renderer (No ECS Widgets)
+We will use an **immediate‑mode renderer** as the core and only rendering path for the Reactified UI.
 
 **Idea**
 - Treat the primitive tree as a **virtual UI** that we render **directly** every frame.
-- The renderer walks the tree, computes layout on the fly, and calls Skija drawing primitives without creating ECS widget entities.
+- The renderer walks the tree, computes layout for each node, and calls Skija drawing primitives without creating a persistent UI entity graph.
 
 **Rough flow**
 ```clojure
 (defn render-ui-tree
-  [^Canvas canvas root-element time viewport]
+  [^Canvas canvas root-element viewport game-state]
   (let [layout-tree (layout/compute-layout root-element viewport)]
-    (render/paint-tree canvas layout-tree time)))
+    (render/paint-tree canvas layout-tree game-state)))
 ```
 
 **Pros**
 - Pure, React‑like, easy to reason about.
-- No need for `:entities` or `layout-dirty` tracking; the layout is recomputed from scratch each frame.
-- Sidesteps some of the complexity of the current widget ECS.
+- No `:entities` or layout-dirty tracking; layout is recomputed from scratch each frame.
+- Keeps the new UI layer small and focused, which is ideal for starting with panels, buttons, and sliders.
 
 **Cons**
-- We throw away a lot of existing `widgets.*` code (layout, interaction, z‑ordering).
-- Need to re‑implement hit testing, scroll math, dropdown behavior, etc. for the new tree shape.
-
-**Good fit if**
-- We are comfortable gradually deprecating ECS widgets for UI.
-- We want a clean “functional UI” layer dedicated to overlay widgets.
-
-### Option 2: React → ECS‑Style Adapter (Virtual to Internal UI Entities)
-
-**Idea**
-- Use an ECS‑style internal representation as the **“DOM”** for Reactified screens (similar in spirit to the legacy widgets, but implemented fresh).
-- The Reactified tree is **diffed** against a cached tree, and differences are applied as mutations on an internal set of UI entities and components (bounds, layout hints, render props, interaction state, etc.).
-
-**Rough flow**
-```clojure
-(defn reconcile!
-  [game-state old-tree new-tree]
-  ;; diff trees by :key and :type, then:
-  ;; - create new entities for new nodes
-  ;; - update components on existing entities
-  ;; - remove entities for deleted nodes
-  )
-
-(defn render-reactified-ui!
-  [game-state root-component props]
-  (let [old-tree (get-in @game-state [:ui-react/root])
-        new-tree (root-component props)]
-    (reconcile! game-state old-tree new-tree)
-    (swap! game-state assoc :ui-react/root new-tree)))
-```
-
-**Pros**
-- Lets us design a **React-style API** while reusing familiar concepts from the legacy widget system (as documented in `src/silent_king/widgets/*.md`).
-- Keeps layout/render/interaction logic encapsulated in one place behind an adapter.
-
-**Cons**
-- Requires building a **reconciler** (diffing algorithm) and a mapping from primitive props → internal UI components.
-- Updates are not purely functional; they mutate internal entities.
-- We would be introducing a new ECS‑backed UI layer, not reusing the old one.
-
-**Good fit if**
-- We want to leverage the conceptual model of the old widgets (layout, draw order, interaction) while still moving to a Reactified authoring story.
-- We are comfortable implementing a fresh ECS‑style UI backend guided by the Markdown docs and tests, rather than depending on the deleted code.
-
-### Option 3: Hybrid: Immediate‑Mode for New Widgets, ECS for Legacy
-
-**Idea**
-- Use **Option 1** for new, self‑contained Reactified panels and overlays.
-- Optionally introduce an **internal ECS‑style layer** (Option 2) later if we find we need a UI “DOM” for performance or incremental updates.
-
-**Pros**
-- Lets us experiment with a clean Reactified stack immediately (the legacy UI is already removed).
-- We can optionally introduce a small adapter or internal ECS layer to reuse math and ideas from `src/silent_king/widgets/*.md` without reviving the old implementation.
-
-**Cons**
-- Two UI systems running side by side during the transition.
-- Need a clear boundary (e.g. immediate‑mode UI in a dedicated overlay layer, or explicit “old UI off / new UI on” switches).
-
-**Clarifying questions**
-- Which direction sounds more appealing: **pure immediate‑mode renderer** first, or a **React → internal ECS adapter** that mirrors the legacy widget concepts from the Markdown docs?
-- How important is **minimizing coupling to an ECS‑style UI backend** versus keeping everything purely functional and immediate‑mode?
+- We must re‑implement hit testing, scroll math, dropdown behavior, etc. for the new tree shape.
+- Requires careful attention to performance as UI grows (though early panels will be small).
 
 ---
 
 ## 6. Layout in the Reactified World
 
-In the legacy system, layout was driven by widget entities and `:layout` components (see `src/silent_king/widgets/layout.md`). In Reactified land we can:
+We will design a **fresh, simple layout system** tailored to the immediate‑mode renderer, rather than porting legacy layout semantics.
 
-### Option A: Port Legacy Layout Semantics into a New Module
+Initial scope:
+- Vertical stacks (`:vstack`) for column layout.
+- Horizontal stacks (`:hstack`) for row layout.
+- Fixed‑size panels (`:panel` with explicit `:bounds`).
+- Simple padding/gap support.
 
-- Each primitive node carries layout hints (similar to the old `:layout` maps).
-- A new layout engine (pure or ECS‑backed) walks the primitive tree and computes child bounds using rules inspired by:
-  - `compute-vstack-layout`, `compute-hstack-layout`, and `apply-anchor-position` from the legacy design.
+As we add more widgets, we can extend this with alignment options and responsive behavior, but we do **not** need to match the legacy `widgets/layout.md` exactly.
 
-**Pros**
-- Minimal conceptual change from the previous behavior; easier to ensure visual parity with the old panels.
-- We can reuse the mental model and tests from the old system while re-implementing the code in a more functional style.
+### Functional Layout in the Tree
 
-**Cons**
-- Layout may still end up partially stateful if we choose an ECS‑backed representation.
-- We need to carefully design the API so it fits React-style, prop-based components.
-
-### Option B: Functional Layout in the Tree
-
-If we lean toward a **pure immediate‑mode layout**:
+Given our immediate‑mode choice, layout will be a pure function:
 - We define pure layout functions that walk the element tree and compute final `:bounds` for each node.
 - The layout tree is just data; rendering uses it directly.
 
@@ -320,10 +210,7 @@ Example sketch:
 - No layout‑dirty bookkeeping; each frame’s tree is self‑contained.
 
 **Cons**
-- Requires porting or re-specifying the layout rules described in `src/silent_king/widgets/layout.md` into pure functions.
-
-**Clarifying questions**
-- Would you prefer to **port the legacy layout semantics** into a new engine (possibly ECS‑backed), or invest in a **from-scratch pure layout module** as part of the Reactified plan?
+- We need to design and iterate on layout behavior as we add more component types (beyond the initial panels, buttons, and sliders).
 - Are you open to a world where UI layout is recomputed every frame (like typical immediate‑mode UIs), given the relatively small widget counts?
 
 ---
@@ -337,44 +224,29 @@ We need a clear, React‑like story for events:
 3. The node’s props contain an **event handler descriptor** (e.g. `[:ui/reset-camera]`).
 4. The app consumes the event descriptor and applies a **pure state transition** to `game-state`.
 
-### 7.1 Integration with an ECS‑Style Interaction Layer
+### 7.1 Functional Event Handling over the Layout Tree
 
-If we go with the **adapter approach (Option 2)**:
-- Internal UI entities would still have `:interaction` components (similar to the legacy design in `src/silent_king/widgets/interaction.md`).
-- The Reactified layer controls `:on-click`, `:on-change`, etc. by:
-  - encoding them as **event descriptors** on primitives,
-  - then generating corresponding interaction callbacks that dispatch those descriptors into a central handler.
+Given the immediate‑mode choice, hit testing and interaction will operate directly on the **layout tree**:
+- Define `handle-mouse-event` functions that walk the layout tree, find the target node, and produce zero or more **event vectors**.
+- A central dispatcher (e.g. `dispatch-event!`) interprets those vectors and updates `game-state`.
 
-Sketch:
+Example sketch:
 ```clojure
-[:button {:on-click [:ui/reset-camera]} "Reset Camera"]
+(defn handle-mouse-click
+  [layout-tree x y]
+  ;; returns a sequence of event vectors, e.g. [[:ui/toggle-hyperlanes]]
+  )
+
+(defn dispatch-event!
+  [game-state event]
+  (match event
+    [:ui/toggle-hyperlanes] (state/toggle-hyperlanes! game-state)
+    [:ui/set-zoom value]    (state/update-camera! game-state assoc :zoom value)
+    ;; ...
+    ))
 ```
 
-Adapter layer:
-```clojure
-(defn attach-interaction-callbacks
-  [primitive]
-  (update primitive :props
-          (fn [props]
-            (cond-> props
-              (:on-click props)
-              (assoc :on-click
-                     (fn dispatch-click []
-                       (dispatch-event (:on-click props))))))))
-```
-
-Here `dispatch-event` is our own function that takes an event vector and mutates `game-state` (or enqueues an event in a queue).
-
-### 7.2 Functional Event Handling (No ECS Interaction Components)
-
-If we go more immediate‑mode:
-- Hit testing and interaction would operate directly on the **layout tree**.
-- We define `handle-mouse-event` functions that walk the tree, find the target node, and produce a sequence of **event descriptors**.
-- The app then interprets those descriptors and updates `game-state`.
-
-**Clarifying questions**
-- Do you envision a **central event dispatcher** (single `handle-event!` that pattern matches event vectors), or many smaller handlers sprinkled around?
-- How much of the legacy interaction behavior (as documented in `src/silent_king/widgets/interaction.md`) do you want to preserve vs. rethink—especially for complex widgets like dropdowns and scroll‑views?
+More complex widgets (dropdowns, scroll-views) can build on top of the same pattern once we add them.
 
 ---
 
@@ -414,32 +286,37 @@ Then, on each frame (once a renderer exists):
 
 ## 9. Bootstrapping Strategy (No Legacy UI)
 
-The legacy widget UI is already removed; the Reactified UI will be built **from scratch**, guided by the Markdown docs listed in section 1.2. Here’s a staged rollout that reflects that reality.
+The legacy widget UI is already removed; the Reactified UI will be built **from scratch**, guided by the Markdown docs listed in section 1.2. We will start with **panels (vertical + horizontal), buttons, and sliders**, so we can implement a basic control panel with:
+- A button to toggle hyperlane visibility.
+- A slider to control zoom.
 
 1. **Define primitive vocabulary and component model**
    - Decide between Hiccup vs map primitives.
-   - Define `render-primitive` multimethod (if we go direct Skija) or mapping to an internal UI representation.
+   - (Done conceptually) Use Hiccup vectors as the public API.
+   - Define `render-primitive` multimethod (for direct Skija drawing) and a small set of initial primitive types: `:panel`, `:vstack`, `:hstack`, `:button`, `:label`, `:slider`.
    - Add Spec (optional) for primitive nodes.
 
-2. **Decide on an initial implementation route**
-   - **Adapter route**: Implement a minimal reconciler from primitives → internal ECS‑style UI entities for a small subset (`:panel`, `:vstack`, `:hstack`, `:label`, `:button`, `:slider`), with semantics guided by `src/silent_king/widgets/*.md`.
-   - **Immediate‑mode route**: Implement a prototype immediate‑mode renderer that walks the primitive tree, computes layout, and issues Skija calls directly.
+2. **Implement the immediate‑mode renderer**
+   - Implement a prototype renderer that:
+     - Walks a Hiccup tree.
+     - Computes layout for `:panel`, `:vstack`, `:hstack`.
+     - Issues Skija drawing calls for `:panel`, `:button`, `:label`, and `:slider`.
+   - Add minimal hit testing and interaction for `:button` and `:slider`, using event vectors.
 
-3. **Build the first new Reactified screen**
-   - Choose a concrete feature (e.g. a new debug overlay, an alternate control panel, or a redesigned dashboard) and implement it entirely in the Reactified system, using the legacy docs as functional reference where applicable.
+3. **Build the first Reactified control panel**
+   - Implement a `control-panel` component (as sketched in section 4.1) that:
+     - Shows a button bound to `[:ui/toggle-hyperlanes]`.
+     - Shows a slider bound to `[:ui/set-zoom]`.
+   - Wire the renderer into `silent-king.core/draw-frame` so this panel renders on top of the starfield.
    - Route events as data (e.g. `[:ui/reset-camera]`) into a central dispatcher that calls existing helpers (`reset-camera!`, `state/toggle-minimap!`, etc.), but keep the **component code** free of direct `update-entity!` usage.
 
 4. **Extend vocabulary and infrastructure**
-   - Add more primitives (`:scroll-view`, `:dropdown`, `:toggle`, charts, etc.) as needed by new Reactified screens.
-   - Generalize layout and interaction helpers so that new UI work can preferentially use the Reactified system instead of the old one.
+   - Add more primitives as needed (`:scroll-view`, `:dropdown`, `:toggle`, charts, etc.).
+   - Generalize layout and interaction helpers, still within the immediate‑mode renderer.
 
 5. **Validate against legacy behavior**
-   - For each Reactified screen, compare its behavior and visuals against the corresponding legacy Markdown doc(s) (e.g. `controls.md`, `star_inspector.md`, etc.).
+   - For each Reactified screen, compare its behavior and visuals against the corresponding legacy Markdown doc(s) (e.g. `controls.md`, `hyperlane_settings.md`, `performance_dashboard.md`).
    - Use those docs as acceptance criteria rather than trying to match the old implementation line-for-line.
-
-**Clarifying questions**
-- Does this **bootstrapping-first plan** (no legacy UI, just legacy docs) match how you’d like to evolve the UI?
-- What kind of **new or replacement screen** would you prefer to build first in the Reactified system (e.g. a new debug overlay, a redesigned performance dashboard, an experimental control panel)?
 
 ---
 
@@ -448,22 +325,18 @@ The legacy widget UI is already removed; the Reactified UI will be built **from 
 Here’s a consolidated list of choices we should resolve before coding:
 
 1. **Primitive representation**
-   - Hiccup‑like vectors vs explicit maps?
-   - How much Spec/validation do we want up front?
+   - How much Spec/validation do we want up front for Hiccup trees?
 
 2. **Rendering strategy**
-   - Adapter to an internal ECS‑style UI layer (React → internal entities)?
-   - Immediate‑mode renderer (no ECS) for new UI?
-   - Hybrid (start adapter‑based, add immediate‑mode later)?
+   - Immediate‑mode renderer (no UI ECS) as the only path.
 
 3. **Event representation**
-   - Use Re‑frame‑style event vectors everywhere (`[:ui/reset-camera]`)?
-   - Allow raw functions in a few places, or keep everything as data?
-   - Central event dispatcher vs many small handlers?
+   - Use Re‑frame‑style event vectors everywhere (`[:ui/reset-camera]`).
+   - Prefer a central event dispatcher that pattern matches on event vectors.
 
 4. **Layout evolution**
-   - Reuse `widgets.layout` and existing layout math via adapter?
-   - Extract / reimplement layout as pure functions over primitive trees?
+   - Start with a small, from-scratch functional layout module for panels/stacks.
+   - Extend layout behavior incrementally as new widgets are added.
 
 5. **State organization**
    - Single `game-state` atom as the source of truth, mapping into props?
@@ -471,22 +344,19 @@ Here’s a consolidated list of choices we should resolve before coding:
    - Where should per‑panel UI state live (`:ui` vs a new root key)?
 
 6. **Migration priorities**
-   - Which panel or overlay’s **functionality** (as described in `src/silent_king/ui/*.md`) do we want the Reactified system to cover first?
-   - How quickly do we want to treat the legacy docs as **fixed requirements** and build all new UI exclusively in the Reactified system?
+   - Which panel or overlay’s **functionality** (as described in `src/silent_king/ui/*.md`) do we want the Reactified system to cover after the initial controls panel?
+   - How quickly do we want to treat the legacy docs as **fixed requirements** and build all additional UI exclusively in the Reactified system?
 
 ---
 
 ## 11. What I Need From You
 
-To tighten this plan for a second draft, it would help to know:
+With the following decisions made:
 
-- Which **primitive representation** do you prefer (vectors vs maps), and do you want Spec validations included early?
-- Do you want to build an **internal ECS‑style UI layer** (adapter route) for new Reactified screens, or start with a **clean immediate‑mode renderer** that only borrows ideas/math from the legacy Markdown docs?
-- Are you comfortable standardizing on **event vectors** for `:on-click`/`:on-change` etc., or do you want the flexibility of passing raw functions?
-- Which area of the previous UI (controls, star inspector, hyperlane settings, performance dashboard, or a new debug overlay) should we target as the **first feature to implement or replace** in the Reactified system?
-- How strongly do you want to mirror the legacy layout semantics (as described in `widgets/layout.md`) vs building a **new pure layout layer**?
+- Primitive representation: **Hiccup vectors**.
+- Rendering: **clean immediate‑mode** renderer (no UI ECS).
+- Events: **standardized event vectors** with a central dispatcher.
+- Layout: **new, simple functional layout**, not legacy‑driven.
+- First target: **control panel** with hyperlane toggle button and zoom slider.
 
-Once we make those calls, we can write a more concrete v2 of this document with:
-- a fixed primitive schema,
-- a sketched API for component authors,
-- and a small, concrete migration plan for the first panel.
+The next step is to turn this plan into concrete namespaces and function signatures (e.g. `silent-king.reactui.core`, `layout`, `render`, `events`) and then implement the initial primitives plus the first control panel.
