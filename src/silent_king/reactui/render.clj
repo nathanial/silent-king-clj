@@ -61,23 +61,48 @@
   []
   (:pointer *render-context*))
 
-(defn- pointer-over?
-  [node]
+(defn- pointer-in-bounds?
+  [{:keys [x y width height]}]
   (when-let [{px :x py :y} (pointer-position)]
-    (let [{:keys [width height] :as bounds} (layout/bounds node)
-          bx (double (:x bounds))
-          by (double (:y bounds))
-          px* (double px)
+    (let [px* (double px)
           py* (double py)]
-      (and (>= px* bx)
-           (<= px* (+ bx width))
-           (>= py* by)
-           (<= py* (+ by height))))))
+      (and (>= px* (double x))
+           (<= px* (+ (double x) width))
+           (>= py* (double y))
+           (<= py* (+ (double y) height))))))
+
+(defn- pointer-over-node?
+  [node]
+  (pointer-in-bounds? (layout/bounds node)))
+
+(defn- active-interaction
+  []
+  (:active-interaction *render-context*))
 
 (defn- active-button?
   [node]
-  (let [active (:active-button-bounds *render-context*)]
-    (and active (= active (layout/bounds node)))))
+  (let [active (active-interaction)]
+    (and (= :button (:type active))
+         (= (:bounds active) (layout/bounds node)))))
+
+(defn- active-slider?
+  [node]
+  (let [active (active-interaction)]
+    (and (= :slider (:type active))
+         (= (:bounds active) (layout/bounds node)))))
+
+(defn- active-dropdown-option?
+  [node option]
+  (let [active (active-interaction)]
+    (and (= :dropdown-option (:type active))
+         (= (:node active) node)
+         (= (:value active) (:value option)))))
+
+(defn- active-dropdown-header?
+  [node]
+  (let [active (active-interaction)]
+    (and (= :dropdown (:type active))
+         (= (:node active) node))))
 
 (defn- selected-label
   [options value]
@@ -125,7 +150,7 @@
         {:keys [x y width height]} (layout/bounds node)
         bg-color (or background-color 0xFF2D2F38)
         txt-color (or text-color 0xFFFFFFFF)
-        hovered? (pointer-over? node)
+        hovered? (pointer-over-node? node)
         active? (active-button? node)
         shade (cond active? 0.9
                     hovered? 1.1
@@ -171,7 +196,15 @@
         {:keys [track handle]} (get-in node [:layout :slider])
         bg-color (or background-color 0x00111111)
         t-color (or track-color 0xFF3C3F4A)
-        h-color (or handle-color 0xFFF0F0F0)]
+        h-color (or handle-color 0xFFF0F0F0)
+        hovered? (pointer-over-node? node)
+        active? (active-slider? node)
+        track-color (cond active? (adjust-color t-color 0.9)
+                          hovered? (adjust-color t-color 1.1)
+                          :else t-color)
+        handle-color (cond active? (adjust-color h-color 0.9)
+                           hovered? (adjust-color h-color 1.05)
+                           :else h-color)]
     (when background-color
       (with-open [^Paint bg (doto (Paint.)
                                (.setColor (unchecked-int bg-color)))]
@@ -180,7 +213,7 @@
                    bg)))
     (when (pos? (:width track))
       (with-open [^Paint track-paint (doto (Paint.)
-                                       (.setColor (unchecked-int t-color)))]
+                                       (.setColor (unchecked-int track-color)))]
         (.drawRect canvas
                    (Rect/makeXYWH (float (:x track))
                                   (float (:y track))
@@ -188,7 +221,7 @@
                                   (float (:height track)))
                    track-paint))
       (with-open [^Paint handle-paint (doto (Paint.)
-                                         (.setColor (unchecked-int h-color)))]
+                                         (.setColor (unchecked-int handle-color)))]
         (.drawCircle canvas
                      (float (:x handle))
                      (float (:y handle))
@@ -222,18 +255,29 @@
         text-baseline (+ (:y header) (/ (:height header) 2.0) 5.0)
         caret-x (- (+ (:x header) (:width header)) (+ padding 6.0))
         caret-baseline text-baseline
-        label (selected-label (or all-options []) selected)]
+        label (selected-label (or all-options []) selected)
+        header-hovered? (pointer-in-bounds? header)
+        header-active? (active-dropdown-header? node)
+        header-color (cond header-active? (adjust-color header-bg 0.9)
+                           header-hovered? (adjust-color header-bg 1.1)
+                           :else header-bg)
+        header-border (cond header-active? (adjust-color header-bg 0.8)
+                             header-hovered? (adjust-color header-bg 1.2)
+                             :else border-color)
+        header-text-color (if header-active?
+                            (adjust-color txt-color 0.95)
+                            txt-color)]
     (with-open [^Paint header-paint (doto (Paint.)
-                                      (.setColor (unchecked-int header-bg)))]
+                                      (.setColor (unchecked-int header-color)))]
       (.drawRect canvas header-rect header-paint))
-    (when border-color
+    (when header-border
       (with-open [^Paint border-paint (doto (Paint.)
-                                         (.setColor (unchecked-int border-color))
+                                         (.setColor (unchecked-int header-border))
                                          (.setStrokeWidth 1.0)
                                          (.setMode PaintMode/STROKE))]
         (.drawRect canvas header-rect border-paint)))
     (with-open [^Paint text-paint (doto (Paint.)
-                                     (.setColor (unchecked-int txt-color)))]
+                                     (.setColor (unchecked-int header-text-color)))]
       (with-open [^Font font (make-font font-size)]
         (.drawString canvas label
                      (float text-x)
@@ -247,6 +291,7 @@
                      text-paint)))
     (when (and expanded? (seq options))
       (queue-overlay! {:type :dropdown
+                       :node node
                        :selected selected
                        :options options
                        :padding padding
@@ -280,12 +325,23 @@
   (draw-dropdown canvas node))
 
 (defmethod draw-overlay :dropdown
-  [^Canvas canvas {:keys [selected options padding option-bg selected-bg text-color selected-text-color]}]
+  [^Canvas canvas {:keys [node selected options padding option-bg selected-bg text-color selected-text-color]}]
   (doseq [option options]
     (let [bounds (:bounds option)
           selected? (= (:value option) selected)
-          bg (if selected? selected-bg option-bg)
-          option-text-color (if selected? selected-text-color text-color)
+          hovered? (pointer-in-bounds? bounds)
+          active? (active-dropdown-option? node option)
+          base-bg (cond active? (adjust-color option-bg 0.85)
+                        hovered? (adjust-color option-bg 1.1)
+                        :else option-bg)
+          bg (if selected?
+               (cond active? (adjust-color selected-bg 0.9)
+                     hovered? (adjust-color selected-bg 1.05)
+                     :else selected-bg)
+               base-bg)
+          option-text-color (if (or selected? active?)
+                              selected-text-color
+                              text-color)
           rect (Rect/makeXYWH (float (:x bounds))
                                (float (:y bounds))
                                (float (:width bounds))

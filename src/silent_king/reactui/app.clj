@@ -47,7 +47,7 @@
                   {:x (/ (double (or (:mouse-x input) 0.0)) scale)
                    :y (/ (double (or (:mouse-y input) 0.0)) scale)})
         render-context {:pointer pointer
-                        :active-button-bounds (ui-core/active-button-bounds)}]
+                        :active-interaction (ui-core/active-interaction)}]
     (when canvas
       (.save canvas)
       (.scale canvas (float scale) (float scale)))

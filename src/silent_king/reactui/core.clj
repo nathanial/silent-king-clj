@@ -10,7 +10,7 @@
 
 (defonce ^:private last-layout (atom nil))
 (defonce ^:private pointer-capture (atom nil))
-(defonce ^:private active-button-bounds* (atom nil))
+(defonce ^:private active-interaction* (atom nil))
 
 (defn- scale-factor
   [game-state]
@@ -152,22 +152,28 @@
   []
   @pointer-capture)
 
-(defn active-button-bounds
+(defn active-interaction
   []
-  @active-button-bounds*)
+  @active-interaction*)
 
-(defn- set-active-button!
-  [node]
-  (reset! active-button-bounds* (layout/bounds node)))
+(defn- set-active-interaction!
+  ([node kind]
+   (set-active-interaction! node kind nil))
+  ([node kind {:keys [bounds value]}]
+   (reset! active-interaction*
+           (cond-> {:type kind}
+             node (assoc :node node)
+             (or bounds node) (assoc :bounds (or bounds (layout/bounds node)))
+             value (assoc :value value)))))
 
-(defn- clear-active-button!
+(defn- clear-active-interaction!
   []
-  (reset! active-button-bounds* nil))
+  (reset! active-interaction* nil))
 
 (defn handle-pointer-down!
   [game-state x y]
   (let [scale (scale-factor game-state)]
-    (clear-active-button!)
+    (clear-active-interaction!)
     (when-let [layout-tree (current-layout)]
       (when-let [node (interaction/node-at layout-tree
                                            (/ (double x) scale)
@@ -175,14 +181,19 @@
         (case (:type node)
           :slider (do
                     (capture-node! node)
+                    (set-active-interaction! node :slider)
                     (interaction/slider-drag! node game-state (/ (double x) scale))
                     true)
           :button (do
                     (capture-node! node)
-                    (set-active-button! node)
+                    (set-active-interaction! node :button)
                     true)
-          :dropdown (when (interaction/dropdown-region node (/ (double x) scale) (/ (double y) scale))
+          :dropdown (when-let [region (interaction/dropdown-region node (/ (double x) scale) (/ (double y) scale))]
                       (capture-node! node)
+                      (case (:type region)
+                        :option (set-active-interaction! node :dropdown-option {:bounds (:bounds region)
+                                                                              :value (:value region)})
+                        :header (set-active-interaction! node :dropdown {:bounds (:bounds region)}))
                       true)
           false)))))
 
@@ -196,7 +207,7 @@
         :dropdown (interaction/dropdown-click! node game-state (/ (double x) scale) (/ (double y) scale))
         nil)))
   (release-capture!)
-  (clear-active-button!)
+  (clear-active-interaction!)
   nil)
 
 (defn handle-pointer-drag!

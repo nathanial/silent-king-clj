@@ -48,13 +48,15 @@
   (let [{:keys [header options expanded?]} (get-in node [:layout :dropdown])]
     (cond
       (contains-point? header px py)
-      {:type :header}
+      {:type :header
+       :bounds header}
 
       (and expanded?)
       (some (fn [option]
               (when (contains-point? (:bounds option) px py)
                 {:type :option
-                 :value (:value option)}))
+                 :value (:value option)
+                 :bounds (:bounds option)}))
             options)
 
       :else
