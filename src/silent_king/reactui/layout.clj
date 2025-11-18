@@ -9,20 +9,27 @@
   [node]
   (get-in node [:layout :bounds]))
 
+(defn- normalize-bounds
+  [bounds]
+  (-> {:x 0.0 :y 0.0 :width 0.0 :height 0.0}
+      (merge bounds)
+      (update :x #(double (or % 0.0)))
+      (update :y #(double (or % 0.0)))
+      (update :width #(double (or % 0.0)))
+      (update :height #(double (or % 0.0)))))
+
 (defn- clean-viewport
   [viewport]
-  (merge {:x 0.0 :y 0.0 :width 0.0 :height 0.0}
-         (or viewport {})))
+  (normalize-bounds viewport))
 
 (defn- resolve-bounds
   [node context]
   (let [viewport (:viewport context)
         fallback (:bounds context)
         explicit (get-in node [:props :bounds])]
-    (merge {:x 0.0 :y 0.0 :width 0.0 :height 0.0}
-           viewport
-           fallback
-           (or explicit {}))))
+    (normalize-bounds (merge viewport
+                             fallback
+                             (or explicit {})))))
 
 (defn- expand-padding
   [padding]

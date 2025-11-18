@@ -21,29 +21,27 @@
   [^Canvas canvas node]
   (let [{:keys [text color font-size]} (:props node)
         {:keys [x y]} (layout/bounds node)
-        ^Paint paint (doto (Paint.)
-                       (.setColor (unchecked-int (or color 0xFFFFFFFF))))
         size (double (or font-size 16.0))
         baseline (+ y size)]
-    (with-open [font (make-font size)]
-      (.drawString canvas (or text "")
-                   (float x)
-                   (float baseline)
-                   font
-                   paint))
-    (.close paint)))
+    (with-open [^Paint paint (doto (Paint.)
+                               (.setColor (unchecked-int (or color 0xFFFFFFFF))))]
+      (with-open [^Font font (make-font size)]
+        (.drawString canvas (or text "")
+                     (float x)
+                     (float baseline)
+                     font
+                     paint)))))
 
 (defn- draw-vstack
   [^Canvas canvas node]
   (let [{:keys [background-color]} (:props node)
         {:keys [x y width height]} (layout/bounds node)]
     (when background-color
-      (let [paint (doto (Paint.)
-                    (.setColor (unchecked-int background-color)))]
+      (with-open [^Paint paint (doto (Paint.)
+                                  (.setColor (unchecked-int background-color)))]
         (.drawRect canvas
                    (Rect/makeXYWH (float x) (float y) (float width) (float height))
-                   paint)
-        (.close paint)))
+                   paint)))
     (doseq [child (:children node)]
       (draw-node canvas child))))
 
