@@ -94,6 +94,21 @@
   (state/close-dropdown! game-state dropdown-id)
   nil)
 
+(defmethod dispatch-event! :ui/perf-toggle-visible
+  [game-state _]
+  (state/toggle-performance-overlay-visible! game-state)
+  nil)
+
+(defmethod dispatch-event! :ui/perf-toggle-expanded
+  [game-state _]
+  (state/toggle-performance-overlay-expanded! game-state)
+  nil)
+
+(defmethod dispatch-event! :metrics/reset-performance
+  [game-state _]
+  (state/reset-performance-metrics! game-state)
+  nil)
+
 (defmethod dispatch-event! :default
   [_ event]
   (println "Unhandled UI event" event)

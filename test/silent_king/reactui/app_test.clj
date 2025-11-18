@@ -7,11 +7,15 @@
             [silent-king.reactui.layout :as layout]
             [silent-king.state :as state]))
 
+(def ^:const test-viewport {:x 0 :y 0 :width 1280 :height 720})
+
 (defn- build-layout
-  [tree]
-  (-> tree
+  [game-state]
+  (state/set-ui-viewport! game-state {:width (:width test-viewport)
+                                      :height (:height test-viewport)})
+  (-> (app/root-tree game-state)
       ui-core/normalize-tree
-      (layout/compute-layout {:x 0 :y 0 :width 800 :height 600})))
+      (layout/compute-layout test-viewport)))
 
 (defn- find-node-by
   [node pred]
@@ -52,7 +56,7 @@
 
 (deftest control-panel-events-update-game-state
   (let [game-state (atom (state/create-game-state))
-        tree (build-layout (app/root-tree game-state))
+        tree (build-layout game-state)
         button-node (find-button-with-event tree [:ui/toggle-hyperlanes])
         button-bounds (layout/bounds button-node)
         button-x (+ (:x button-bounds) (/ (:width button-bounds) 2.0))
@@ -80,7 +84,7 @@
 
 (deftest hyperlane-settings-slider-updates-state
   (let [game-state (atom (state/create-game-state))
-        tree (build-layout (app/root-tree game-state))
+        tree (build-layout game-state)
         opacity-slider (find-slider-with-event tree [:hyperlanes/set-opacity])
         track (get-in opacity-slider [:layout :slider :track])
         click-x (+ (:x track) (:width track))
@@ -92,7 +96,7 @@
 
 (deftest hyperlane-color-dropdown-selects-scheme
   (let [game-state (atom (state/create-game-state))
-        initial-tree (build-layout (app/root-tree game-state))
+        initial-tree (build-layout game-state)
         dropdown (find-dropdown initial-tree)
         header (get-in dropdown [:layout :dropdown :header])
         toggle-events (interaction/click->events initial-tree
@@ -100,7 +104,7 @@
                                                  (+ (:y header) 4))]
     (doseq [event toggle-events]
       (events/dispatch-event! game-state event))
-    (let [expanded-tree (build-layout (app/root-tree game-state))
+    (let [expanded-tree (build-layout game-state)
           dropdown* (find-dropdown expanded-tree)
           red-option (some #(when (= :red (:value %)) %)
                            (get-in dropdown* [:layout :dropdown :options]))]
@@ -113,3 +117,56 @@
           (events/dispatch-event! game-state event))
         (is (= :red (:color-scheme (state/hyperlane-settings game-state))))
         (is (false? (state/dropdown-open? game-state :hyperlane-color)))))))
+
+(deftest performance-overlay-visibility-and-expanded-toggle
+  (let [game-state (atom (state/create-game-state))
+        tree (build-layout game-state)
+        hide-button (find-button-with-event tree [:ui/perf-toggle-visible])]
+    (is hide-button)
+    (let [bounds (layout/bounds hide-button)
+          click-x (+ (:x bounds) (/ (:width bounds) 2.0))
+          click-y (+ (:y bounds) (/ (:height bounds) 2.0))
+          click-events (interaction/click->events tree click-x click-y)]
+      (is (seq click-events))
+      (doseq [event click-events]
+        (events/dispatch-event! game-state event)))
+    (is (false? (state/performance-overlay-visible? game-state)))
+    (let [hidden-tree (build-layout game-state)
+          show-button (find-button-with-event hidden-tree [:ui/perf-toggle-visible])
+          bounds (layout/bounds show-button)
+          click-x (+ (:x bounds) (/ (:width bounds) 2.0))
+          click-y (+ (:y bounds) (/ (:height bounds) 2.0))
+          click-events (interaction/click->events hidden-tree click-x click-y)]
+      (is (seq click-events))
+      (doseq [event click-events]
+        (events/dispatch-event! game-state event)))
+    (is (true? (state/performance-overlay-visible? game-state)))
+    (let [expanded-tree (build-layout game-state)
+          collapse-button (find-button-with-event expanded-tree [:ui/perf-toggle-expanded])
+          bounds (layout/bounds collapse-button)
+          click-x (+ (:x bounds) (/ (:width bounds) 2.0))
+          click-y (+ (:y bounds) (/ (:height bounds) 2.0))
+          click-events (interaction/click->events expanded-tree click-x click-y)]
+      (is (seq click-events))
+      (doseq [event click-events]
+        (events/dispatch-event! game-state event)))
+    (is (false? (state/performance-overlay-expanded? game-state)))))
+
+(deftest performance-overlay-reset-metrics
+  (let [game-state (atom (state/create-game-state))]
+    (swap! game-state assoc-in [:metrics :performance]
+           {:fps-history [1.0]
+            :frame-time-history [10.0]
+            :last-sample-time 5.0
+            :latest {:fps 120.0}})
+    (let [tree (build-layout game-state)
+          reset-button (find-button-with-event tree [:metrics/reset-performance])
+          bounds (layout/bounds reset-button)
+          click-x (+ (:x bounds) (/ (:width bounds) 2.0))
+          click-y (+ (:y bounds) (/ (:height bounds) 2.0))
+          click-events (interaction/click->events tree click-x click-y)]
+      (is (seq click-events))
+      (doseq [event click-events]
+        (events/dispatch-event! game-state event)))
+    (is (= state/default-performance-metrics
+           (get-in @game-state [:metrics :performance])))))

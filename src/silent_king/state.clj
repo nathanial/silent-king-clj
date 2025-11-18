@@ -25,6 +25,12 @@
    :animation-speed 1.0
    :line-width 1.0})
 
+(def default-performance-metrics
+  {:fps-history []
+   :frame-time-history []
+   :last-sample-time 0.0
+   :latest {}})
+
 ;; =============================================================================
 ;; Game State Structure
 ;; =============================================================================
@@ -63,14 +69,15 @@
                :details nil}
    :ui {:scale 2.0
         :hyperlane-panel {:expanded? true}
+        :viewport {:width 0.0
+                   :height 0.0}
+        :performance-overlay {:visible? true
+                               :expanded? true}
         :dropdowns {}}
    :features {:hyperlanes? true
               :minimap? true}
    :hyperlane-settings default-hyperlane-settings
-   :metrics {:performance {:fps-history []
-                           :frame-time-history []
-                           :last-sample-time 0.0
-                           :latest {}}}})
+   :metrics {:performance default-performance-metrics}})
 
 (defn create-render-state []
   "Create initial render state structure"
@@ -224,6 +231,16 @@
   (swap! game-state assoc-in [:ui :scale]
          (-> value double (max 1.0) (min 3.0))))
 
+(defn ui-viewport
+  [game-state]
+  (get-in @game-state [:ui :viewport]))
+
+(defn set-ui-viewport!
+  [game-state {:keys [width height]}]
+  (swap! game-state assoc-in [:ui :viewport]
+         {:width (double (or width 0.0))
+          :height (double (or height 0.0))}))
+
 (defn hyperlane-panel-expanded?
   [game-state]
   (boolean (get-in @game-state [:ui :hyperlane-panel :expanded?] true)))
@@ -247,6 +264,28 @@
   [game-state dropdown-id]
   (when dropdown-id
     (swap! game-state assoc-in [:ui :dropdowns dropdown-id] false)))
+
+(defn performance-overlay-visible?
+  [game-state]
+  (boolean (get-in @game-state [:ui :performance-overlay :visible?] true)))
+
+(defn toggle-performance-overlay-visible!
+  [game-state]
+  (swap! game-state update-in [:ui :performance-overlay :visible?]
+         (fnil not true)))
+
+(defn performance-overlay-expanded?
+  [game-state]
+  (boolean (get-in @game-state [:ui :performance-overlay :expanded?] true)))
+
+(defn toggle-performance-overlay-expanded!
+  [game-state]
+  (swap! game-state update-in [:ui :performance-overlay :expanded?]
+         (fnil not true)))
+
+(defn reset-performance-metrics!
+  [game-state]
+  (swap! game-state assoc-in [:metrics :performance] default-performance-metrics))
 
 ;; =============================================================================
 ;; State Updaters

@@ -2,6 +2,7 @@
   "Bridges game state to the Reactified UI tree."
   (:require [silent-king.reactui.components.control-panel :as control-panel]
             [silent-king.reactui.components.hyperlane-settings :as hyperlane-settings]
+            [silent-king.reactui.components.performance-overlay :as performance-overlay]
             [silent-king.reactui.core :as ui-core]
             [silent-king.state :as state])
   (:import [io.github.humbleui.skija Canvas]))
@@ -25,11 +26,32 @@
    :expanded? (state/hyperlane-panel-expanded? game-state)
    :color-dropdown-expanded? (state/dropdown-open? game-state :hyperlane-color)})
 
+(defn performance-overlay-props
+  [game-state]
+  (let [metrics (or (get-in @game-state [:metrics :performance :latest]) {})
+        viewport (state/ui-viewport game-state)
+        margin 24.0
+        panel-width (double (or (:width performance-overlay/default-panel-bounds) 320.0))
+        scale (state/ui-scale game-state)
+        physical-width (double (or (:width viewport) panel-width))
+        logical-width (if (pos? scale)
+                        (/ physical-width scale)
+                        physical-width)
+        x (max margin (- logical-width panel-width margin))
+        bounds (-> performance-overlay/default-panel-bounds
+                   (assoc :x x
+                          :y margin))]
+    {:metrics metrics
+     :bounds bounds
+     :visible? (state/performance-overlay-visible? game-state)
+     :expanded? (state/performance-overlay-expanded? game-state)}))
+
 (defn root-tree
   [game-state]
   [:vstack {:key :ui-root}
    (control-panel/control-panel (control-panel-props game-state))
-   (hyperlane-settings/hyperlane-settings-panel (hyperlane-settings-props game-state))])
+   (hyperlane-settings/hyperlane-settings-panel (hyperlane-settings-props game-state))
+   (performance-overlay/performance-overlay (performance-overlay-props game-state))])
 
 (defn logical-viewport
   [scale {:keys [x y width height]}]
@@ -41,6 +63,7 @@
 (defn render!
   "Render the full Reactified UI."
   [^Canvas canvas viewport game-state]
+  (state/set-ui-viewport! game-state viewport)
   (let [scale (state/ui-scale game-state)
         input (state/get-input game-state)
         pointer (when (:mouse-initialized? input)
