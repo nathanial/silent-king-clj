@@ -96,7 +96,7 @@
                                    (fn [cam]
                                      (-> cam
                                          (update :pan-x #(+ % dx))
-                                         (update :pan-y #(+ % dy))))))
+                                         (update :pan-y #(+ % dy)))))))
          (state/update-input! game-state assoc :mouse-x fb-xpos :mouse-y fb-ypos)))))
 
   (GLFW/glfwSetMouseButtonCallback
@@ -113,7 +113,7 @@
                                   :dragging true
                                   :mouse-down-x x
                                   :mouse-down-y y)
-             (state/update-input! game-state assoc :dragging false))))))))
+             (state/update-input! game-state assoc :dragging false)))))))
 
   (GLFW/glfwSetScrollCallback
    window
