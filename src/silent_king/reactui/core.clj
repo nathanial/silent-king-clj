@@ -125,35 +125,6 @@
   []
   @last-layout)
 
-(defn demo-tree
-  "Simple placeholder tree used until real panels are wired up."
-  []
-  [:vstack {:bounds {:x 24
-                     :y 24
-                     :width 300}
-            :padding {:all 12}
-            :gap 6
-            :background-color 0xAA10131A}
-   [:label {:text "Reactified UI scaffolding"
-            :color 0xFFFFFFFF}]
-   [:label {:text "Phase 2 – primitives + events"
-            :color 0xFF9CDCFE}]
-   [:button {:label "Toggle Hyperlanes"
-             :on-click [:ui/toggle-hyperlanes]
-             :background-color 0xFF2F3039}]
-   [:slider {:value 1.0
-             :min 0.4
-             :max 4.0
-             :step 0.1
-             :on-change [:ui/set-zoom]}]])
-
-(defn render-demo!
-  "Render the placeholder :vstack overlay."
-  [canvas viewport]
-  (render-ui-tree {:canvas canvas
-                   :tree (demo-tree)
-                   :viewport viewport}))
-
 (defn handle-pointer-click!
   "Run hit testing on the latest layout tree and dispatch resulting UI events."
   [game-state x y]

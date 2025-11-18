@@ -1,5 +1,6 @@
 (ns silent-king.test-runner
   (:require [clojure.test :as t]
+            [silent-king.reactui.app-test]
             [silent-king.reactui.core-test]
             [silent-king.reactui.events-test]
             [silent-king.reactui.interaction-test]
@@ -8,7 +9,8 @@
 (defn -main
   "Run all Reactified UI unit tests."
   [& _]
-  (let [result (apply t/run-tests '[silent-king.reactui.core-test
+  (let [result (apply t/run-tests '[silent-king.reactui.app-test
+                                    silent-king.reactui.core-test
                                     silent-king.reactui.events-test
                                     silent-king.reactui.interaction-test
                                     silent-king.reactui.layout-test])
