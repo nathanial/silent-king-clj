@@ -278,12 +278,6 @@ Then, on each frame (once a renderer exists):
     ))
 ```
 
-**Clarifying questions**
-- Are you comfortable deriving **all UI props** from `game-state` (and maybe a separate `ui-state` sub‑tree), or do you want a **separate UI atom** for Reactified components?
-- Should per‑panel UI state (e.g. star inspector visibility, performance dashboard position) continue to live under `[:ui ...]` in `game-state`, or would you like a different structure?
-
----
-
 ## 9. Bootstrapping Strategy (No Legacy UI)
 
 The legacy widget UI is already removed; the Reactified UI will be built **from scratch**, guided by the Markdown docs listed in section 1.2. We will start with **panels (vertical + horizontal), buttons, and sliders**, so we can implement a basic control panel with:
@@ -314,42 +308,20 @@ The legacy widget UI is already removed; the Reactified UI will be built **from 
    - Add more primitives as needed (`:scroll-view`, `:dropdown`, `:toggle`, charts, etc.).
    - Generalize layout and interaction helpers, still within the immediate‑mode renderer.
 
-5. **Validate against legacy behavior**
-   - For each Reactified screen, compare its behavior and visuals against the corresponding legacy Markdown doc(s) (e.g. `controls.md`, `hyperlane_settings.md`, `performance_dashboard.md`).
-   - Use those docs as acceptance criteria rather than trying to match the old implementation line-for-line.
+5. **Use legacy docs as guidance**
+   - For each Reactified screen, refer to the corresponding legacy Markdown doc(s) (e.g. `controls.md`, `hyperlane_settings.md`, `performance_dashboard.md`) as **design inspiration and behavioral guidance**, not as exact specs we must match.
 
 ---
 
 ## 10. Open Questions & Decisions To Make
 
-Here’s a consolidated list of choices we should resolve before coding:
+Here’s a consolidated list of items that are **still open** and worth deciding before we start coding:
 
-1. **Primitive representation**
-   - How much Spec/validation do we want up front for Hiccup trees?
-
-2. **Rendering strategy**
-   - Immediate‑mode renderer (no UI ECS) as the only path.
-
-3. **Event representation**
-   - Use Re‑frame‑style event vectors everywhere (`[:ui/reset-camera]`).
-   - Prefer a central event dispatcher that pattern matches on event vectors.
-
-4. **Layout evolution**
-   - Start with a small, from-scratch functional layout module for panels/stacks.
-   - Extend layout behavior incrementally as new widgets are added.
-
-5. **State organization**
-   - Single `game-state` atom as the source of truth, mapping into props?
-   - Dedicated `ui-react` sub‑tree for Reactified panel state?
-   - Where should per‑panel UI state live (`:ui` vs a new root key)?
-
-6. **Migration priorities**
-   - Which panel or overlay’s **functionality** (as described in `src/silent_king/ui/*.md`) do we want the Reactified system to cover after the initial controls panel?
-   - How quickly do we want to treat the legacy docs as **fixed requirements** and build all additional UI exclusively in the Reactified system?
+There are no remaining open design questions for this initial phase; the key decisions are summarized below.
 
 ---
 
-## 11. What I Need From You
+## 11. Summary & Next Steps
 
 With the following decisions made:
 
@@ -357,6 +329,57 @@ With the following decisions made:
 - Rendering: **clean immediate‑mode** renderer (no UI ECS).
 - Events: **standardized event vectors** with a central dispatcher.
 - Layout: **new, simple functional layout**, not legacy‑driven.
-- First target: **control panel** with hyperlane toggle button and zoom slider.
+- State: a single `game-state` atom mapped into props; no separate UI atom initially.
+- Legacy docs: treated as suggestions and reference, not fixed constraints.
+- First primitive/panel target: **`:vstack`** (used to build a control panel with hyperlane toggle button and zoom slider).
 
-The next step is to turn this plan into concrete namespaces and function signatures (e.g. `silent-king.reactui.core`, `layout`, `render`, `events`) and then implement the initial primitives plus the first control panel.
+The next step is to turn this plan into concrete namespaces and function signatures (e.g. `silent-king.reactui.core`, `layout`, `render`, `events`) and then implement the initial primitives plus the first `:vstack`-based control panel.
+
+---
+
+## 12. Phased Implementation Plan
+
+To make the work concrete and incremental, we can break it into phases:
+
+**Phase 1 – Core primitives and layout**
+- Create a new `silent-king.reactui` (or similar) namespace group.
+- Implement:
+  - Hiccup primitive normalizer (if needed).
+  - `:vstack` layout and rendering.
+  - Minimal `render-ui-tree` that can draw a static `:vstack` of labels on top of the starfield.
+- Testing:
+  - Add clojure.test tests for `:vstack` layout (e.g. simple trees with known bounds).
+  - Add a smoke test that builds a tiny Hiccup tree and passes it through `render-ui-tree` without exceptions.
+
+**Phase 2 – Buttons and sliders**
+- Add `:button` and `:slider` primitives:
+  - Rendering (visual states can be simple at first).
+  - Hit testing and interaction (clicks and value changes) that emit event vectors.
+- Introduce a central `dispatch-event!` that handles:
+  - `[:ui/toggle-hyperlanes]` → `state/toggle-hyperlanes!`
+  - `[:ui/set-zoom value]`    → `state/update-camera!` with `:zoom`.
+- Testing:
+  - Unit tests for button hit testing and click handling (ensure correct event vectors are produced).
+  - Unit tests for slider value mapping from mouse coordinates and event emission (`[:ui/set-zoom value]`).
+
+**Phase 3 – Control panel integration**
+- Implement the `control-panel` component using `:vstack`, `:button`, and `:slider`.
+- Integrate `render-ui-frame!` into `silent-king.core/draw-frame`:
+  - Build props from `game-state`.
+  - Render the control panel over the existing starfield.
+- Verify that:
+  - The hyperlane toggle button affects rendering.
+  - The zoom slider updates camera zoom and feels responsive.
+- Testing:
+  - Integration-style tests that:
+    - Build a small `game-state`, render the control panel, and simulate button/slider events.
+    - Assert that `state/toggle-hyperlanes!` and `state/update-camera!` effects are observed on `game-state`.
+
+**Phase 4 – Additional primitives and panels**
+- Add more layout and display primitives (`:hstack`, additional labels/text styling).
+- Start designing the next Reactified panels (e.g. a simplified performance overlay or hyperlane settings UI), using the legacy Markdown docs as high-level guides.
+- Testing:
+  - For each new primitive, add unit tests for layout, rendering preconditions, and event behavior.
+  - For each new panel, add focused tests that exercise its event vectors and basic state wiring.
+
+Each phase should be small enough to validate at the REPL, and we can refine the layout, rendering quality, event model, and tests incrementally once the basic control panel is working.
