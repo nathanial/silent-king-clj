@@ -2,7 +2,8 @@
   "Bridges game state to the Reactified UI tree."
   (:require [silent-king.reactui.components.control-panel :as control-panel]
             [silent-king.reactui.core :as ui-core]
-            [silent-king.state :as state]))
+            [silent-king.state :as state])
+  (:import [io.github.humbleui.skija Canvas]))
 
 (set! *warn-on-reflection* true)
 
@@ -20,9 +21,22 @@
   [game-state]
   (control-panel/control-panel (control-panel-props game-state)))
 
+(defn logical-viewport
+  [{:keys [x y width height]}]
+  {:x (/ x ui-core/ui-scale)
+   :y (/ y ui-core/ui-scale)
+   :width (/ width ui-core/ui-scale)
+   :height (/ height ui-core/ui-scale)})
+
 (defn render!
   "Render the full Reactified UI."
-  [canvas viewport game-state]
-  (ui-core/render-ui-tree {:canvas canvas
-                           :tree (root-tree game-state)
-                           :viewport viewport}))
+  [^Canvas canvas viewport game-state]
+  (when canvas
+    (.save canvas)
+    (.scale canvas (float ui-core/ui-scale) (float ui-core/ui-scale)))
+  (let [result (ui-core/render-ui-tree {:canvas canvas
+                                        :tree (root-tree game-state)
+                                        :viewport (logical-viewport viewport)})]
+    (when canvas
+      (.restore canvas))
+    result))

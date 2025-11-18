@@ -7,6 +7,8 @@
 
 (set! *warn-on-reflection* true)
 
+(def ui-scale 2.0)
+
 (defonce ^:private last-layout (atom nil))
 (defonce ^:private pointer-capture (atom nil))
 
@@ -141,11 +143,13 @@
 (defn handle-pointer-down!
   [game-state x y]
   (when-let [layout-tree (current-layout)]
-    (when-let [node (interaction/node-at layout-tree (double x) (double y))]
+    (when-let [node (interaction/node-at layout-tree
+                                         (/ (double x) ui-scale)
+                                         (/ (double y) ui-scale))]
       (case (:type node)
         :slider (do
                   (capture-node! node)
-                  (interaction/slider-drag! node game-state (double x))
+                  (interaction/slider-drag! node game-state (/ (double x) ui-scale))
                   true)
         :button (do
                   (capture-node! node)
@@ -156,8 +160,8 @@
   [game-state x y]
   (when-let [node (captured-node)]
     (case (:type node)
-      :button (interaction/activate-button! node game-state (double x) (double y))
-      :slider (interaction/slider-drag! node game-state (double x))
+      :button (interaction/activate-button! node game-state (/ (double x) ui-scale) (/ (double y) ui-scale))
+      :slider (interaction/slider-drag! node game-state (/ (double x) ui-scale))
       nil))
   (release-capture!)
   nil)
@@ -166,5 +170,5 @@
   [game-state x _y]
   (when-let [node (captured-node)]
     (when (= (:type node) :slider)
-      (interaction/slider-drag! node game-state (double x))
+      (interaction/slider-drag! node game-state (/ (double x) ui-scale))
       true)))

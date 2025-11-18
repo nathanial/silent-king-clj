@@ -43,9 +43,10 @@
                                              :viewport {:x 0 :y 0 :width 200 :height 40}})
         slider-node (find-node layout-tree :slider)
         track (get-in slider-node [:layout :slider :track])
-        down-x (+ (:x track) 2.0)
+        scale reactui/ui-scale
+        down-x (* scale (+ (:x track) 2.0))
         down-y (+ (:y track) (/ (:height track) 2.0))
-        drag-x (+ (:x track) (:width track))]
+        drag-x (* scale (+ (:x track) (:width track)))]
     (is (true? (reactui/handle-pointer-down! game-state down-x down-y)))
     (is (= 0.4 (get-in @game-state [:camera :zoom])))
     (is (true? (reactui/handle-pointer-drag! game-state drag-x down-y)))
