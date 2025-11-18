@@ -1,7 +1,8 @@
 (ns silent-king.ui.controls
   "High-level UI construction functions for Silent King"
   (:require [silent-king.state :as state]
-            [silent-king.widgets.core :as wcore]))
+            [silent-king.widgets.core :as wcore]
+            [silent-king.ui.theme :as theme]))
 
 (set! *warn-on-reflection* true)
 
@@ -37,62 +38,71 @@
   (let [;; Panel background
         panel (wcore/panel
                :id :control-panel
-               :bounds {:x 20 :y 20 :width 280 :height 264}
-               :visual {:background-color 0xCC222222
-                       :border-radius 12.0
-                       :shadow {:offset-x 0 :offset-y 4 :blur 12 :color 0x80000000}})
+               :bounds {:x (theme/get-panel-dimension :control :margin)
+                       :y (theme/get-panel-dimension :control :margin)
+                       :width (theme/get-panel-dimension :control :width)
+                       :height (theme/get-panel-dimension :control :height)}
+               :visual {:background-color (theme/get-color :background :panel-secondary)
+                       :border-radius (theme/get-border-radius :xl)
+                       :shadow (theme/get-shadow :md)})
 
         ;; Title
         title (wcore/label "Silent King Controls"
-                          :bounds {:width 260 :height 30}
-                          :visual {:text-color 0xFFFFFFFF
-                                  :font-size 18
+                          :bounds {:width (:width (theme/get-widget-size :button :standard))
+                                  :height (:height (theme/get-widget-size :label :large))}
+                          :visual {:text-color (theme/get-color :text :primary)
+                                  :font-size (theme/get-font-size :heading)
                                   :font-weight :bold
                                   :text-align :left})
 
         ;; Zoom label
         zoom-label (wcore/label "Zoom"
-                               :bounds {:width 260 :height 20}
-                               :visual {:text-color 0xFFAAAAAA
-                                       :font-size 14})
+                               :bounds {:width (:width (theme/get-widget-size :button :standard))
+                                       :height (:height (theme/get-widget-size :label :small))}
+                               :visual {:text-color (theme/get-color :text :tertiary)
+                                       :font-size (theme/get-font-size :body)})
 
         ;; Zoom slider
-        zoom-slider (wcore/slider 0.4 10.0 1.0
+        zoom-slider (wcore/slider (:min (:zoom theme/ranges))
+                                 (:max (:zoom theme/ranges))
+                                 (:initial (:zoom theme/ranges))
                                  #(set-camera-zoom! game-state %)
                                  :id :zoom-slider
-                                 :bounds {:width 260 :height 30}
-                                 :step 0.1)
+                                 :bounds {:width (:width (theme/get-widget-size :button :standard))
+                                         :height (:height (theme/get-widget-size :label :large))}
+                                 :step (:step (:zoom theme/ranges)))
 
         ;; Hyperlane toggle button
         hyperlane-button (wcore/button "Toggle Hyperlanes"
                                        #(state/toggle-hyperlanes! game-state)
                                        :id :hyperlane-toggle
-                                       :bounds {:width 260 :height 36}
-                                       :visual {:background-color 0xFF6699FF
-                                               :border-radius 6.0})
+                                       :bounds (theme/get-widget-size :button :standard)
+                                       :visual {:background-color (theme/get-color :interactive :secondary)
+                                               :border-radius (theme/get-border-radius :md)})
 
         ;; Minimap toggle button
         minimap-button (wcore/button "Toggle Minimap"
                                      #(state/toggle-minimap! game-state)
                                      :id :minimap-toggle
-                                     :bounds {:width 260 :height 36}
-                                     :visual {:background-color 0xFF66CCFF
-                                             :border-radius 6.0})
+                                     :bounds (theme/get-widget-size :button :standard)
+                                     :visual {:background-color (theme/get-color :interactive :tertiary)
+                                             :border-radius (theme/get-border-radius :md)})
 
         ;; Reset camera button
         reset-button (wcore/button "Reset Camera"
                                   #(reset-camera! game-state)
                                   :id :reset-camera
-                                  :bounds {:width 260 :height 36}
-                                  :visual {:background-color 0xFF3366CC
-                                          :border-radius 6.0})
+                                  :bounds (theme/get-widget-size :button :standard)
+                                  :visual {:background-color (theme/get-color :interactive :primary)
+                                          :border-radius (theme/get-border-radius :md)})
 
         ;; Stats label (will be updated each frame)
         stats-label (wcore/label "FPS: -- | Stars: --"
                                 :id :stats-label
-                                :bounds {:width 260 :height 20}
-                                :visual {:text-color 0xFFAAAAAA
-                                        :font-size 12})
+                                :bounds {:width (:width (theme/get-widget-size :button :standard))
+                                        :height (:height (theme/get-widget-size :label :small))}
+                                :visual {:text-color (theme/get-color :text :tertiary)
+                                        :font-size (theme/get-font-size :tiny)})
 
         ;; Create VStack with all children
         children [title zoom-label zoom-slider hyperlane-button minimap-button reset-button stats-label]]
@@ -137,6 +147,6 @@
   [game-state]
   (let [minimap (wcore/minimap
                  :id :galaxy-minimap
-                 :bounds {:width 250 :height 250})]
+                 :bounds (:minimap theme/widget-sizes))]
     (wcore/add-widget! game-state minimap)
     (println "Minimap created")))

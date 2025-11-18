@@ -3,6 +3,7 @@
   (:require [silent-king.state :as state]
             [silent-king.widgets.core :as wcore]
             [silent-king.ui.specs :as ui-specs]
+            [silent-king.ui.theme :as theme]
             [clojure.spec.alpha :as s]))
 
 (set! *warn-on-reflection* true)
@@ -29,10 +30,6 @@
    {:value :red :label "Red"}
    {:value :green :label "Green"}
    {:value :rainbow :label "Rainbow"}])
-
-(def ^:private opacity-range {:min 0.0 :max 1.0 :step 0.05})
-(def ^:private speed-range {:min 0.2 :max 2.5 :step 0.1})
-(def ^:private width-range {:min 0.5 :max 2.5 :step 0.1})
 
 ;; =============================================================================
 ;; Internal Helpers
@@ -71,9 +68,9 @@
 (defn- text-label
   [text]
   (wcore/label text
-               :bounds {:width 120 :height 24}
-               :visual {:text-color 0xFFAAAAAA
-                        :font-size 14}))
+               :bounds (theme/get-widget-size :button :medium)
+               :visual {:text-color (theme/get-color :text :tertiary)
+                        :font-size (theme/get-font-size :body)}))
 
 (defn- update-header-label!
   [game-state expanded?]
@@ -157,82 +154,98 @@
         expanded-height (:expanded-height ui-state)
         panel (wcore/panel
                :id panel-id
-               :bounds {:x 20 :y 300 :width 320 :height collapsed-height}
-               :visual {:background-color 0xCC1A1A1A
-                        :border-radius 12.0
-                        :shadow {:offset-x 0 :offset-y 4 :blur 10 :color 0x66000000}})
+               :bounds {:x (theme/get-panel-dimension :settings :margin)
+                       :y 300
+                       :width (theme/get-panel-dimension :settings :width)
+                       :height collapsed-height}
+               :visual {:background-color (theme/get-color :background :panel-primary)
+                        :border-radius (theme/get-border-radius :xl)
+                        :shadow (theme/get-shadow :sm)})
         header (wcore/button "Hyperlane Settings ▸"
                              #(toggle-panel! game-state)
                              :id header-id
-                             :bounds {:width 280 :height 36}
-                             :visual {:background-color 0xFF2A2A2A
-                                      :border-radius 8.0
-                                      :font-size 16
-                                      :text-color 0xFFEEEEEE})
+                             :bounds (theme/get-widget-size :button :large)
+                             :visual {:background-color (theme/get-color :background :button-primary)
+                                      :border-radius (theme/get-border-radius :lg)
+                                      :font-size (theme/get-font-size :subheading)
+                                      :text-color (theme/get-color :text :secondary)})
         master-toggle (wcore/toggle "Enable Hyperlanes"
                                     (:enabled? settings)
                                     #(state/set-hyperlane-setting! game-state :enabled? %)
                                     :id master-toggle-id
-                                    :bounds {:width 280 :height 34})
+                                    :bounds (theme/get-widget-size :text-field :small))
         color-dropdown (wcore/dropdown color-options
                                        (:color-scheme settings)
                                        #(state/set-hyperlane-setting! game-state :color-scheme %)
                                        :id color-dropdown-id
-                                       :bounds {:width 280 :height 38})
+                                       :bounds (theme/get-widget-size :text-field :medium))
         animation-toggle (wcore/toggle "Enable Animation"
                                        (:animation? settings)
                                        #(state/set-hyperlane-setting! game-state :animation? %)
                                        :id animation-toggle-id
-                                       :bounds {:width 280 :height 34})
+                                       :bounds (theme/get-widget-size :text-field :small))
         opacity-row (wcore/hstack
                      :id opacity-row-id
-                     :bounds {:width 280 :height 48}
-                     :layout {:padding {:top 4 :bottom 4 :left 4 :right 4}
-                              :gap 12
+                     :bounds (theme/get-widget-size :text-field :large)
+                     :layout {:padding {:top (theme/get-spacing :xs)
+                                       :bottom (theme/get-spacing :xs)
+                                       :left (theme/get-spacing :xs)
+                                       :right (theme/get-spacing :xs)}
+                              :gap (theme/get-spacing :md)
                               :align :center})
         speed-row (wcore/hstack
                    :id speed-row-id
-                   :bounds {:width 280 :height 48}
-                   :layout {:padding {:top 4 :bottom 4 :left 4 :right 4}
-                            :gap 12
+                   :bounds (theme/get-widget-size :text-field :large)
+                   :layout {:padding {:top (theme/get-spacing :xs)
+                                     :bottom (theme/get-spacing :xs)
+                                     :left (theme/get-spacing :xs)
+                                     :right (theme/get-spacing :xs)}
+                            :gap (theme/get-spacing :md)
                             :align :center})
         width-row (wcore/hstack
                    :id width-row-id
-                   :bounds {:width 280 :height 48}
-                   :layout {:padding {:top 4 :bottom 4 :left 4 :right 4}
-                            :gap 12
+                   :bounds (theme/get-widget-size :text-field :large)
+                   :layout {:padding {:top (theme/get-spacing :xs)
+                                     :bottom (theme/get-spacing :xs)
+                                     :left (theme/get-spacing :xs)
+                                     :right (theme/get-spacing :xs)}
+                            :gap (theme/get-spacing :md)
                             :align :center})
         opacity-label (text-label "Opacity")
-        opacity-slider (wcore/slider (:min opacity-range)
-                                     (:max opacity-range)
+        opacity-slider (wcore/slider (:min (:opacity theme/ranges))
+                                     (:max (:opacity theme/ranges))
                                      (:opacity settings)
                                      #(state/set-hyperlane-setting! game-state :opacity %)
                                      :id opacity-slider-id
-                                     :bounds {:width 150 :height 24}
-                                     :step (:step opacity-range))
+                                     :bounds {:width (:width-sm (:slider theme/widget-sizes))
+                                             :height (:height (:slider theme/widget-sizes))}
+                                     :step (:step (:opacity theme/ranges)))
         speed-label (text-label "Animation Speed")
-        speed-slider (wcore/slider (:min speed-range)
-                                   (:max speed-range)
+        speed-slider (wcore/slider (:min (:speed theme/ranges))
+                                   (:max (:speed theme/ranges))
                                    (:animation-speed settings)
                                    #(state/set-hyperlane-setting! game-state :animation-speed %)
                                    :id speed-slider-id
-                                   :bounds {:width 150 :height 24}
-                                   :step (:step speed-range))
+                                   :bounds {:width (:width-sm (:slider theme/widget-sizes))
+                                           :height (:height (:slider theme/widget-sizes))}
+                                   :step (:step (:speed theme/ranges)))
         width-label (text-label "Line Width")
-        width-slider (wcore/slider (:min width-range)
-                                   (:max width-range)
+        width-slider (wcore/slider (:min (:width theme/ranges))
+                                   (:max (:width theme/ranges))
                                    (:line-width settings)
                                    #(state/set-hyperlane-setting! game-state :line-width %)
                                    :id width-slider-id
-                                   :bounds {:width 150 :height 24}
-                                   :step (:step width-range))
+                                   :bounds {:width (:width-sm (:slider theme/widget-sizes))
+                                           :height (:height (:slider theme/widget-sizes))}
+                                   :step (:step (:width theme/ranges)))
         reset-button (wcore/button "Reset to Defaults"
                                    #(state/reset-hyperlane-settings! game-state)
                                    :id reset-button-id
-                                   :bounds {:width 280 :height 32}
-                                   :visual {:background-color 0xFF444444
-                                            :border-radius 8.0
-                                            :text-color 0xFFFFFFFF})]
+                                   :bounds {:width (:width (theme/get-widget-size :button :large))
+                                           :height (:height (theme/get-widget-size :button :compact))}
+                                   :visual {:background-color (theme/get-color :background :button-neutral)
+                                            :border-radius (theme/get-border-radius :lg)
+                                            :text-color (theme/get-color :text :primary)})]
 
     (let [panel-entity-id (wcore/add-widget-tree! game-state
                                                   panel

@@ -5,6 +5,7 @@
             [silent-king.widgets.config :as wconfig]
             [silent-king.widgets.minimap :as wminimap]
             [silent-king.ui.specs :as ui-specs]
+            [silent-king.ui.theme :as theme]
             [clojure.spec.alpha :as s]))
 
 (set! *warn-on-reflection* true)
@@ -30,18 +31,18 @@
 (def ^:private memory-label-id :performance-dashboard-memory)
 
 ;; =============================================================================
-;; Layout Constants
+;; Layout Constants (from theme)
 ;; =============================================================================
 
-(def ^:private panel-width 320.0)
-(def ^:private header-height 48.0)
-(def ^:private default-collapsed-height 60.0)
-(def ^:private default-expanded-height 320.0)
-(def ^:private margin 12.0)
-(def ^:private viewport-margin 16.0)  ;; Minimum margin from viewport edge
-(def ^:private gap 8.0)
-(def ^:private chart-height 80.0)
-(def ^:private label-height 24.0)
+(def ^:private panel-width (theme/get-panel-dimension :dashboard :width))
+(def ^:private header-height (theme/get-panel-dimension :dashboard :header-height))
+(def ^:private default-collapsed-height (theme/get-panel-dimension :dashboard :collapsed))
+(def ^:private default-expanded-height (theme/get-panel-dimension :dashboard :expanded))
+(def ^:private margin (theme/get-panel-dimension :dashboard :margin))
+(def ^:private viewport-margin (theme/get-panel-dimension :dashboard :viewport-margin))
+(def ^:private gap (theme/get-spacing :sm))
+(def ^:private chart-height (theme/get-panel-dimension :dashboard :chart-height))
+(def ^:private label-height (:height (theme/get-widget-size :label :medium)))
 
 ;; =============================================================================
 ;; Helper Functions - State Access
@@ -337,47 +338,47 @@
         ;; Create header widgets
         title-label (wcore/label "Performance"
                                  :id title-label-id
-                                 :bounds {:width 120 :height 32}
-                                 :visual {:font-size 16
+                                 :bounds (theme/get-widget-size :button :medium)
+                                 :visual {:font-size (theme/get-font-size :subheading)
                                          :font-weight :bold
-                                         :text-color 0xFFFFFFFF})
+                                         :text-color (theme/get-color :text :primary)})
 
         fps-label (wcore/label "0.0 FPS"
                                :id fps-label-id
                                :bounds {:width 80 :height 32}
-                               :visual {:font-size 14
-                                       :text-color 0xFF3DD598
+                               :visual {:font-size (theme/get-font-size :body)
+                                       :text-color (theme/get-color :text :accent)
                                        :text-align :right})
 
         pin-button (wcore/button "PIN"
                                  #(do (toggle-pin! game-state)
                                       (update-pin-button! game-state))
                                  :id pin-button-id
-                                 :bounds {:width 60 :height 32}
-                                 :visual {:background-color 0xFF444444
-                                         :text-color 0xFFFFFFFF
-                                         :font-size 12
-                                         :border-radius 4.0})
+                                 :bounds (theme/get-widget-size :button :compact)
+                                 :visual {:background-color (theme/get-color :background :button-neutral)
+                                         :text-color (theme/get-color :text :primary)
+                                         :font-size (theme/get-font-size :tiny)
+                                         :border-radius (theme/get-border-radius :sm)})
 
         expand-button (wcore/button (if initial-expanded? "[-]" "[+]")
                                     #(do (toggle-expanded! game-state)
                                          (update-expand-button! game-state))
                                     :id expand-button-id
-                                    :bounds {:width 40 :height 32}
-                                    :visual {:background-color 0xFF444444
-                                            :text-color 0xFFFFFFFF
-                                            :font-size 12
-                                            :border-radius 4.0})
+                                    :bounds (theme/get-widget-size :button :small)
+                                    :visual {:background-color (theme/get-color :background :button-neutral)
+                                            :text-color (theme/get-color :text :primary)
+                                            :font-size (theme/get-font-size :tiny)
+                                            :border-radius (theme/get-border-radius :sm)})
 
         ;; Create header stack
         header (wcore/hstack
                 :id header-id
                 :bounds {:width panel-width :height header-height}
-                :layout {:padding {:all 8}
-                        :gap 8
+                :layout {:padding {:all (theme/get-spacing :sm)}
+                        :gap (theme/get-spacing :sm)
                         :align :center}
-                :visual {:background-color 0xDD1A1A1A
-                        :border-radius 8.0}
+                :visual {:background-color (theme/get-color :background :header)
+                        :border-radius (theme/get-border-radius :lg)}
                 :interaction {:draggable? true
                              :enabled true
                              :hover-cursor :move
@@ -406,38 +407,38 @@
         stars-label (wcore/label "Stars: 0 (visible 0)"
                                  :id stars-label-id
                                  :bounds {:width (- panel-width (* 2 margin)) :height label-height}
-                                 :visual {:font-size 12
-                                         :text-color 0xFFCCCCCC})
+                                 :visual {:font-size (theme/get-font-size :tiny)
+                                         :text-color (theme/get-color :text :muted)})
 
         hyperlanes-label (wcore/label "Hyperlanes: 0 (visible 0)"
                                       :id hyperlanes-label-id
                                       :bounds {:width (- panel-width (* 2 margin)) :height label-height}
-                                      :visual {:font-size 12
-                                              :text-color 0xFFCCCCCC})
+                                      :visual {:font-size (theme/get-font-size :tiny)
+                                              :text-color (theme/get-color :text :muted)})
 
         widgets-label (wcore/label "Widgets: 0"
                                    :id widgets-label-id
                                    :bounds {:width (- panel-width (* 2 margin)) :height label-height}
-                                   :visual {:font-size 12
-                                           :text-color 0xFFCCCCCC})
+                                   :visual {:font-size (theme/get-font-size :tiny)
+                                           :text-color (theme/get-color :text :muted)})
 
         draw-calls-label (wcore/label "Draw calls: 0"
                                       :id draw-calls-label-id
                                       :bounds {:width (- panel-width (* 2 margin)) :height label-height}
-                                      :visual {:font-size 12
-                                              :text-color 0xFFCCCCCC})
+                                      :visual {:font-size (theme/get-font-size :tiny)
+                                              :text-color (theme/get-color :text :muted)})
 
         memory-label (wcore/label "Memory: 0.0 MB"
                                   :id memory-label-id
                                   :bounds {:width (- panel-width (* 2 margin)) :height label-height}
-                                  :visual {:font-size 12
-                                          :text-color 0xFFCCCCCC})
+                                  :visual {:font-size (theme/get-font-size :tiny)
+                                          :text-color (theme/get-color :text :muted)})
 
         ;; Stats stack
         stats-stack (wcore/vstack
                      :id stats-stack-id
                      :layout {:padding {:all 0}
-                             :gap 4
+                             :gap (theme/get-spacing :xs)
                              :align :stretch})
 
         ;; Body container
@@ -447,7 +448,7 @@
               :layout {:padding {:all margin}
                       :gap gap
                       :align :stretch}
-              :visual {:background-color 0xDD222222}
+              :visual {:background-color (theme/get-color :background :body)}
               :visible? initial-expanded?)
 
         ;; Main panel
@@ -455,9 +456,9 @@
                :id panel-id
                :bounds {:x (:x clamped-start) :y (:y clamped-start) :width panel-width :height initial-height}
                :layout {:z-index 100}
-               :visual {:background-color 0x00000000  ;; Transparent, children have backgrounds
-                       :border-radius 8.0
-                       :shadow {:offset-x 0 :offset-y 4 :blur 16 :color 0xA0000000}})]
+               :visual {:background-color (theme/get-color :background :transparent)
+                       :border-radius (theme/get-border-radius :lg)
+                       :shadow (theme/get-shadow :lg)})]
 
     ;; Add widgets to game state
     (let [panel-entity-id (wcore/add-widget! game-state panel)

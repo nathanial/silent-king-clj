@@ -6,6 +6,7 @@
             [silent-king.widgets.core :as wcore]
             [silent-king.widgets.minimap :as wminimap]
             [silent-king.ui.specs :as ui-specs]
+            [silent-king.ui.theme :as theme]
             [clojure.spec.alpha :as s]))
 
 (set! *warn-on-reflection* true)
@@ -240,61 +241,64 @@
                         :y 80.0
                         :width panel-width
                         :height panel-height}
-               :layout {:padding {:top 16 :right 16 :bottom 16 :left 16}
-                        :gap 12
+               :layout {:padding {:top (theme/get-spacing :lg)
+                                 :right (theme/get-spacing :lg)
+                                 :bottom (theme/get-spacing :lg)
+                                 :left (theme/get-spacing :lg)}
+                        :gap (theme/get-spacing :md)
                         :align :stretch}
-               :visual {:background-color 0xE61A1A1A
-                        :border-radius 14.0
-                        :shadow {:offset-x 0 :offset-y 8 :blur 20 :color 0x80000000}})
+               :visual {:background-color (theme/get-color :background :panel-inspector)
+                        :border-radius (theme/get-border-radius :xxl)
+                        :shadow (theme/get-shadow :xl)})
         title (wcore/label "Star Inspector"
                            :id title-id
-                           :bounds {:width (- panel-width 32) :height 28}
-                           :visual {:text-color 0xFFFFFFFF
-                                    :font-size 20
+                           :bounds {:width (- panel-width 32) :height (:height (theme/get-widget-size :label :title))}
+                           :visual {:text-color (theme/get-color :text :primary)
+                                    :font-size (theme/get-font-size :title)
                                     :font-weight :bold})
         subtitle (wcore/label "Select a star to view details"
                               :id subtitle-id
-                              :bounds {:width (- panel-width 32) :height 22}
-                              :visual {:text-color 0xFFAAAAAA
-                                       :font-size 14})
+                              :bounds {:width (- panel-width 32) :height (:height (theme/get-widget-size :label :standard))}
+                              :visual {:text-color (theme/get-color :text :tertiary)
+                                       :font-size (theme/get-font-size :body)})
         preview (wcore/star-preview
                  :id preview-id
-                 :bounds {:width (- panel-width 32) :height 110})
+                 :bounds {:width (- panel-width 32) :height (:height (:preview theme/widget-sizes))})
         position (wcore/label "Position: --"
                               :id position-id
-                              :bounds {:width (- panel-width 32) :height 22}
-                              :visual {:text-color 0xFFEEEEEE
-                                       :font-size 14})
+                              :bounds {:width (- panel-width 32) :height (:height (theme/get-widget-size :label :standard))}
+                              :visual {:text-color (theme/get-color :text :secondary)
+                                       :font-size (theme/get-font-size :body)})
         size-label (wcore/label "Size: --"
                                 :id size-id
-                                :bounds {:width (- panel-width 32) :height 22}
-                                :visual {:text-color 0xFFEEEEEE
-                                         :font-size 14})
+                                :bounds {:width (- panel-width 32) :height (:height (theme/get-widget-size :label :standard))}
+                                :visual {:text-color (theme/get-color :text :secondary)
+                                         :font-size (theme/get-font-size :body)})
         density-label (wcore/label "Density: --"
                                    :id density-id
-                                   :bounds {:width (- panel-width 32) :height 22}
-                                   :visual {:text-color 0xFFEEEEEE
-                                            :font-size 14})
+                                   :bounds {:width (- panel-width 32) :height (:height (theme/get-widget-size :label :standard))}
+                                   :visual {:text-color (theme/get-color :text :secondary)
+                                            :font-size (theme/get-font-size :body)})
         rotation-label (wcore/label "Rotation: --"
                                     :id rotation-id
-                                    :bounds {:width (- panel-width 32) :height 22}
-                                    :visual {:text-color 0xFFEEEEEE
-                                             :font-size 14})
+                                    :bounds {:width (- panel-width 32) :height (:height (theme/get-widget-size :label :standard))}
+                                    :visual {:text-color (theme/get-color :text :secondary)
+                                             :font-size (theme/get-font-size :body)})
         hyperlane-label (wcore/label "Hyperlanes (0)"
                                      :id hyperlane-label-id
-                                     :bounds {:width (- panel-width 32) :height 22}
-                                     :visual {:text-color 0xFFCCCCCC
-                                              :font-size 13
+                                     :bounds {:width (- panel-width 32) :height (:height (theme/get-widget-size :label :standard))}
+                                     :visual {:text-color (theme/get-color :text :muted)
+                                              :font-size (theme/get-font-size :small)
                                               :font-weight :bold})
         hyperlane-list (wcore/scroll-view
                         :id hyperlane-list-id
-                        :bounds {:width (- panel-width 32) :height 200})
+                        :bounds {:width (- panel-width 32) :height (:default-height (:scroll-view theme/widget-sizes))})
         zoom-button (wcore/button "Zoom to Star"
                                   #(zoom-to-selected-star! game-state)
                                   :id :star-inspector-zoom
                                   :bounds {:width (- panel-width 32) :height 40}
-                                  :visual {:background-color 0xFF3366CC
-                                           :border-radius 8.0})]
+                                  :visual {:background-color (theme/get-color :interactive :primary)
+                                           :border-radius (theme/get-border-radius :lg)})]
     (let [panel-entity (wcore/add-widget-tree! game-state panel
                                                [title
                                                 subtitle

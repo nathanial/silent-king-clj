@@ -5,7 +5,8 @@
   factory functions that ensure all required properties are initialized with
   proper defaults. This eliminates the need for scattered fallback logic
   throughout the rendering code."
-  (:require [clojure.spec.alpha :as s]))
+  (:require [clojure.spec.alpha :as s]
+            [silent-king.ui.theme :as theme]))
 
 (set! *warn-on-reflection* true)
 
@@ -96,12 +97,12 @@
    (make-star-inspector-state {}))
   ([overrides]
    (let [defaults {:visible? false
-                   :panel-width 320.0
-                   :panel-height 520.0
-                   :margin 20.0
+                   :panel-width (theme/get-panel-dimension :inspector :width)
+                   :panel-height (theme/get-panel-dimension :inspector :height)
+                   :margin (theme/get-panel-dimension :inspector :margin)
                    :current-x 0.0
                    :target-x 0.0
-                   :slide-speed 10.0
+                   :slide-speed (:slide-speed theme/animation)
                    :panel-entity nil}
          state (merge defaults overrides)]
      (when-not (s/valid? ::star-inspector-state state)
@@ -119,9 +120,9 @@
    (let [defaults {:expanded? false
                    :target 0.0
                    :progress 0.0
-                   :collapsed-height 64.0
-                   :expanded-height 320.0
-                   :animation-speed 8.0
+                   :collapsed-height (theme/get-panel-dimension :settings :collapsed)
+                   :expanded-height (theme/get-panel-dimension :settings :expanded)
+                   :animation-speed (:fade-speed theme/animation)
                    :panel-entity nil
                    :header-entity nil
                    :body-entities []
@@ -143,9 +144,9 @@
   ([overrides]
    (let [defaults {:expanded? false
                    :pinned? false
-                   :collapsed-height 60.0
-                   :expanded-height 320.0
-                   :history-limit 60
+                   :collapsed-height (theme/get-panel-dimension :dashboard :collapsed)
+                   :expanded-height (theme/get-panel-dimension :dashboard :expanded)
+                   :history-limit (:history-limit theme/animation)
                    :panel-entity nil
                    :header-entity nil
                    :body-entity nil
