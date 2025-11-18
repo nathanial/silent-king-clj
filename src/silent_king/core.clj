@@ -11,6 +11,7 @@
             [silent-king.ui.controls :as ui-controls]
             [silent-king.ui.star-inspector :as ui-inspector]
             [silent-king.ui.hyperlane-settings :as ui-hsettings]
+            [silent-king.ui.performance-dashboard :as ui-perf]
             [nrepl.server :as nrepl]
             [cider.nrepl :refer [cider-nrepl-handler]])
   (:import [org.lwjgl.glfw GLFW GLFWErrorCallback GLFWCursorPosCallbackI GLFWMouseButtonCallbackI GLFWScrollCallbackI GLFWKeyCallbackI]
@@ -350,12 +351,42 @@
         (when (and selected-star (= entity-id selected-star))
           (draw-selection-highlight canvas screen-x screen-y screen-size time))))
 
-    ;; Calculate FPS
+    ;; Calculate FPS and metrics
     (let [time-state (state/get-time game-state)
           frame-count (:frame-count time-state)
           current-time (:current-time time-state)
           fps (if (pos? current-time) (/ frame-count current-time) 0.0)
-          hyperlanes-count (get-in @game-state [:debug :hyperlanes-rendered] 0)]
+          hyperlanes-count (get-in @game-state [:debug :hyperlanes-rendered] 0)
+
+          ;; Count entities for performance metrics (computed once per frame)
+          hyperlane-entities (state/filter-entities-with game-state [:hyperlane])
+          hyperlane-count (count hyperlane-entities)
+          widget-entities (state/filter-entities-with game-state [:widget])
+          widget-count (count widget-entities)
+
+          ;; Compute frame time from delta
+          last-sample-time (get-in @game-state [:metrics :performance :last-sample-time] 0.0)
+          time-delta (- current-time last-sample-time)
+          frame-time-ms (if (pos? time-delta)
+                          (* time-delta 1000.0)
+                          (/ 1000.0 (max fps 0.0001)))
+
+          ;; Compute memory usage
+          runtime (Runtime/getRuntime)
+          used-memory (- (.totalMemory runtime) (.freeMemory runtime))
+          memory-mb (/ used-memory 1048576.0)
+
+          ;; Build metrics map
+          metrics {:fps fps
+                   :frame-time-ms frame-time-ms
+                   :total-stars total-count
+                   :visible-stars visible-count
+                   :hyperlane-count hyperlane-count
+                   :visible-hyperlanes (if hyperlanes-enabled hyperlanes-count 0)
+                   :widget-count widget-count
+                   :draw-calls (+ visible-count hyperlanes-count widget-count)
+                   :memory-mb memory-mb
+                   :current-time current-time}]
 
       ;; Update stats label in control panel
       (ui-controls/update-stats-label! game-state fps total-count visible-count hyperlanes-count hyperlanes-enabled)
@@ -367,7 +398,10 @@
       (ui-inspector/update-panel! game-state)
 
       ;; Animate hyperlane settings panel
-      (ui-hsettings/update! game-state))
+      (ui-hsettings/update! game-state)
+
+      ;; Update performance dashboard
+      (ui-perf/update-dashboard! game-state metrics))
 
     ;; Recompute dirty widget layouts before rendering
     (wlayout/process-layouts! game-state width height)
@@ -505,7 +539,10 @@
         (ui-inspector/create-star-inspector! game-state)
 
         ;; Create hyperlane settings panel (collapsible)
-        (ui-hsettings/create-hyperlane-settings! game-state))
+        (ui-hsettings/create-hyperlane-settings! game-state)
+
+        ;; Create performance dashboard overlay
+        (ui-perf/create-performance-dashboard! game-state))
 
       ;; Run render loop
       (render-loop game-state render-state))

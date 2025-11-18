@@ -213,6 +213,30 @@
                                  :hover-cursor :pointer
                                  :on-select on-select})))
 
+(defn line-chart
+  "Create a line chart widget for displaying time-series performance metrics."
+  [& {:keys [id bounds visual value]}]
+  (create-widget :line-chart
+                 :id id
+                 :bounds (or bounds {:width 280 :height 100})
+                 :visual (merge {:background-color 0xCC1A1A1A
+                                 :border-radius 8.0
+                                 :line-color 0xFF3DD598
+                                 :grid-color 0x33444444
+                                 :text-color 0xFFCCCCCC}
+                                visual)
+                 :interaction {:enabled false
+                               :hovered false
+                               :pressed false
+                               :focused false
+                               :hover-cursor :default}
+                 :value (merge {:points []
+                                :max-points 60
+                                :label ""
+                                :unit ""
+                                :grid-lines 4}
+                               value)))
+
 ;; =============================================================================
 ;; Layout Containers
 ;; =============================================================================

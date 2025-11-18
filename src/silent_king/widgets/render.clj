@@ -475,6 +475,112 @@
                               0xFFEEEEEE
                               14))))))
 
+;; Line chart rendering
+(defmethod render-widget :line-chart
+  [^Canvas canvas widget-entity _game-state _time]
+  (let [bounds (state/get-component widget-entity :bounds)
+        visual (state/get-component widget-entity :visual)
+        value (state/get-component widget-entity :value)]
+    (when (and bounds (:width bounds) (:height bounds))
+      (let [bg-color (or (:background-color visual) 0xCC1A1A1A)
+            border-radius (or (:border-radius visual) 8.0)
+            line-color (or (:line-color visual) 0xFF3DD598)
+            grid-color (or (:grid-color visual) 0x33444444)
+            text-color (or (:text-color visual) 0xFFCCCCCC)
+
+            label (or (:label value) "")
+            unit (or (:unit value) "")
+            points (or (:points value) [])
+            max-points (or (:max-points value) 60)
+            grid-lines (or (:grid-lines value) 4)
+
+            ;; Padding around the chart body
+            padding 8.0
+            label-height 18.0
+
+            ;; Chart area bounds
+            chart-x (+ (:x bounds) padding)
+            chart-y (+ (:y bounds) padding label-height)
+            chart-width (- (:width bounds) (* 2 padding))
+            chart-height (- (:height bounds) (* 2 padding) label-height)
+
+            ;; Auto-scale based on data (fallback to [0,1] when empty)
+            data-min (if (seq points) (apply min points) 0.0)
+            data-max (if (seq points) (apply max points) 1.0)
+            ;; Avoid division by zero if all values are the same
+            value-range (let [r (- data-max data-min)]
+                         (if (< r 0.0001) 1.0 r))
+
+            ;; Latest value for display
+            latest-value (if (seq points) (last points) nil)]
+
+        ;; Draw background
+        (draw-rounded-rect canvas bounds bg-color border-radius nil)
+
+        ;; Draw label (top-left)
+        (when (seq label)
+          (draw-text canvas label
+                     (+ (:x bounds) padding)
+                     (+ (:y bounds) padding 12)
+                     text-color 12))
+
+        ;; Draw latest value + unit (top-right)
+        (when latest-value
+          (let [value-text (str (format "%.1f" (double latest-value))
+                                (when (seq unit) (str " " unit)))
+                paint (get-or-create-paint text-color)
+                font (Font. (Typeface/makeDefault) 12.0)
+                text-line (.measureText ^Font font value-text)
+                text-width (.getWidth text-line)
+                value-x (- (+ (:x bounds) (:width bounds)) padding text-width)]
+            (.drawString canvas value-text (float value-x)
+                        (+ (:y bounds) padding 12) font paint)
+            (.close font)))
+
+        ;; Draw horizontal grid lines (skip if grid-lines is 0)
+        (when (pos? grid-lines)
+          (let [grid-paint (get-or-create-paint grid-color)]
+            (dotimes [i (inc grid-lines)]
+              (let [grid-y (+ chart-y (* i (/ chart-height grid-lines)))]
+                (.drawLine canvas
+                          (float chart-x) (float grid-y)
+                          (float (+ chart-x chart-width)) (float grid-y)
+                          grid-paint)))))
+
+        ;; Draw polyline for data points (if at least 2 points)
+        (when (>= (count points) 2)
+          (let [line-paint (doto (Paint.)
+                            (.setColor (unchecked-int line-color))
+                            (.setMode PaintMode/STROKE)
+                            (.setStrokeWidth 2.0))
+                ;; Take the most recent max-points samples
+                visible-points (vec (take-last max-points points))
+                num-points (count visible-points)
+                ;; Compute domain count to distribute samples across width
+                domain-count (max 1 (dec (max max-points 2)))
+                start-index (max 0 (- max-points num-points))
+                ;; Map each point to screen coordinates
+                scale-y (fn [v]
+                         (let [normalized (-> (/ (- v data-min) value-range)
+                                             (max 0.0)
+                                             (min 1.0))]
+                           ;; Flip y-axis (0 at bottom, 1 at top)
+                           (+ chart-y chart-height (* -1.0 normalized chart-height))))
+                scale-x (fn [idx]
+                         (-> (+ start-index idx)
+                             (* (/ chart-width domain-count))
+                             (+ chart-x)))]
+
+            ;; Draw line segments connecting consecutive points
+            (doseq [i (range (dec num-points))]
+              (let [x1 (scale-x i)
+                    y1 (scale-y (nth visible-points i))
+                    x2 (scale-x (inc i))
+                    y2 (scale-y (nth visible-points (inc i)))]
+                (.drawLine canvas (float x1) (float y1) (float x2) (float y2) line-paint)))
+
+            (.close line-paint)))))))
+
 ;; Scroll view rendering
 (defmethod render-widget :scroll-view
   [^Canvas canvas widget-entity _game-state _time]

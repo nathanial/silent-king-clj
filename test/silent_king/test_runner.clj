@@ -7,7 +7,8 @@
             [silent-king.widgets.layout-test]
             [silent-king.widgets.animation-test]
             [silent-king.ui.star-inspector-test]
-            [silent-king.ui.hyperlane-settings-test]))
+            [silent-king.ui.hyperlane-settings-test]
+            [silent-king.ui.performance-dashboard-test]))
 
 (defn -main
   "Run all widget-related unit tests."
@@ -19,7 +20,8 @@
                                     silent-king.widgets.layout-test
                                     silent-king.widgets.animation-test
                                     silent-king.ui.star-inspector-test
-                                    silent-king.ui.hyperlane-settings-test])
+                                    silent-king.ui.hyperlane-settings-test
+                                    silent-king.ui.performance-dashboard-test])
         failures (+ (:fail result 0) (:error result 0))]
     (when (pos? failures)
       (System/exit 1))))

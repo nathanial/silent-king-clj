@@ -75,10 +75,23 @@
                              :expanded-height 320.0
                              :animation-speed 8.0
                              :panel-entity nil
-                             :body-entities []}}
+                             :body-entities []}
+        :performance-dashboard {:expanded? false
+                                :pinned? false
+                                :collapsed-height 60.0
+                                :expanded-height 320.0
+                                :history-limit 60
+                                :panel-entity nil
+                                :header-entity nil
+                                :body-entity nil
+                                :position nil}}
    :features {:hyperlanes? true
               :minimap? true}
-   :hyperlane-settings default-hyperlane-settings})
+   :hyperlane-settings default-hyperlane-settings
+   :metrics {:performance {:fps-history []
+                           :frame-time-history []
+                           :last-sample-time 0.0
+                           :latest {}}}})
 
 (defn create-render-state []
   "Create initial render state structure"

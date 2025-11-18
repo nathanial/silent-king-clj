@@ -164,6 +164,21 @@
             (when-let [on-change (:on-change interaction)]
               (on-change new-value))))))
 
+    ;; Handle generic draggable widgets
+    (doseq [[entity-id widget] widgets]
+      (let [widget-data (state/get-component widget :widget)
+            interaction (state/get-component widget :interaction)]
+        (when (and (:draggable? interaction)
+                  (:dragging interaction)
+                  (:on-drag interaction)
+                  ;; Guard to prevent interfering with sliders
+                  (not= (:type widget-data) :slider))
+          (let [drag-offset (or (:drag-offset interaction) {:x 0.0 :y 0.0})
+                new-x (- widget-x (:x drag-offset))
+                new-y (- widget-y (:y drag-offset))
+                on-drag (:on-drag interaction)]
+            (on-drag new-x new-y)))))
+
     ;; Update dropdown hover state if expanded
     (doseq [[entity-id widget] widgets]
       (let [widget-data (state/get-component widget :widget)]
@@ -205,7 +220,8 @@
         (state/update-entity! game-state entity-id
                               #(-> %
                                    (assoc-in [:components :interaction :pressed] false)
-                                   (assoc-in [:components :interaction :dragging] false)))))))
+                                   (assoc-in [:components :interaction :dragging] false)
+                                   (update-in [:components :interaction] dissoc :drag-offset)))))))
 
 (defn handle-mouse-click
   "Handle mouse button press/release. Returns true if a widget handled the event."
@@ -334,6 +350,28 @@
                              viewport-size (wminimap/get-viewport-size game-state)
                              {:keys [pan-x pan-y]} (wminimap/target-pan world-pos (:zoom camera) viewport-size)]
                          (wanim/start-camera-pan! game-state pan-x pan-y 0.5)
+                         true)
+
+                       ;; Handle generic draggable widgets - press
+                       (and (:draggable? interaction) pressed?)
+                       (let [bounds (state/get-component widget :bounds)
+                             drag-offset (if bounds
+                                          {:x (- widget-x (or (:x bounds) 0.0))
+                                           :y (- widget-y (or (:y bounds) 0.0))}
+                                          {:x 0.0 :y 0.0})]
+                         (state/update-entity! game-state entity-id
+                                              #(-> %
+                                                   (assoc-in [:components :interaction :dragging] true)
+                                                   (assoc-in [:components :interaction :drag-offset] drag-offset)))
+                         true)
+
+                       ;; Handle generic draggable widgets - release
+                       (and (:draggable? interaction) (not pressed?))
+                       (do
+                         (state/update-entity! game-state entity-id
+                                              #(-> %
+                                                   (assoc-in [:components :interaction :dragging] false)
+                                                   (update-in [:components :interaction] dissoc :drag-offset)))
                          true)
 
                        :else false))

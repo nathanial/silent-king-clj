@@ -119,3 +119,50 @@
                                                    (* wconfig/ui-scale 20)
                                                    (* wconfig/ui-scale menu-y))]
         (is (= dropdown-id (first hit)))))))
+
+(deftest draggable-widget-tracks-position
+  (testing "Draggable widget invokes on-drag callback and clears dragging state on release"
+    (state/reset-entity-ids!)
+    (let [game-state (atom (state/create-game-state))
+          drag-coords (atom nil)
+          panel (wcore/panel :id :draggable-panel
+                             :bounds {:x 50 :y 50 :width 100 :height 80})
+          panel-id (wcore/add-widget! game-state panel)]
+      ;; Configure panel as draggable with on-drag callback
+      (state/update-entity! game-state panel-id
+                            #(-> %
+                                 (assoc-in [:components :interaction :draggable?] true)
+                                 (assoc-in [:components :interaction :on-drag]
+                                          (fn [x y] (reset! drag-coords {:x x :y y})))))
+
+      ;; Press inside the panel (at 60, 60 in widget space)
+      (is (true? (winteraction/handle-mouse-click game-state
+                                                  (* wconfig/ui-scale 60)
+                                                  (* wconfig/ui-scale 60)
+                                                  true)))
+      (is (true? (get-in (state/get-entity game-state panel-id)
+                         [:components :interaction :dragging])))
+
+      ;; Drag to new location (100, 100 in widget space)
+      (winteraction/handle-mouse-move game-state
+                                      (* wconfig/ui-scale 100)
+                                      (* wconfig/ui-scale 100))
+
+      ;; Verify callback was invoked with correct top-left coordinates
+      ;; Mouse was at (60, 60), panel started at (50, 50), so drag-offset is (10, 10)
+      ;; New mouse position is (100, 100), so new top-left should be (90, 90)
+      (is (= {:x 90.0 :y 90.0} @drag-coords))
+
+      ;; Release mouse button
+      (is (true? (winteraction/handle-mouse-click game-state
+                                                  (* wconfig/ui-scale 100)
+                                                  (* wconfig/ui-scale 100)
+                                                  false)))
+
+      ;; Verify dragging state is cleared
+      (is (false? (get-in (state/get-entity game-state panel-id)
+                          [:components :interaction :dragging])))
+
+      ;; Verify drag-offset is removed
+      (is (nil? (get-in (state/get-entity game-state panel-id)
+                        [:components :interaction :drag-offset]))))))
