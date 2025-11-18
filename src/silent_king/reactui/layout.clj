@@ -46,10 +46,9 @@
   [node context]
   (let [viewport (:viewport context)
         fallback (:bounds context)
-        explicit (get-in node [:props :bounds])]
-    (normalize-bounds (merge viewport
-                             fallback
-                             (or explicit {})))))
+        explicit (get-in node [:props :bounds])
+        base (or fallback viewport)]
+    (normalize-bounds (merge base (or explicit {})))))
 
 (defn- expand-padding
   [padding]
