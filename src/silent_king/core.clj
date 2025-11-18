@@ -4,14 +4,6 @@
             [silent-king.state :as state]
             [silent-king.galaxy :as galaxy]
             [silent-king.hyperlanes :as hyperlanes]
-            [silent-king.widgets.render :as wrender]
-            [silent-king.widgets.interaction :as winteraction]
-            [silent-king.widgets.layout :as wlayout]
-            [silent-king.widgets.animation :as wanim]
-            [silent-king.ui.controls :as ui-controls]
-            [silent-king.ui.star-inspector :as ui-inspector]
-            [silent-king.ui.hyperlane-settings :as ui-hsettings]
-            [silent-king.ui.performance-dashboard :as ui-perf]
             [nrepl.server :as nrepl]
             [cider.nrepl :refer [cider-nrepl-handler]])
   (:import [org.lwjgl.glfw GLFW GLFWErrorCallback GLFWCursorPosCallbackI GLFWMouseButtonCallbackI GLFWScrollCallbackI GLFWKeyCallbackI]
@@ -97,15 +89,14 @@
              old-x (:mouse-x input)
              old-y (:mouse-y input)
              dragging (:dragging input)]
-         (if-not (winteraction/handle-mouse-move game-state fb-xpos fb-ypos)
-           (when dragging
-             (let [dx (- fb-xpos old-x)
-                   dy (- fb-ypos old-y)]
-               (state/update-camera! game-state
-                                     (fn [cam]
-                                       (-> cam
-                                           (update :pan-x #(+ % dx))
-                                           (update :pan-y #(+ % dy))))))))
+         (when dragging
+           (let [dx (- fb-xpos old-x)
+                 dy (- fb-ypos old-y)]
+             (state/update-camera! game-state
+                                   (fn [cam]
+                                     (-> cam
+                                         (update :pan-x #(+ % dx))
+                                         (update :pan-y #(+ % dy))))))
          (state/update-input! game-state assoc :mouse-x fb-xpos :mouse-y fb-ypos)))))
 
   (GLFW/glfwSetMouseButtonCallback
@@ -116,24 +107,13 @@
          (let [input (state/get-input game-state)
                x (:mouse-x input)
                y (:mouse-y input)
-               pressed? (= action GLFW/GLFW_PRESS)
-               handled? (winteraction/handle-mouse-click game-state x y pressed?)]
-           (when-not handled?
-             (if pressed?
-               (state/update-input! game-state assoc
-                                    :dragging true
-                                    :mouse-down-x x
-                                    :mouse-down-y y)
-               (let [dx (- x (:mouse-down-x input))
-                     dy (- y (:mouse-down-y input))
-                     distance (Math/sqrt (+ (* dx dx) (* dy dy)))
-                     click-threshold 6.0]
-                 (state/update-input! game-state assoc :dragging false)
-                 (when (<= distance click-threshold)
-                   (let [camera (state/get-camera game-state)
-                         world-x (inverse-transform-position x (:zoom camera) (:pan-x camera))
-                         world-y (inverse-transform-position y (:zoom camera) (:pan-y camera))]
-                     (ui-inspector/handle-star-click! game-state world-x world-y)))))))))))
+               pressed? (= action GLFW/GLFW_PRESS)]
+           (if pressed?
+             (state/update-input! game-state assoc
+                                  :dragging true
+                                  :mouse-down-x x
+                                  :mouse-down-y y)
+             (state/update-input! game-state assoc :dragging false))))))))
 
   (GLFW/glfwSetScrollCallback
    window
@@ -142,34 +122,28 @@
        (let [input (state/get-input game-state)
              mouse-x (:mouse-x input)
              mouse-y (:mouse-y input)]
-         (when-not (winteraction/handle-scroll game-state mouse-x mouse-y yoffset)
-           (let [camera (state/get-camera game-state)
-                 old-zoom (:zoom camera)
-                 zoom-factor (Math/pow 1.1 yoffset)
-                 new-zoom (max 0.4 (min 10.0 (* old-zoom zoom-factor)))
-                 old-pan-x (:pan-x camera)
-                 old-pan-y (:pan-y camera)
-                 world-x (inverse-transform-position mouse-x old-zoom old-pan-x)
-                 world-y (inverse-transform-position mouse-y old-zoom old-pan-y)
-                 new-pan-x (- mouse-x (* world-x (zoom->position-scale new-zoom)))
-                 new-pan-y (- mouse-y (* world-y (zoom->position-scale new-zoom)))]
-             (state/update-camera! game-state assoc
-                                   :zoom new-zoom
-                                   :pan-x new-pan-x
-                                   :pan-y new-pan-y)))))))
+         (let [camera (state/get-camera game-state)
+               old-zoom (:zoom camera)
+               zoom-factor (Math/pow 1.1 yoffset)
+               new-zoom (max 0.4 (min 10.0 (* old-zoom zoom-factor)))
+               old-pan-x (:pan-x camera)
+               old-pan-y (:pan-y camera)
+               world-x (inverse-transform-position mouse-x old-zoom old-pan-x)
+               world-y (inverse-transform-position mouse-y old-zoom old-pan-y)
+               new-pan-x (- mouse-x (* world-x (zoom->position-scale new-zoom)))
+               new-pan-y (- mouse-y (* world-y (zoom->position-scale new-zoom)))]
+           (state/update-camera! game-state assoc
+                                 :zoom new-zoom
+                                 :pan-x new-pan-x
+                                 :pan-y new-pan-y))))))
 
   (GLFW/glfwSetKeyCallback
    window
    (reify GLFWKeyCallbackI
      (invoke [_ win key scancode action mods]
-       (cond
-         (and (= action GLFW/GLFW_PRESS)
-              (= key GLFW/GLFW_KEY_H))
-         (state/toggle-hyperlanes! game-state)
-
-         (and (= action GLFW/GLFW_PRESS)
-              (= key GLFW/GLFW_KEY_ESCAPE))
-         (ui-inspector/clear-star-selection! game-state))))))
+       (when (and (= action GLFW/GLFW_PRESS)
+                  (= key GLFW/GLFW_KEY_H))
+         (state/toggle-hyperlanes! game-state))))))
 
 (defn create-skija-context []
   (println "Creating Skija DirectContext...")
@@ -265,11 +239,6 @@
   ;; Clear background
   (.clear canvas (unchecked-int 0xFF000000))
 
-  ;; Update camera animations
-  (wanim/update-camera-animation! game-state)
-
-  (swap! game-state assoc-in [:widgets :viewport-size] {:width width :height height})
-
   (let [camera (state/get-camera game-state)
         assets (state/get-assets game-state)
         zoom (:zoom camera)
@@ -315,8 +284,7 @@
                                                pan-x pan-y width height zoom)))
                              star-entities)
         visible-count (count visible-stars)
-        total-count (count star-entities)
-        selected-star (ui-inspector/selected-star-id game-state)]
+        total-count (count star-entities)]
 
     ;; Note: No canvas transform needed - we calculate screen positions per-star with non-linear scaling
 
@@ -347,9 +315,7 @@
           ;; Draw from full-resolution image
           (draw-full-res-star canvas star-images path screen-x screen-y screen-size rotation)
           ;; Draw from texture atlas
-          (draw-star-from-atlas canvas atlas-image atlas-metadata path screen-x screen-y screen-size rotation atlas-size))
-        (when (and selected-star (= entity-id selected-star))
-          (draw-selection-highlight canvas screen-x screen-y screen-size time))))
+          (draw-star-from-atlas canvas atlas-image atlas-metadata path screen-x screen-y screen-size rotation atlas-size))))
 
     ;; Calculate FPS and metrics
     (let [time-state (state/get-time game-state)
@@ -364,12 +330,8 @@
           widget-entities (state/filter-entities-with game-state [:widget])
           widget-count (count widget-entities)
 
-          ;; Compute frame time from delta
-          last-sample-time (get-in @game-state [:metrics :performance :last-sample-time] 0.0)
-          time-delta (- current-time last-sample-time)
-          frame-time-ms (if (pos? time-delta)
-                          (* time-delta 1000.0)
-                          (/ 1000.0 (max fps 0.0001)))
+          ;; Approximate frame time from FPS
+          frame-time-ms (/ 1000.0 (max fps 0.0001))
 
           ;; Compute memory usage
           runtime (Runtime/getRuntime)
@@ -388,25 +350,8 @@
                    :memory-mb memory-mb
                    :current-time current-time}]
 
-      ;; Update stats label in control panel
-      (ui-controls/update-stats-label! game-state fps total-count visible-count hyperlanes-count hyperlanes-enabled)
-
-      ;; Update zoom slider to match current camera zoom
-      (ui-controls/update-zoom-slider! game-state zoom)
-
-      ;; Animate star inspector panel
-      (ui-inspector/update-panel! game-state)
-
-      ;; Animate hyperlane settings panel
-      (ui-hsettings/update! game-state)
-
-      ;; Update performance dashboard
-      (ui-perf/update-dashboard! game-state metrics))
-
-    ;; Recompute dirty widget layouts before rendering
-    (wlayout/process-layouts! game-state width height)
-    ;; Render all widgets (control panel, etc.)
-    (wrender/render-all-widgets canvas game-state time)))
+      ;; Store latest metrics for potential external inspection
+      (swap! game-state assoc-in [:metrics :performance :latest] metrics))))
 
 (defn render-loop [game-state render-state]
   (println "Starting render loop...")
@@ -527,22 +472,7 @@
         (galaxy/generate-galaxy-entities! game-state star-images 1000)
 
         ;; Generate hyperlane connections using Delaunay triangulation
-        (hyperlanes/generate-delaunay-hyperlanes! game-state)
-
-        ;; Create the control panel UI
-        (ui-controls/create-control-panel! game-state)
-
-        ;; Create the minimap for galaxy navigation
-        (ui-controls/create-minimap! game-state)
-
-        ;; Create the star inspector panel (hidden by default)
-        (ui-inspector/create-star-inspector! game-state)
-
-        ;; Create hyperlane settings panel (collapsible)
-        (ui-hsettings/create-hyperlane-settings! game-state)
-
-        ;; Create performance dashboard overlay
-        (ui-perf/create-performance-dashboard! game-state))
+        (hyperlanes/generate-delaunay-hyperlanes! game-state))
 
       ;; Run render loop
       (render-loop game-state render-state))

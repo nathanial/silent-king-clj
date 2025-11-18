@@ -1,6 +1,5 @@
 (ns silent-king.state
-  "Game state management with entity-component system"
-  (:require [silent-king.ui.specs :as ui-specs]))
+  "Game state management with entity-component system")
 
 (set! *warn-on-reflection* true)
 
@@ -61,9 +60,7 @@
    :selection {:star-id nil
                :last-world-click nil
                :details nil}
-   :ui {:star-inspector (ui-specs/make-star-inspector-state)
-        :hyperlane-settings (ui-specs/make-hyperlane-settings-state)
-        :performance-dashboard (ui-specs/make-performance-dashboard-state)}
+   :ui {}
    :features {:hyperlanes? true
               :minimap? true}
    :hyperlane-settings default-hyperlane-settings
