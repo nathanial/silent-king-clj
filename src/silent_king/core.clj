@@ -105,16 +105,18 @@
    (reify GLFWMouseButtonCallbackI
      (invoke [_ win button action mods]
        (when (= button GLFW/GLFW_MOUSE_BUTTON_LEFT)
-         (let [input (state/get-input game-state)
-               x (:mouse-x input)
-               y (:mouse-y input)
-               pressed? (= action GLFW/GLFW_PRESS)]
-           (if pressed?
-             (state/update-input! game-state assoc
-                                  :dragging true
-                                  :mouse-down-x x
-                                  :mouse-down-y y)
-             (state/update-input! game-state assoc :dragging false)))))))
+       (let [input (state/get-input game-state)
+             x (:mouse-x input)
+             y (:mouse-y input)
+             pressed? (= action GLFW/GLFW_PRESS)]
+         (if pressed?
+           (state/update-input! game-state assoc
+                                :dragging true
+                                :mouse-down-x x
+                                :mouse-down-y y)
+            (do
+              (state/update-input! game-state assoc :dragging false)
+              (reactui/handle-pointer-click! game-state x y))))))))
 
   (GLFW/glfwSetScrollCallback
    window

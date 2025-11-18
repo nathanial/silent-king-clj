@@ -1,9 +1,13 @@
 (ns silent-king.reactui.core
   "Entry points for the Reactified immediate-mode UI layer."
-  (:require [silent-king.reactui.layout :as layout]
+  (:require [silent-king.reactui.events :as ui-events]
+            [silent-king.reactui.interaction :as interaction]
+            [silent-king.reactui.layout :as layout]
             [silent-king.reactui.render :as render]))
 
 (set! *warn-on-reflection* true)
+
+(defonce ^:private last-layout (atom nil))
 
 (defn- text-fragment?
   [value]
@@ -21,19 +25,39 @@
 
 (declare normalize-element)
 
+(defn- collect-text
+  [children]
+  (not-empty
+   (apply str
+          (map coerce-text
+               (filter text-fragment? children)))))
+
 (defn- normalize-label
   "Normalize a label element so that its text always lives in :props/:text."
   [props raw-children]
   (let [text (or (:text props)
-                 (not-empty
-                  (apply str
-                         (map coerce-text
-                              (filter text-fragment? raw-children)))))
+                 (collect-text raw-children))
         cleaned-props (-> props
                           (assoc :text (or text "")))]
     {:type :label
      :props cleaned-props
      :children []}))
+
+(defn- normalize-button
+  [props raw-children]
+  (let [label (or (:label props)
+                  (collect-text raw-children)
+                  "Button")]
+    {:type :button
+     :props (-> props
+                (assoc :label label))
+     :children []}))
+
+(defn- normalize-slider
+  [props _raw-children]
+  {:type :slider
+   :props (or props {})
+   :children []})
 
 (defn normalize-element
   "Normalize a single Hiccup element (vector, string, or number) into the
@@ -57,8 +81,10 @@
           has-props? (map? maybe-props)
           props (if has-props? maybe-props {})
           child-forms (if has-props? remaining (cons maybe-props remaining))]
-      (if (= tag* :label)
-        (normalize-label props child-forms)
+      (case tag*
+        :label (normalize-label props child-forms)
+        :button (normalize-button props child-forms)
+        :slider (normalize-slider props child-forms)
         {:type tag*
          :props (or props {})
          :children (->> child-forms
@@ -90,9 +116,14 @@
   [{:keys [canvas tree viewport]}]
   (let [normalized (normalize-tree tree)
         layout-tree (layout/compute-layout normalized viewport)]
+    (reset! last-layout layout-tree)
     (when canvas
       (render/draw-tree canvas layout-tree))
     layout-tree))
+
+(defn current-layout
+  []
+  @last-layout)
 
 (defn demo-tree
   "Simple placeholder tree used until real panels are wired up."
@@ -105,10 +136,16 @@
             :background-color 0xAA10131A}
    [:label {:text "Reactified UI scaffolding"
             :color 0xFFFFFFFF}]
-   [:label {:text "Phase 1 – vstack demo"
+   [:label {:text "Phase 2 – primitives + events"
             :color 0xFF9CDCFE}]
-   [:label {:text "This overlay is static for now."
-            :color 0xFFB3B3B3}]])
+   [:button {:label "Toggle Hyperlanes"
+             :on-click [:ui/toggle-hyperlanes]
+             :background-color 0xFF2F3039}]
+   [:slider {:value 1.0
+             :min 0.4
+             :max 4.0
+             :step 0.1
+             :on-change [:ui/set-zoom]}]])
 
 (defn render-demo!
   "Render the placeholder :vstack overlay."
@@ -116,3 +153,12 @@
   (render-ui-tree {:canvas canvas
                    :tree (demo-tree)
                    :viewport viewport}))
+
+(defn handle-pointer-click!
+  "Run hit testing on the latest layout tree and dispatch resulting UI events."
+  [game-state x y]
+  (when-let [layout-tree (current-layout)]
+    (let [events (interaction/click->events layout-tree (double x) (double y))]
+      (doseq [event events]
+        (ui-events/dispatch-event! game-state event))))
+  nil)

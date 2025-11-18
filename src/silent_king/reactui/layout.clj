@@ -18,6 +18,26 @@
       (update :width #(double (or % 0.0)))
       (update :height #(double (or % 0.0)))))
 
+(defn- clamp
+  [value min-value max-value]
+  (-> value
+      (max min-value)
+      (min max-value)))
+
+(defn- positive-step
+  [step]
+  (when (some? step)
+    (let [s (double step)]
+      (when (pos? s) s))))
+
+(defn- snap-to-step
+  [value min-value step]
+  (if-let [s (positive-step step)]
+    (let [steps (/ (- value min-value) s)
+          snapped (+ min-value (* (Math/round (double steps)) s))]
+      (double snapped))
+    (double value)))
+
 (defn- clean-viewport
   [viewport]
   (normalize-bounds viewport))
@@ -79,6 +99,62 @@
                          (assoc :height line-height))]
     (assoc node
            :layout {:bounds final-bounds}
+           :children [])))
+
+(defmethod layout-node :button
+  [node context]
+  (let [bounds* (resolve-bounds node context)
+        height (double (if (pos? (:height bounds*))
+                         (:height bounds*)
+                         36.0))
+        final-bounds (assoc bounds* :height height)]
+    (assoc node
+           :layout {:bounds final-bounds}
+           :children [])))
+
+(defmethod layout-node :slider
+  [node context]
+  (let [props (:props node)
+        bounds* (resolve-bounds node context)
+        height (double (if (pos? (:height bounds*))
+                         (:height bounds*)
+                         32.0))
+        final-bounds (assoc bounds* :height height)
+        raw-min (double (or (:min props) 0.0))
+        raw-max (double (or (:max props) 1.0))
+        [min-value max-value] (if (> raw-min raw-max)
+                                [raw-max raw-min]
+                                [raw-min raw-max])
+        step (:step props)
+        value (double (or (:value props) min-value))
+        snapped-value (-> value
+                          (snap-to-step min-value step)
+                          (clamp min-value max-value))
+        track-padding (double (max 0.0 (or (:track-padding props) 12.0)))
+        track-height (double (or (:track-height props) 4.0))
+        track-width (max 0.0 (- (:width final-bounds) (* 2 track-padding)))
+        track-x (+ (:x final-bounds) track-padding)
+        track-y (+ (:y final-bounds)
+                   (/ (- height track-height) 2.0))
+        range-span (max (- max-value min-value) 1e-9)
+        ratio (/ (- snapped-value min-value) range-span)
+        clamped-ratio (clamp ratio 0.0 1.0)
+        handle-radius (double (or (:handle-radius props) 8.0))
+        handle-x (+ track-x (* track-width clamped-ratio))
+        handle-y (+ (:y final-bounds) (/ height 2.0))]
+    (assoc node
+           :layout {:bounds final-bounds
+                    :slider {:track {:x track-x
+                                     :y track-y
+                                     :width track-width
+                                     :height track-height}
+                             :handle {:x handle-x
+                                      :y handle-y
+                                      :radius handle-radius}
+                             :range {:min min-value
+                                     :max max-value
+                                     :step (positive-step step)}
+                             :value snapped-value}}
            :children [])))
 
 (defmethod layout-node :vstack

@@ -41,3 +41,19 @@
     (is (= 250 (:height root-bounds)))
     (is (= 4.0 (:y child-bounds)))
     (is (= 112.0 (:width child-bounds)))))
+
+(deftest slider-layout-clamps-value
+  (let [tree (reactui/normalize-tree
+              [:slider {:bounds {:x 10 :y 10 :width 200 :height 30}
+                        :min 0.0
+                        :max 10.0
+                        :step 1.0
+                        :value 12.0}])
+        laid-out (layout/compute-layout tree {:x 0 :y 0 :width 400 :height 200})
+        slider-data (get-in laid-out [:layout :slider])]
+    (is (= 10.0 (get-in slider-data [:range :max])))
+    (is (= 10.0 (:value slider-data)))
+    (is (= 176.0 (get-in slider-data [:track :width])))
+    (is (= (+ (get-in slider-data [:track :x])
+              (get-in slider-data [:track :width]))
+           (get-in slider-data [:handle :x])))))
