@@ -3,14 +3,17 @@
   (:require [silent-king.reactui.events :as ui-events]
             [silent-king.reactui.interaction :as interaction]
             [silent-king.reactui.layout :as layout]
-            [silent-king.reactui.render :as render]))
+            [silent-king.reactui.render :as render]
+            [silent-king.state :as state]))
 
 (set! *warn-on-reflection* true)
 
-(def ui-scale 2.0)
-
 (defonce ^:private last-layout (atom nil))
 (defonce ^:private pointer-capture (atom nil))
+
+(defn- scale-factor
+  [game-state]
+  (state/ui-scale game-state))
 
 (defn- text-fragment?
   [value]
@@ -142,33 +145,36 @@
 
 (defn handle-pointer-down!
   [game-state x y]
-  (when-let [layout-tree (current-layout)]
-    (when-let [node (interaction/node-at layout-tree
-                                         (/ (double x) ui-scale)
-                                         (/ (double y) ui-scale))]
-      (case (:type node)
-        :slider (do
-                  (capture-node! node)
-                  (interaction/slider-drag! node game-state (/ (double x) ui-scale))
-                  true)
-        :button (do
-                  (capture-node! node)
-                  true)
-        false))))
+  (let [scale (scale-factor game-state)]
+    (when-let [layout-tree (current-layout)]
+      (when-let [node (interaction/node-at layout-tree
+                                           (/ (double x) scale)
+                                           (/ (double y) scale))]
+        (case (:type node)
+          :slider (do
+                    (capture-node! node)
+                    (interaction/slider-drag! node game-state (/ (double x) scale))
+                    true)
+          :button (do
+                    (capture-node! node)
+                    true)
+          false)))))
 
 (defn handle-pointer-up!
   [game-state x y]
-  (when-let [node (captured-node)]
-    (case (:type node)
-      :button (interaction/activate-button! node game-state (/ (double x) ui-scale) (/ (double y) ui-scale))
-      :slider (interaction/slider-drag! node game-state (/ (double x) ui-scale))
-      nil))
+  (let [scale (scale-factor game-state)]
+    (when-let [node (captured-node)]
+      (case (:type node)
+        :button (interaction/activate-button! node game-state (/ (double x) scale) (/ (double y) scale))
+        :slider (interaction/slider-drag! node game-state (/ (double x) scale))
+        nil)))
   (release-capture!)
   nil)
 
 (defn handle-pointer-drag!
   [game-state x _y]
-  (when-let [node (captured-node)]
-    (when (= (:type node) :slider)
-      (interaction/slider-drag! node game-state (/ (double x) ui-scale))
-      true)))
+  (let [scale (scale-factor game-state)]
+    (when-let [node (captured-node)]
+      (when (= (:type node) :slider)
+        (interaction/slider-drag! node game-state (/ (double x) scale))
+        true))))

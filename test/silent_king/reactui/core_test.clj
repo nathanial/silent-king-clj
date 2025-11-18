@@ -43,7 +43,7 @@
                                              :viewport {:x 0 :y 0 :width 200 :height 40}})
         slider-node (find-node layout-tree :slider)
         track (get-in slider-node [:layout :slider :track])
-        scale reactui/ui-scale
+        scale (state/ui-scale game-state)
         down-x (* scale (+ (:x track) 2.0))
         down-y (+ (:y track) (/ (:height track) 2.0))
         drag-x (* scale (+ (:x track) (:width track)))]

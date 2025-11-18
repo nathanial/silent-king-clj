@@ -18,3 +18,10 @@
       (is (= 10.0 (get-in @game-state [:camera :zoom])))
       (events/dispatch-event! game-state [:ui/set-zoom 0.1])
       (is (= 0.4 (get-in @game-state [:camera :zoom]))))))
+
+(deftest dispatch-set-scale
+  (let [game-state (atom (state/create-game-state))]
+    (events/dispatch-event! game-state [:ui/set-scale 2.5])
+    (is (= 2.5 (state/ui-scale game-state)))
+    (events/dispatch-event! game-state [:ui/set-scale 10.0])
+    (is (= 3.0 (state/ui-scale game-state)))))

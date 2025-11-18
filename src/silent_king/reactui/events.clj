@@ -26,6 +26,12 @@
     (state/update-camera! game-state assoc :zoom (clamp-zoom value)))
   nil)
 
+(defmethod dispatch-event! :ui/set-scale
+  [game-state [_ value]]
+  (when (number? value)
+    (state/set-ui-scale! game-state value))
+  nil)
+
 (defmethod dispatch-event! :default
   [_ event]
   (println "Unhandled UI event" event)

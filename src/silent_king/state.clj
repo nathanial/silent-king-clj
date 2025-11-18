@@ -60,7 +60,7 @@
    :selection {:star-id nil
                :last-world-click nil
                :details nil}
-   :ui {}
+   :ui {:scale 2.0}
    :features {:hyperlanes? true
               :minimap? true}
    :hyperlane-settings default-hyperlane-settings
@@ -123,7 +123,7 @@
 (defn remove-component
   "Remove a component from an entity (pure function, returns updated entity)"
   [entity component-key]
-  (update entity :components dissoc component-key))
+   (update entity :components dissoc component-key))
 
 (defn get-component
   "Get a component from an entity"
@@ -211,6 +211,15 @@
   "Return true if minimap should be rendered"
   [game-state]
   (get-in @game-state [:features :minimap?] true))
+
+(defn ui-scale
+  [game-state]
+  (double (get-in @game-state [:ui :scale] 2.0)))
+
+(defn set-ui-scale!
+  [game-state value]
+  (swap! game-state assoc-in [:ui :scale]
+         (-> value double (max 1.0) (min 3.0))))
 
 ;; =============================================================================
 ;; State Updaters

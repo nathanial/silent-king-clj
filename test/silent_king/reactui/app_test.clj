@@ -19,6 +19,11 @@
     node
     (some #(find-node % type) (:children node))))
 
+(defn- nodes-of-type
+  [node type]
+  (filter #(= (:type %) type)
+          (tree-seq #(seq (:children %)) :children node)))
+
 (deftest control-panel-props-reflect-game-state
   (let [game-state (atom (state/create-game-state))]
     (state/update-camera! game-state assoc :zoom 2.5)
@@ -29,7 +34,8 @@
       (is (= 2.5 (:zoom props)))
       (is (false? (:hyperlanes-enabled? props)))
       (is (= 55.5 (get-in props [:metrics :fps])))
-      (is (= 123 (get-in props [:metrics :visible-stars]))))))
+      (is (= 123 (get-in props [:metrics :visible-stars])))
+      (is (= 2.0 (:ui-scale props))))))
 
 (deftest control-panel-events-update-game-state
   (let [game-state (atom (state/create-game-state))
@@ -42,11 +48,18 @@
     (doseq [event button-events]
       (events/dispatch-event! game-state event))
     (is (false? (state/hyperlanes-enabled? game-state)))
-    (let [slider-node (find-node tree :slider)
-          track (get-in slider-node [:layout :slider :track])
-          slider-x (+ (:x track) (:width track))
-          slider-y (+ (:y track) (/ (:height track) 2.0))
-          slider-events (interaction/click->events tree slider-x slider-y)]
-      (doseq [event slider-events]
+    (let [[zoom-slider scale-slider] (vec (nodes-of-type tree :slider))
+          zoom-track (get-in zoom-slider [:layout :slider :track])
+          zoom-x (+ (:x zoom-track) (:width zoom-track))
+          zoom-y (+ (:y zoom-track) (/ (:height zoom-track) 2.0))
+          zoom-events (interaction/click->events tree zoom-x zoom-y)
+          scale-track (get-in scale-slider [:layout :slider :track])
+          scale-x (+ (:x scale-track) (:width scale-track))
+          scale-y (+ (:y scale-track) (/ (:height scale-track) 2.0))
+          scale-events (interaction/click->events tree scale-x scale-y)]
+      (doseq [event zoom-events]
+        (events/dispatch-event! game-state event))
+      (doseq [event scale-events]
         (events/dispatch-event! game-state event)))
-    (is (= 4.0 (get-in @game-state [:camera :zoom])))))
+    (is (= 4.0 (get-in @game-state [:camera :zoom])))
+    (is (= 3.0 (state/ui-scale game-state)))))

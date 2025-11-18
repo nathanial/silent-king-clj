@@ -20,7 +20,7 @@
            :font-size 14.0}])
 
 (defn control-panel
-  [{:keys [zoom hyperlanes-enabled? metrics]}]
+  [{:keys [zoom hyperlanes-enabled? metrics ui-scale]}]
   (let [button-label (if hyperlanes-enabled?
                        "Disable Hyperlanes"
                        "Enable Hyperlanes")]
@@ -43,6 +43,13 @@
                :max 4.0
                :step 0.1
                :on-change [:ui/set-zoom]}]
+     [:label {:text (format "UI Scale: %.1f×" (double ui-scale))
+              :color text-color}]
+     [:slider {:value (double ui-scale)
+               :min 1.0
+               :max 3.0
+               :step 0.1
+               :on-change [:ui/set-scale]}]
      [:vstack {:gap 2}
       [:label {:text "Performance"
                :color accent-color
