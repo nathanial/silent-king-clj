@@ -75,15 +75,29 @@
 ;; Helper Functions - Position Clamping
 ;; =============================================================================
 
+(defn- state-panel-height
+  "Return the current panel height (from entity bounds if available, otherwise derived from UI state)."
+  [game-state]
+  (let [state (dashboard-state game-state)
+        panel-id (:panel-entity state)
+        collapsed-height (or (:collapsed-height state) default-collapsed-height)
+        expanded-height (or (:expanded-height state) default-expanded-height)]
+    (or (when panel-id
+          (some-> (state/get-entity game-state panel-id)
+                  (get-in [:components :bounds :height])))
+        (if (:expanded? state) expanded-height collapsed-height))))
+
 (defn- initial-position
   "Compute the initial position for the dashboard (bottom-left corner)."
   [game-state]
   (let [state (dashboard-state game-state)
         collapsed-height (or (:collapsed-height state) default-collapsed-height)
+        expanded-height (or (:expanded-height state) default-expanded-height)
+        initial-height (if (:expanded? state) expanded-height collapsed-height)
         vw (widget-space-width game-state)
         vh (widget-space-height game-state)
         x viewport-margin
-        y (- vh collapsed-height viewport-margin)]
+        y (- vh initial-height viewport-margin)]
     {:x x :y y}))
 
 (defn- clamp-position
@@ -91,9 +105,10 @@
   [game-state x y]
   (let [vw (widget-space-width game-state)
         vh (widget-space-height game-state)
+        panel-height (state-panel-height game-state)
         ;; Respect margins even if viewport is smaller than panel
         max-x (max viewport-margin (- vw panel-width viewport-margin))
-        max-y (max viewport-margin (- vh header-height viewport-margin))
+        max-y (max viewport-margin (- vh panel-height viewport-margin))
         clamped-x (-> x (max viewport-margin) (min max-x))
         clamped-y (-> y (max viewport-margin) (min max-y))]
     {:x clamped-x :y clamped-y}))
@@ -196,11 +211,12 @@
     (when-let [body-entity-id (:body-entity state)]
       (wcore/set-visibility! game-state body-entity-id expanded? true))
 
-    ;; Request layout and update expand button
+    ;; Request layout to reposition children with new size
     (when-let [panel-entity-id (:panel-entity state)]
       (wcore/request-layout! game-state panel-entity-id)))
 
-  (update-expand-button! game-state))
+  (update-expand-button! game-state)
+  (ensure-panel-in-viewport! game-state))
 
 (defn- toggle-expanded!
   "Toggle the expanded state."
