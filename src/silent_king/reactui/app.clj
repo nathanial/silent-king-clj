@@ -1,6 +1,7 @@
 (ns silent-king.reactui.app
   "Bridges game state to the Reactified UI tree."
   (:require [silent-king.reactui.components.control-panel :as control-panel]
+            [silent-king.reactui.components.hyperlane-settings :as hyperlane-settings]
             [silent-king.reactui.core :as ui-core]
             [silent-king.state :as state])
   (:import [io.github.humbleui.skija Canvas]))
@@ -18,9 +19,16 @@
                :visible-stars (long (or (:visible-stars metrics) 0))
                :draw-calls (long (or (:draw-calls metrics) 0))}}))
 
+(defn hyperlane-settings-props
+  [game-state]
+  {:settings (state/hyperlane-settings game-state)
+   :expanded? (state/hyperlane-panel-expanded? game-state)})
+
 (defn root-tree
   [game-state]
-  (control-panel/control-panel (control-panel-props game-state)))
+  [:vstack {:key :ui-root}
+   (control-panel/control-panel (control-panel-props game-state))
+   (hyperlane-settings/hyperlane-settings-panel (hyperlane-settings-props game-state))])
 
 (defn logical-viewport
   [scale {:keys [x y width height]}]

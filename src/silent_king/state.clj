@@ -60,7 +60,8 @@
    :selection {:star-id nil
                :last-world-click nil
                :details nil}
-   :ui {:scale 2.0}
+   :ui {:scale 2.0
+        :hyperlane-panel {:expanded? true}}
    :features {:hyperlanes? true
               :minimap? true}
    :hyperlane-settings default-hyperlane-settings
@@ -220,6 +221,15 @@
   [game-state value]
   (swap! game-state assoc-in [:ui :scale]
          (-> value double (max 1.0) (min 3.0))))
+
+(defn hyperlane-panel-expanded?
+  [game-state]
+  (boolean (get-in @game-state [:ui :hyperlane-panel :expanded?] true)))
+
+(defn toggle-hyperlane-panel!
+  [game-state]
+  (swap! game-state update-in [:ui :hyperlane-panel :expanded?]
+         (fnil not true)))
 
 ;; =============================================================================
 ;; State Updaters

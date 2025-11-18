@@ -13,16 +13,24 @@
       ui-core/normalize-tree
       (layout/compute-layout {:x 0 :y 0 :width 800 :height 600})))
 
-(defn- find-node
-  [node type]
-  (if (= (:type node) type)
-    node
-    (some #(find-node % type) (:children node))))
+(defn- find-node-by
+  [node pred]
+  (when node
+    (or (when (pred node)
+          node)
+        (some #(find-node-by % pred) (:children node)))))
 
-(defn- nodes-of-type
-  [node type]
-  (filter #(= (:type %) type)
-          (tree-seq #(seq (:children %)) :children node)))
+(defn- find-button-with-event
+  [tree event]
+  (find-node-by tree (fn [node]
+                       (and (= :button (:type node))
+                            (= event (get-in node [:props :on-click]))))))
+
+(defn- find-slider-with-event
+  [tree event]
+  (find-node-by tree (fn [node]
+                       (and (= :slider (:type node))
+                            (= event (get-in node [:props :on-change]))))))
 
 (deftest control-panel-props-reflect-game-state
   (let [game-state (atom (state/create-game-state))]
@@ -40,7 +48,7 @@
 (deftest control-panel-events-update-game-state
   (let [game-state (atom (state/create-game-state))
         tree (build-layout (app/root-tree game-state))
-        button-node (find-node tree :button)
+        button-node (find-button-with-event tree [:ui/toggle-hyperlanes])
         button-bounds (layout/bounds button-node)
         button-x (+ (:x button-bounds) (/ (:width button-bounds) 2.0))
         button-y (+ (:y button-bounds) (/ (:height button-bounds) 2.0))
@@ -48,7 +56,8 @@
     (doseq [event button-events]
       (events/dispatch-event! game-state event))
     (is (false? (state/hyperlanes-enabled? game-state)))
-    (let [[zoom-slider scale-slider] (vec (nodes-of-type tree :slider))
+    (let [zoom-slider (find-slider-with-event tree [:ui/set-zoom])
+          scale-slider (find-slider-with-event tree [:ui/set-scale])
           zoom-track (get-in zoom-slider [:layout :slider :track])
           zoom-x (+ (:x zoom-track) (:width zoom-track))
           zoom-y (+ (:y zoom-track) (/ (:height zoom-track) 2.0))
@@ -63,3 +72,15 @@
         (events/dispatch-event! game-state event)))
     (is (= 4.0 (get-in @game-state [:camera :zoom])))
     (is (= 3.0 (state/ui-scale game-state)))))
+
+(deftest hyperlane-settings-slider-updates-state
+  (let [game-state (atom (state/create-game-state))
+        tree (build-layout (app/root-tree game-state))
+        opacity-slider (find-slider-with-event tree [:hyperlanes/set-opacity])
+        track (get-in opacity-slider [:layout :slider :track])
+        click-x (+ (:x track) (:width track))
+        click-y (+ (:y track) (/ (:height track) 2.0))
+        events (interaction/click->events tree click-x click-y)]
+    (doseq [event events]
+      (events/dispatch-event! game-state event))
+    (is (= 1.0 (:opacity (state/hyperlane-settings game-state))))))

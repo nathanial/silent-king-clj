@@ -194,6 +194,52 @@
                  (conj acc child-node)
                  next-y))))))
 
+(defmethod layout-node :hstack
+  [node context]
+  (let [props (:props node)
+        explicit-bounds (or (get-in node [:props :bounds]) {})
+        bounds* (resolve-bounds node context)
+        padding (expand-padding (:padding props))
+        gap (double (or (:gap props) 0.0))
+        inner-y (+ (:y bounds*) (:top padding))
+        inner-x (+ (:x bounds*) (:left padding))
+        inner-width (max 0.0 (- (:width bounds*) (:left padding) (:right padding)))
+        explicit-height (when (contains? explicit-bounds :height)
+                          (double (:height explicit-bounds)))
+        inner-height (if explicit-height
+                       (max 0.0 (- explicit-height (:top padding) (:bottom padding)))
+                       0.0)
+        children (:children node)
+        viewport (:viewport context)]
+    (loop [remaining children
+           acc []
+           cursor-x inner-x
+           max-height 0.0]
+      (if (empty? remaining)
+        (let [computed-height (+ max-height (:top padding) (:bottom padding))
+              height (if explicit-height explicit-height computed-height)
+              final-bounds (assoc bounds* :height height)]
+          (assoc node
+                 :layout {:bounds final-bounds
+                          :padding padding}
+                 :children acc))
+        (let [child (first remaining)
+              available-width (max 0.0 (- (+ inner-x inner-width) cursor-x))
+              child-node (layout-node child {:viewport viewport
+                                             :bounds {:x cursor-x
+                                                      :y inner-y
+                                                      :width available-width
+                                                      :height inner-height}})
+              child-bounds (bounds child-node)
+              child-width (double (or (:width child-bounds) 0.0))
+              child-height (double (or (:height child-bounds) 0.0))
+              has-more? (seq (rest remaining))
+              next-x (+ cursor-x child-width (if has-more? gap 0.0))]
+          (recur (rest remaining)
+                 (conj acc child-node)
+                 next-x
+                 (max max-height child-height)))))))
+
 (defmethod layout-node :default
   [node context]
   (throw (ex-info "Unknown primitive type" {:type (:type node)})))

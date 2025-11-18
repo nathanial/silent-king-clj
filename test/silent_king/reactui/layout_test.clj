@@ -57,3 +57,19 @@
     (is (= (+ (get-in slider-data [:track :x])
               (get-in slider-data [:track :width]))
            (get-in slider-data [:handle :x])))))
+
+(deftest hstack-lays-out-children-horizontally
+  (let [tree (reactui/normalize-tree
+              [:hstack {:bounds {:x 0 :y 0 :width 240}
+                        :padding {:left 10 :right 10}
+                        :gap 6}
+               [:label {:text "Label"
+                        :bounds {:width 60}}]
+               [:button {:label "Action"
+                         :bounds {:width 80 :height 32}}]])
+        laid-out (layout/compute-layout tree {:x 0 :y 0 :width 300 :height 200})
+        first-child (layout/bounds (first (:children laid-out)))
+        second-child (layout/bounds (second (:children laid-out)))]
+    (is (= 10.0 (:x first-child)))
+    (is (= (+ 10.0 60.0 6.0) (:x second-child)))
+    (is (= (:y first-child) (:y second-child)))))

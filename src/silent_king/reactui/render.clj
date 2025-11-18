@@ -38,7 +38,7 @@
                      font
                      paint)))))
 
-(defn- draw-vstack
+(defn- draw-stack
   [^Canvas canvas node]
   (let [{:keys [background-color]} (:props node)
         {:keys [x y width height]} (layout/bounds node)]
@@ -121,7 +121,11 @@
 
 (defmethod draw-node :vstack
   [canvas node]
-  (draw-vstack canvas node))
+  (draw-stack canvas node))
+
+(defmethod draw-node :hstack
+  [canvas node]
+  (draw-stack canvas node))
 
 (defmethod draw-node :default
   [_ _]
