@@ -10,6 +10,7 @@
 
 (defonce ^:private last-layout (atom nil))
 (defonce ^:private pointer-capture (atom nil))
+(defonce ^:private active-button-bounds* (atom nil))
 
 (defn- scale-factor
   [game-state]
@@ -117,6 +118,7 @@
   (or (normalize-element element)
       (throw (ex-info "UI tree cannot be nil" {}))))
 
+
 (defn render-ui-tree
   "Normalize, lay out, and render a Hiccup tree.
 
@@ -126,12 +128,12 @@
    - :viewport – {:x ... :y ... :width ... :height ...}
 
    Returns the laid out tree."
-  [{:keys [canvas tree viewport]}]
+  [{:keys [canvas tree viewport context]}]
   (let [normalized (normalize-tree tree)
         layout-tree (layout/compute-layout normalized viewport)]
     (reset! last-layout layout-tree)
     (when canvas
-      (render/draw-tree canvas layout-tree))
+      (render/draw-tree canvas layout-tree context))
     layout-tree))
 
 (defn current-layout
@@ -150,9 +152,22 @@
   []
   @pointer-capture)
 
+(defn active-button-bounds
+  []
+  @active-button-bounds*)
+
+(defn- set-active-button!
+  [node]
+  (reset! active-button-bounds* (layout/bounds node)))
+
+(defn- clear-active-button!
+  []
+  (reset! active-button-bounds* nil))
+
 (defn handle-pointer-down!
   [game-state x y]
   (let [scale (scale-factor game-state)]
+    (clear-active-button!)
     (when-let [layout-tree (current-layout)]
       (when-let [node (interaction/node-at layout-tree
                                            (/ (double x) scale)
@@ -164,6 +179,7 @@
                     true)
           :button (do
                     (capture-node! node)
+                    (set-active-button! node)
                     true)
           :dropdown (when (interaction/dropdown-region node (/ (double x) scale) (/ (double y) scale))
                       (capture-node! node)
@@ -180,6 +196,7 @@
         :dropdown (interaction/dropdown-click! node game-state (/ (double x) scale) (/ (double y) scale))
         nil)))
   (release-capture!)
+  (clear-active-button!)
   nil)
 
 (defn handle-pointer-drag!

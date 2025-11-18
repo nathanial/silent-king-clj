@@ -39,7 +39,8 @@
            :mouse-y 0.0
            :mouse-down-x 0.0
            :mouse-down-y 0.0
-           :dragging false}
+           :dragging false
+           :mouse-initialized? false}
    :time {:start-time (System/nanoTime)
           :current-time 0.0
           :frame-count 0}

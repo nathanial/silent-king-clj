@@ -10,6 +10,7 @@
   (Typeface/makeDefault))
 
 (def ^:dynamic *overlay-collector* nil)
+(def ^:dynamic *render-context* nil)
 
 (defn- queue-overlay!
   [overlay]
@@ -33,6 +34,50 @@
   (* (count (or text ""))
      font-size
      0.55))
+
+(defn- adjust-channel
+  [value factor]
+  (-> (* (double value) factor)
+      (double)
+      (Math/round)
+      (max 0)
+      (min 255)))
+
+(defn- adjust-color
+  [color factor]
+  (let [a (bit-and (bit-shift-right color 24) 0xFF)
+        r (bit-and (bit-shift-right color 16) 0xFF)
+        g (bit-and (bit-shift-right color 8) 0xFF)
+        b (bit-and color 0xFF)
+        nr (adjust-channel r factor)
+        ng (adjust-channel g factor)
+        nb (adjust-channel b factor)]
+    (unchecked-int (bit-or (bit-shift-left a 24)
+                           (bit-shift-left nr 16)
+                           (bit-shift-left ng 8)
+                           nb))))
+
+(defn- pointer-position
+  []
+  (:pointer *render-context*))
+
+(defn- pointer-over?
+  [node]
+  (when-let [{px :x py :y} (pointer-position)]
+    (let [{:keys [width height] :as bounds} (layout/bounds node)
+          bx (double (:x bounds))
+          by (double (:y bounds))
+          px* (double px)
+          py* (double py)]
+      (and (>= px* bx)
+           (<= px* (+ bx width))
+           (>= py* by)
+           (<= py* (+ by height))))))
+
+(defn- active-button?
+  [node]
+  (let [active (:active-button-bounds *render-context*)]
+    (and active (= active (layout/bounds node)))))
 
 (defn- selected-label
   [options value]
@@ -80,18 +125,38 @@
         {:keys [x y width height]} (layout/bounds node)
         bg-color (or background-color 0xFF2D2F38)
         txt-color (or text-color 0xFFFFFFFF)
+        hovered? (pointer-over? node)
+        active? (active-button? node)
+        shade (cond active? 0.9
+                    hovered? 1.1
+                    :else 1.0)
+        final-bg (if (= shade 1.0) bg-color (adjust-color bg-color shade))
+        final-text (if active?
+                     (adjust-color txt-color 0.95)
+                     txt-color)
         size (double (or font-size 16.0))
         text (or label "")
         text-width (approx-text-width text size)
         text-x (+ x (/ (- width text-width) 2.0))
-        baseline (+ y (/ height 2.0) (/ size 2.5))]
+        baseline (+ y (/ height 2.0) (/ size 2.5))
+        border-color (cond active? (adjust-color bg-color 0.7)
+                               hovered? (adjust-color bg-color 1.2)
+                               :else nil)]
     (with-open [^Paint paint (doto (Paint.)
-                               (.setColor (unchecked-int bg-color)))]
+                               (.setColor (unchecked-int final-bg)))]
       (.drawRect canvas
                  (Rect/makeXYWH (float x) (float y) (float width) (float height))
                  paint))
+    (when border-color
+      (with-open [^Paint border (doto (Paint.)
+                                   (.setColor (unchecked-int border-color))
+                                   (.setStrokeWidth 1.0)
+                                   (.setMode PaintMode/STROKE))]
+        (.drawRect canvas
+                   (Rect/makeXYWH (float x) (float y) (float width) (float height))
+                   border)))
     (with-open [^Paint text-paint (doto (Paint.)
-                                    (.setColor (unchecked-int txt-color)))]
+                                    (.setColor (unchecked-int final-text)))]
       (with-open [^Font font (make-font size)]
         (.drawString canvas text
                      (float text-x)
@@ -243,10 +308,12 @@
 
 (defn draw-tree
   "Render a laid-out tree."
-  [canvas node]
+  [canvas node context]
   (when canvas
-    (let [overlays (atom [])]
-      (binding [*overlay-collector* overlays]
-        (draw-node canvas node))
-      (doseq [overlay @overlays]
-        (draw-overlay canvas overlay)))))
+    (let [overlays (atom [])
+          ctx (or context {})]
+      (binding [*overlay-collector* overlays
+                *render-context* ctx]
+        (draw-node canvas node)
+        (doseq [overlay @overlays]
+          (draw-overlay canvas overlay))))))

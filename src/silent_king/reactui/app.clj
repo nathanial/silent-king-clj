@@ -41,13 +41,20 @@
 (defn render!
   "Render the full Reactified UI."
   [^Canvas canvas viewport game-state]
-  (let [scale (state/ui-scale game-state)]
+  (let [scale (state/ui-scale game-state)
+        input (state/get-input game-state)
+        pointer (when (:mouse-initialized? input)
+                  {:x (/ (double (or (:mouse-x input) 0.0)) scale)
+                   :y (/ (double (or (:mouse-y input) 0.0)) scale)})
+        render-context {:pointer pointer
+                        :active-button-bounds (ui-core/active-button-bounds)}]
     (when canvas
       (.save canvas)
       (.scale canvas (float scale) (float scale)))
     (let [result (ui-core/render-ui-tree {:canvas canvas
                                           :tree (root-tree game-state)
-                                          :viewport (logical-viewport scale viewport)})]
+                                          :viewport (logical-viewport scale viewport)
+                                          :context render-context})]
       (when canvas
         (.restore canvas))
       result)))

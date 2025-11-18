@@ -100,7 +100,10 @@
                                      (-> cam
                                          (update :pan-x #(+ % dx))
                                          (update :pan-y #(+ % dy)))))))
-         (state/update-input! game-state assoc :mouse-x fb-xpos :mouse-y fb-ypos)))))
+         (state/update-input! game-state assoc
+                               :mouse-x fb-xpos
+                               :mouse-y fb-ypos
+                               :mouse-initialized? true)))))
 
   (GLFW/glfwSetMouseButtonCallback
    window
