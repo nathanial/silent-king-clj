@@ -1,27 +1,13 @@
 (ns silent-king.test-runner
   (:require [clojure.test :as t]
-            [silent-king.widgets.core-test]
-            [silent-king.widgets.interaction-test]
-            [silent-king.widgets.draw-order-test]
-            [silent-king.widgets.minimap-test]
-            [silent-king.widgets.layout-test]
-            [silent-king.widgets.animation-test]
-            [silent-king.ui.star-inspector-test]
-            [silent-king.ui.hyperlane-settings-test]
-            [silent-king.ui.performance-dashboard-test]))
+            [silent-king.reactui.layout-test]
+            [silent-king.reactui.core-test]))
 
 (defn -main
-  "Run all widget-related unit tests."
+  "Run all reactui-related unit tests."
   [& _]
-  (let [result (apply t/run-tests '[silent-king.widgets.core-test
-                                    silent-king.widgets.interaction-test
-                                    silent-king.widgets.draw-order-test
-                                    silent-king.widgets.minimap-test
-                                    silent-king.widgets.layout-test
-                                    silent-king.widgets.animation-test
-                                    silent-king.ui.star-inspector-test
-                                    silent-king.ui.hyperlane-settings-test
-                                    silent-king.ui.performance-dashboard-test])
+  (let [result (apply t/run-tests '[silent-king.reactui.layout-test
+                                    silent-king.reactui.core-test])
         failures (+ (:fail result 0) (:error result 0))]
     (when (pos? failures)
       (System/exit 1))))

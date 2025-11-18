@@ -2,6 +2,7 @@
   (:require [silent-king.assets :as assets]
             [silent-king.camera :as camera]
             [silent-king.state :as state]
+            [silent-king.reactui.core :as reactui]
             [silent-king.galaxy :as galaxy]
             [silent-king.hyperlanes :as hyperlanes]
             [nrepl.server :as nrepl]
@@ -351,7 +352,13 @@
                    :current-time current-time}]
 
       ;; Store latest metrics for potential external inspection
-      (swap! game-state assoc-in [:metrics :performance :latest] metrics))))
+      (swap! game-state assoc-in [:metrics :performance :latest] metrics))
+
+    ;; Temporary Reactified overlay
+    (reactui/render-demo! canvas {:x 0.0
+                                  :y 0.0
+                                  :width width
+                                  :height height})))
 
 (defn render-loop [game-state render-state]
   (println "Starting render loop...")
