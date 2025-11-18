@@ -3,7 +3,9 @@
   (:require [silent-king.state :as state]
             [silent-king.widgets.core :as wcore]
             [silent-king.widgets.config :as wconfig]
-            [silent-king.widgets.minimap :as wminimap]))
+            [silent-king.widgets.minimap :as wminimap]
+            [silent-king.ui.specs :as ui-specs]
+            [clojure.spec.alpha :as s]))
 
 (set! *warn-on-reflection* true)
 
@@ -53,7 +55,17 @@
 (defn- update-ui!
   "Update the performance dashboard UI state."
   [game-state f & args]
-  (swap! game-state update-in [:ui :performance-dashboard] #(apply f % args)))
+  (swap! game-state
+         (fn [gs]
+           (let [updated (update-in gs [:ui :performance-dashboard] #(apply f % args))
+                 new-state (get-in updated [:ui :performance-dashboard])]
+             (when-not (s/valid? ::ui-specs/performance-dashboard-state new-state)
+               (throw (ex-info "Invalid performance dashboard state after update"
+                               {:function f
+                                :args args
+                                :explain (s/explain-str ::ui-specs/performance-dashboard-state new-state)
+                                :state new-state})))
+             updated))))
 
 ;; =============================================================================
 ;; Helper Functions - Widget Space
@@ -80,8 +92,8 @@
   [game-state]
   (let [state (dashboard-state game-state)
         panel-id (:panel-entity state)
-        collapsed-height (or (:collapsed-height state) default-collapsed-height)
-        expanded-height (or (:expanded-height state) default-expanded-height)]
+        collapsed-height (:collapsed-height state)
+        expanded-height (:expanded-height state)]
     (or (when panel-id
           (some-> (state/get-entity game-state panel-id)
                   (get-in [:components :bounds :height])))
@@ -91,8 +103,8 @@
   "Compute the initial position for the dashboard (bottom-left corner)."
   [game-state]
   (let [state (dashboard-state game-state)
-        collapsed-height (or (:collapsed-height state) default-collapsed-height)
-        expanded-height (or (:expanded-height state) default-expanded-height)
+        collapsed-height (:collapsed-height state)
+        expanded-height (:expanded-height state)
         initial-height (if (:expanded? state) expanded-height collapsed-height)
         vw (widget-space-width game-state)
         vh (widget-space-height game-state)
@@ -201,8 +213,8 @@
   ;; Adjust panel height based on expanded state
   (let [state (dashboard-state game-state)]
     (when-let [panel-entity-id (:panel-entity state)]
-      (let [collapsed-height (or (:collapsed-height state) default-collapsed-height)
-            expanded-height (or (:expanded-height state) default-expanded-height)
+      (let [collapsed-height (:collapsed-height state)
+            expanded-height (:expanded-height state)
             new-height (if expanded? expanded-height collapsed-height)]
         (state/update-entity! game-state panel-entity-id
                              #(assoc-in % [:components :bounds :height] new-height))))
@@ -313,8 +325,8 @@
   "Build the performance dashboard widget tree."
   [game-state]
   (let [state (dashboard-state game-state)
-        collapsed-height (or (:collapsed-height state) default-collapsed-height)
-        expanded-height (or (:expanded-height state) default-expanded-height)
+        collapsed-height (:collapsed-height state)
+        expanded-height (:expanded-height state)
         initial-expanded? (:expanded? state)
         initial-height (if initial-expanded? expanded-height collapsed-height)
         ;; Compute starting position (use stored position or calculate initial position)
@@ -523,7 +535,7 @@
   (let [state (dashboard-state game-state)]
     (when (:panel-entity state)
       (let [fps (or (:fps metrics) 0.0)
-            history-limit (max 1 (int (or (:history-limit state) 60)))
+            history-limit (max 1 (int (:history-limit state)))
 
             ;; Get previous histories
             fps-history (get-in @game-state [:metrics :performance :fps-history] [])

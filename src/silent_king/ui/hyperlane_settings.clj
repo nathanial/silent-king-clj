@@ -1,7 +1,9 @@
 (ns silent-king.ui.hyperlane-settings
   "Collapsible hyperlane settings panel with advanced controls."
   (:require [silent-king.state :as state]
-            [silent-king.widgets.core :as wcore]))
+            [silent-king.widgets.core :as wcore]
+            [silent-king.ui.specs :as ui-specs]
+            [clojure.spec.alpha :as s]))
 
 (set! *warn-on-reflection* true)
 
@@ -42,7 +44,17 @@
 
 (defn- update-ui!
   [game-state path value]
-  (swap! game-state assoc-in (into [:ui :hyperlane-settings] path) value))
+  (swap! game-state
+         (fn [gs]
+           (let [updated (assoc-in gs (into [:ui :hyperlane-settings] path) value)
+                 new-state (get-in updated [:ui :hyperlane-settings])]
+             (when-not (s/valid? ::ui-specs/hyperlane-settings-state new-state)
+               (throw (ex-info "Invalid hyperlane settings state after update"
+                               {:path path
+                                :value value
+                                :explain (s/explain-str ::ui-specs/hyperlane-settings-state new-state)
+                                :state new-state})))
+             updated))))
 
 (defn- populate-row!
   [game-state row-widget-id label-widget slider-widget]
@@ -141,8 +153,8 @@
   [game-state]
   (let [settings (state/hyperlane-settings game-state)
         ui-state (panel-state game-state)
-        collapsed-height (:collapsed-height ui-state 60.0)
-        expanded-height (:expanded-height ui-state 360.0)
+        collapsed-height (:collapsed-height ui-state)
+        expanded-height (:expanded-height ui-state)
         panel (wcore/panel
                :id panel-id
                :bounds {:x 20 :y 300 :width 320 :height collapsed-height}
@@ -275,11 +287,11 @@
         panel-entity (:panel-entity ui)]
     (when panel-entity
       (let [current-time (:current-time (state/get-time game-state))
-            last-update (double (:last-update ui current-time))
-            progress (double (:progress ui 0.0))
-            target (double (:target ui 0.0))
+            last-update (double (:last-update ui))
+            progress (double (:progress ui))
+            target (double (:target ui))
             delta (max 0.0 (- current-time last-update))
-            speed (:animation-speed ui 8.0)
+            speed (:animation-speed ui)
             step (* delta speed)
             new-progress (cond
                            (> target progress) (min target (+ progress step))
@@ -288,8 +300,8 @@
         (when-not (= new-progress progress)
           (update-ui! game-state [:progress] new-progress)
           (update-ui! game-state [:last-update] current-time)
-          (let [collapsed (:collapsed-height ui 60.0)
-                expanded (:expanded-height ui 360.0)
+          (let [collapsed (:collapsed-height ui)
+                expanded (:expanded-height ui)
                 height (+ collapsed (* (- expanded collapsed) new-progress))]
             (state/update-entity! game-state panel-entity
                                   #(assoc-in % [:components :bounds :height] height))

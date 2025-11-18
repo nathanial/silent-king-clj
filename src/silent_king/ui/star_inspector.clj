@@ -4,7 +4,9 @@
             [silent-king.widgets.animation :as wanim]
             [silent-king.widgets.config :as wconfig]
             [silent-king.widgets.core :as wcore]
-            [silent-king.widgets.minimap :as wminimap]))
+            [silent-king.widgets.minimap :as wminimap]
+            [silent-king.ui.specs :as ui-specs]
+            [clojure.spec.alpha :as s]))
 
 (set! *warn-on-reflection* true)
 
@@ -31,6 +33,21 @@
   [game-state]
   (get-in @game-state [:ui :star-inspector]))
 
+(defn- update-inspector-ui!
+  "Update star inspector UI state with validation."
+  [game-state f & args]
+  (swap! game-state
+         (fn [gs]
+           (let [updated (update-in gs [:ui :star-inspector] #(apply f % args))
+                 new-state (get-in updated [:ui :star-inspector])]
+             (when-not (s/valid? ::ui-specs/star-inspector-state new-state)
+               (throw (ex-info "Invalid star inspector state after update"
+                               {:function f
+                                :args args
+                                :explain (s/explain-str ::ui-specs/star-inspector-state new-state)
+                                :state new-state})))
+             updated))))
+
 (defn- widget-viewport-width
   [game-state]
   (let [{:keys [width]} (wminimap/get-viewport-size game-state)
@@ -41,15 +58,13 @@
 (defn- visible-position
   [game-state]
   (let [{:keys [panel-width margin]} (inspector-state game-state)
-        viewport (widget-viewport-width game-state)
-        margin (or margin 20.0)]
+        viewport (widget-viewport-width game-state)]
     (- viewport panel-width margin)))
 
 (defn- hidden-position
   [game-state]
   (let [{:keys [margin]} (inspector-state game-state)
-        viewport (widget-viewport-width game-state)
-        margin (or margin 20.0)]
+        viewport (widget-viewport-width game-state)]
     (+ viewport margin)))
 
 (defn- desired-target-x
@@ -63,10 +78,11 @@
   (let [target (if visible?
                  (visible-position game-state)
                  (hidden-position game-state))]
-    (swap! game-state (fn [gs]
-                        (-> gs
-                            (assoc-in [:ui :star-inspector :visible?] visible?)
-                            (assoc-in [:ui :star-inspector :target-x] target))))))
+    (update-inspector-ui! game-state
+                          (fn [state]
+                            (-> state
+                                (assoc :visible? visible?)
+                                (assoc :target-x target))))))
 
 (defn- update-label-text!
   [game-state widget-id text]
@@ -290,11 +306,12 @@
                                                 hyperlane-label
                                                 hyperlane-list
                                                 zoom-button])]
-      (swap! game-state (fn [gs]
-                          (-> gs
-                              (assoc-in [:ui :star-inspector :panel-entity] panel-entity)
-                              (assoc-in [:ui :star-inspector :current-x] hidden-x)
-                              (assoc-in [:ui :star-inspector :target-x] hidden-x))))
+      (update-inspector-ui! game-state
+                            (fn [state]
+                              (-> state
+                                  (assoc :panel-entity panel-entity)
+                                  (assoc :current-x hidden-x)
+                                  (assoc :target-x hidden-x))))
       (update-inspector-content! game-state nil)
       panel-entity)))
 
@@ -330,11 +347,11 @@
           desired (desired-target-x game-state)
           target-x (if (not= desired target-x)
                      (do
-                       (swap! game-state assoc-in [:ui :star-inspector :target-x] desired)
+                       (update-inspector-ui! game-state assoc :target-x desired)
                        desired)
                      target-x)
-          current (double (or current-x target-x 0.0))
-          target (double (or target-x current-x 0.0))
+          current (double current-x)
+          target (double target-x)
           new-x (if (<= (Math/abs (- current target)) 0.5)
                   target
                   (+ current (* 0.2 (- target current))))]
@@ -345,7 +362,7 @@
           (state/update-entity! game-state panel-entity
                                 #(state/add-component % :bounds new-bounds))
           (wcore/request-layout! game-state panel-entity)
-          (swap! game-state assoc-in [:ui :star-inspector :current-x] new-x))))))
+          (update-inspector-ui! game-state assoc :current-x new-x))))))
 
 (defn zoom-to-selected-star!
   [game-state]
