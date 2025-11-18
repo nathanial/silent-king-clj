@@ -8,6 +8,8 @@
 (def ^:private interactive-types
   #{:button :slider :dropdown})
 
+(declare dropdown-region)
+
 (defn- contains-point?
   [{:keys [x y width height]} px py]
   (and (number? x) (number? y)
@@ -17,14 +19,29 @@
        (>= py y)
        (<= py (+ y height))))
 
+(defn- dropdown-overlay-hit
+  [node px py]
+  (when node
+    (or (when (= (:type node) :dropdown)
+          (let [region (dropdown-region node px py)]
+            (when (= (:type region) :option)
+              node)))
+        (some #(dropdown-overlay-hit % px py) (:children node)))))
+
 (defn node-at
   [node px py]
   (when node
-    (let [bounds (layout/bounds node)]
-      (when (contains-point? bounds px py)
-        (or (some #(node-at % px py) (reverse (:children node)))
-            (when (interactive-types (:type node))
-              node))))))
+    (or (dropdown-overlay-hit node px py)
+        (let [bounds (layout/bounds node)
+              type (:type node)]
+          (when (contains-point? bounds px py)
+            (or (some #(node-at % px py) (reverse (:children node)))
+                (when (= type :dropdown)
+                  (let [region (dropdown-region node px py)]
+                    (when region
+                      node)))
+                (when (interactive-types type)
+                  node)))))))
 
 (defn dropdown-region
   [node px py]

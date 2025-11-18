@@ -9,9 +9,20 @@
 (defonce ^Typeface default-typeface
   (Typeface/makeDefault))
 
+(def ^:dynamic *overlay-collector* nil)
+
+(defn- queue-overlay!
+  [overlay]
+  (when *overlay-collector*
+    (swap! *overlay-collector* conj overlay)))
+
 (defmulti draw-node
   (fn [_ node]
     (:type node)))
+
+(defmulti draw-overlay
+  (fn [_ overlay]
+    (:type overlay)))
 
 (defn- make-font
   [font-size]
@@ -169,28 +180,15 @@
                      (float caret-baseline)
                      font
                      text-paint)))
-    (when expanded?
-      (doseq [option options]
-        (let [bounds (:bounds option)
-              selected? (= (:value option) selected)
-              bg (if selected? selected-bg option-bg)
-              option-text-color (if selected? selected-txt-color txt-color)
-              rect (Rect/makeXYWH (float (:x bounds))
-                                   (float (:y bounds))
-                                   (float (:width bounds))
-                                   (float (:height bounds)))]
-          (with-open [^Paint option-paint (doto (Paint.)
-                                            (.setColor (unchecked-int bg)))]
-            (.drawRect canvas rect option-paint))
-          (with-open [^Paint text-paint (doto (Paint.)
-                                           (.setColor (unchecked-int option-text-color)))]
-            (with-open [^Font font (make-font 15.0)]
-              (.drawString canvas (:label option)
-                           (float (+ (:x bounds) padding))
-                           (float (+ (:y bounds) (/ (:height bounds) 2.0) 5.0))
-                           font
-                           text-paint))))))
-    ))
+    (when (and expanded? (seq options))
+      (queue-overlay! {:type :dropdown
+                       :selected selected
+                       :options options
+                       :padding padding
+                       :option-bg option-bg
+                       :selected-bg selected-bg
+                       :text-color txt-color
+                       :selected-text-color selected-txt-color}))))
 
 (defmethod draw-node :label
   [canvas node]
@@ -216,6 +214,29 @@
   [canvas node]
   (draw-dropdown canvas node))
 
+(defmethod draw-overlay :dropdown
+  [^Canvas canvas {:keys [selected options padding option-bg selected-bg text-color selected-text-color]}]
+  (doseq [option options]
+    (let [bounds (:bounds option)
+          selected? (= (:value option) selected)
+          bg (if selected? selected-bg option-bg)
+          option-text-color (if selected? selected-text-color text-color)
+          rect (Rect/makeXYWH (float (:x bounds))
+                               (float (:y bounds))
+                               (float (:width bounds))
+                               (float (:height bounds)))]
+      (with-open [^Paint option-paint (doto (Paint.)
+                                        (.setColor (unchecked-int bg)))]
+        (.drawRect canvas rect option-paint))
+      (with-open [^Paint text-paint (doto (Paint.)
+                                       (.setColor (unchecked-int option-text-color)))]
+        (with-open [^Font font (make-font 15.0)]
+          (.drawString canvas (:label option)
+                       (float (+ (:x bounds) padding))
+                       (float (+ (:y bounds) (/ (:height bounds) 2.0) 5.0))
+                       font
+                       text-paint))))))
+
 (defmethod draw-node :default
   [_ _]
   nil)
@@ -224,4 +245,8 @@
   "Render a laid-out tree."
   [canvas node]
   (when canvas
-    (draw-node canvas node)))
+    (let [overlays (atom [])]
+      (binding [*overlay-collector* overlays]
+        (draw-node canvas node))
+      (doseq [overlay @overlays]
+        (draw-overlay canvas overlay)))))

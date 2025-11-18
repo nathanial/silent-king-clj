@@ -93,10 +93,11 @@
                                 :expanded? true}])
           expanded-layout (layout/compute-layout expanded {:x 0 :y 0 :width 220 :height 400})
           expanded-bounds (layout/bounds expanded-layout)
-          options (get-in expanded-layout [:layout :dropdown :options])]
+          options (get-in expanded-layout [:layout :dropdown :options])
+          header-bounds (get-in expanded-layout [:layout :dropdown :header])]
+      (is (= header-height (:height expanded-bounds)))
       (is (= 3 (count options)))
-      (is (> (:height expanded-bounds) header-height))
-      ;; Ensure options are stacked below header
-      (let [first-option-bounds (:bounds (first options))
-            header-bounds (get-in expanded-layout [:layout :dropdown :header])]
-        (is (> (:y first-option-bounds) (:y header-bounds)))))))
+      ;; Ensure options are stacked below header despite overlay rendering
+      (let [first-option-bounds (:bounds (first options))]
+        (is (> (:y first-option-bounds)
+               (+ (:y header-bounds) (:height header-bounds))))))))

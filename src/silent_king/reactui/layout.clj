@@ -273,30 +273,23 @@
         header-bounds (assoc bounds*
                              :width width
                              :height header-height)
-        [options-layout total-height]
-        (if (and expanded? (seq options))
-          (loop [remaining options
-                 acc []
-                 cursor-y (+ (:y header-bounds) header-height option-gap)
-                 height (+ header-height option-gap)]
-            (if (empty? remaining)
-              [acc height]
-              (let [opt (first remaining)
-                    bounds {:x (:x header-bounds)
-                            :y cursor-y
-                            :width width
-                            :height option-height}
-                    next-y (+ cursor-y option-height option-gap)
-                    next-height (+ height option-height
-                                    (if (seq (rest remaining)) option-gap 0.0))]
-                (recur (rest remaining)
-                       (conj acc (assoc opt :bounds bounds))
-                       next-y
-                       next-height))))
-          [[] header-height])
-        final-bounds (assoc header-bounds :height total-height)]
+        options-layout (when (and expanded? (seq options))
+                         (loop [remaining options
+                                acc []
+                                cursor-y (+ (:y header-bounds) header-height option-gap)]
+                           (if (empty? remaining)
+                             acc
+                             (let [opt (first remaining)
+                                   bounds {:x (:x header-bounds)
+                                           :y cursor-y
+                                           :width width
+                                           :height option-height}
+                                   next-y (+ cursor-y option-height option-gap)]
+                               (recur (rest remaining)
+                                      (conj acc (assoc opt :bounds bounds))
+                                      next-y)))))]
     (assoc node
-           :layout {:bounds final-bounds
+           :layout {:bounds header-bounds
                     :dropdown {:header header-bounds
                                :options options-layout
                                :all-options options
