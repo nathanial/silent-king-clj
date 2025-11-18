@@ -61,7 +61,8 @@
                :last-world-click nil
                :details nil}
    :ui {:scale 2.0
-        :hyperlane-panel {:expanded? true}}
+        :hyperlane-panel {:expanded? true}
+        :dropdowns {}}
    :features {:hyperlanes? true
               :minimap? true}
    :hyperlane-settings default-hyperlane-settings
@@ -230,6 +231,21 @@
   [game-state]
   (swap! game-state update-in [:ui :hyperlane-panel :expanded?]
          (fnil not true)))
+
+(defn dropdown-open?
+  [game-state dropdown-id]
+  (boolean (get-in @game-state [:ui :dropdowns dropdown-id])))
+
+(defn toggle-dropdown!
+  [game-state dropdown-id]
+  (when dropdown-id
+    (swap! game-state update-in [:ui :dropdowns dropdown-id]
+           (fnil not false))))
+
+(defn close-dropdown!
+  [game-state dropdown-id]
+  (when dropdown-id
+    (swap! game-state assoc-in [:ui :dropdowns dropdown-id] false)))
 
 ;; =============================================================================
 ;; State Updaters

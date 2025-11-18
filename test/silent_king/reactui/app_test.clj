@@ -32,6 +32,11 @@
                        (and (= :slider (:type node))
                             (= event (get-in node [:props :on-change]))))))
 
+(defn- find-dropdown
+  [tree]
+  (find-node-by tree (fn [node]
+                       (= :dropdown (:type node)))))
+
 (deftest control-panel-props-reflect-game-state
   (let [game-state (atom (state/create-game-state))]
     (state/update-camera! game-state assoc :zoom 2.5)
@@ -84,3 +89,27 @@
     (doseq [event events]
       (events/dispatch-event! game-state event))
     (is (= 1.0 (:opacity (state/hyperlane-settings game-state))))))
+
+(deftest hyperlane-color-dropdown-selects-scheme
+  (let [game-state (atom (state/create-game-state))
+        initial-tree (build-layout (app/root-tree game-state))
+        dropdown (find-dropdown initial-tree)
+        header (get-in dropdown [:layout :dropdown :header])
+        toggle-events (interaction/click->events initial-tree
+                                                 (+ (:x header) 4)
+                                                 (+ (:y header) 4))]
+    (doseq [event toggle-events]
+      (events/dispatch-event! game-state event))
+    (let [expanded-tree (build-layout (app/root-tree game-state))
+          dropdown* (find-dropdown expanded-tree)
+          red-option (some #(when (= :red (:value %)) %)
+                           (get-in dropdown* [:layout :dropdown :options]))]
+      (is red-option)
+      (let [option-bounds (:bounds red-option)
+            option-events (interaction/click->events expanded-tree
+                                                     (+ (:x option-bounds) 4)
+                                                     (+ (:y option-bounds) 4))]
+        (doseq [event option-events]
+          (events/dispatch-event! game-state event))
+        (is (= :red (:color-scheme (state/hyperlane-settings game-state))))
+        (is (false? (state/dropdown-open? game-state :hyperlane-color)))))))

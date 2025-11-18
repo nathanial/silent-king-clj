@@ -65,6 +65,12 @@
    :props (or props {})
    :children []})
 
+(defn- normalize-dropdown
+  [props _raw-children]
+  {:type :dropdown
+   :props (or props {})
+   :children []})
+
 (defn normalize-element
   "Normalize a single Hiccup element (vector, string, or number) into the
    internal tree representation {:type keyword :props map :children [...]}."
@@ -91,6 +97,7 @@
         :label (normalize-label props child-forms)
         :button (normalize-button props child-forms)
         :slider (normalize-slider props child-forms)
+        :dropdown (normalize-dropdown props child-forms)
         {:type tag*
          :props (or props {})
          :children (->> child-forms
@@ -158,6 +165,9 @@
           :button (do
                     (capture-node! node)
                     true)
+          :dropdown (when (interaction/dropdown-region node (/ (double x) scale) (/ (double y) scale))
+                      (capture-node! node)
+                      true)
           false)))))
 
 (defn handle-pointer-up!
@@ -167,6 +177,7 @@
       (case (:type node)
         :button (interaction/activate-button! node game-state (/ (double x) scale) (/ (double y) scale))
         :slider (interaction/slider-drag! node game-state (/ (double x) scale))
+        :dropdown (interaction/dropdown-click! node game-state (/ (double x) scale) (/ (double y) scale))
         nil)))
   (release-capture!)
   nil)

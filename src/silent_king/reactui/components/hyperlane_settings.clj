@@ -13,10 +13,12 @@
 (def ^:const section-background 0xFF2D2F38)
 
 (def color-options
-  [{:scheme :blue :label "Blue"}
-   {:scheme :red :label "Red"}
-   {:scheme :green :label "Green"}
-   {:scheme :rainbow :label "Rainbow"}])
+  [{:value :blue :label "Blue"}
+   {:value :red :label "Red"}
+   {:value :green :label "Green"}
+   {:value :rainbow :label "Rainbow"}])
+
+(def ^:const color-dropdown-id :hyperlane-color)
 
 (defn- header-row
   [expanded?]
@@ -63,23 +65,23 @@
                :bounds {:width slider-width}}]]))
 
 (defn- color-row
-  [selected]
-  (let [buttons (mapv (fn [{:keys [scheme label]}]
-                        [:button {:key [:color scheme]
-                                  :label label
-                                  :on-click [:hyperlanes/set-color-scheme scheme]
-                                  :background-color (if (= selected scheme)
-                                                      accent-color
-                                                      section-background)
-                                  :text-color (if (= selected scheme)
-                                                0xFF0F111A
-                                                text-color)
-                                  :bounds {:width 84.0 :height 30.0}}])
-                      color-options)]
-    [:vstack {:gap 4}
-     [:label {:text "Color Scheme"
-              :color muted-color}]
-     (into [:hstack {:gap 8}] buttons)]))
+  [selected expanded?]
+  [:vstack {:gap 4}
+   [:label {:text "Color Scheme"
+            :color muted-color}]
+   [:dropdown {:id color-dropdown-id
+               :bounds {:width slider-width}
+               :options color-options
+               :selected selected
+               :expanded? expanded?
+               :background-color section-background
+               :option-background 0xFF1F2330
+               :option-selected-background accent-color
+               :option-selected-text-color 0xFF0F111A
+               :text-color text-color
+               :on-toggle [:ui.dropdown/toggle color-dropdown-id]
+               :on-select [:hyperlanes/set-color-scheme]
+               :on-close [:ui.dropdown/close color-dropdown-id]}]])
 
 (defn- animation-row
   [animation?]
@@ -101,10 +103,11 @@
                   enabled?)])
 
 (defn- settings-content
-  [{:keys [enabled? opacity color-scheme animation? animation-speed line-width]}]
+  [{:keys [enabled? opacity color-scheme animation? animation-speed line-width]}
+   {:keys [color-dropdown-expanded?]}]
   [:vstack {:gap 10}
    (visibility-row enabled?)
-   (color-row color-scheme)
+   (color-row color-scheme color-dropdown-expanded?)
    (slider-row {:label "Opacity"
                 :value opacity
                 :min 0.05
@@ -137,9 +140,9 @@
              :bounds {:height 34.0}}]])
 
 (defn hyperlane-settings-panel
-  [{:keys [settings expanded?]}]
+  [{:keys [settings expanded? color-dropdown-expanded?]}]
   (let [content (when expanded?
-                  (settings-content settings))]
+                  (settings-content settings {:color-dropdown-expanded? color-dropdown-expanded?}))]
     [:vstack {:key :hyperlane-settings-panel
               :bounds panel-bounds
               :padding {:all 12}

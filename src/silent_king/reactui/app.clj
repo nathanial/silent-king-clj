@@ -22,7 +22,8 @@
 (defn hyperlane-settings-props
   [game-state]
   {:settings (state/hyperlane-settings game-state)
-   :expanded? (state/hyperlane-panel-expanded? game-state)})
+   :expanded? (state/hyperlane-panel-expanded? game-state)
+   :color-dropdown-expanded? (state/dropdown-open? game-state :hyperlane-color)})
 
 (defn root-tree
   [game-state]

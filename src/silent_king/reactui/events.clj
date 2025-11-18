@@ -84,6 +84,16 @@
   (state/reset-hyperlane-settings! game-state)
   nil)
 
+(defmethod dispatch-event! :ui.dropdown/toggle
+  [game-state [_ dropdown-id]]
+  (state/toggle-dropdown! game-state dropdown-id)
+  nil)
+
+(defmethod dispatch-event! :ui.dropdown/close
+  [game-state [_ dropdown-id]]
+  (state/close-dropdown! game-state dropdown-id)
+  nil)
+
 (defmethod dispatch-event! :default
   [_ event]
   (println "Unhandled UI event" event)

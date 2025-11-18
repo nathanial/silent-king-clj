@@ -73,3 +73,30 @@
     (is (= 10.0 (:x first-child)))
     (is (= (+ 10.0 60.0 6.0) (:x second-child)))
     (is (= (:y first-child) (:y second-child)))))
+
+(deftest dropdown-layout-adjusts-height
+  (let [base-opts [{:value :blue :label "Blue"}
+                   {:value :red :label "Red"}
+                   {:value :green :label "Green"}]
+        collapsed (reactui/normalize-tree
+                   [:dropdown {:bounds {:x 0 :y 0 :width 220}
+                               :options base-opts
+                               :selected :blue}])
+        collapsed-layout (layout/compute-layout collapsed {:x 0 :y 0 :width 220 :height 200})
+        collapsed-bounds (layout/bounds collapsed-layout)
+        header-height (:height (get-in collapsed-layout [:layout :dropdown :header]))]
+    (is (= header-height (:height collapsed-bounds)))
+    (let [expanded (reactui/normalize-tree
+                    [:dropdown {:bounds {:x 0 :y 0 :width 220}
+                                :options base-opts
+                                :selected :blue
+                                :expanded? true}])
+          expanded-layout (layout/compute-layout expanded {:x 0 :y 0 :width 220 :height 400})
+          expanded-bounds (layout/bounds expanded-layout)
+          options (get-in expanded-layout [:layout :dropdown :options])]
+      (is (= 3 (count options)))
+      (is (> (:height expanded-bounds) header-height))
+      ;; Ensure options are stacked below header
+      (let [first-option-bounds (:bounds (first options))
+            header-bounds (get-in expanded-layout [:layout :dropdown :header])]
+        (is (> (:y first-option-bounds) (:y header-bounds)))))))

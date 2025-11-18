@@ -49,3 +49,10 @@
     (swap! game-state assoc-in [:hyperlane-settings :opacity] 0.8)
     (events/dispatch-event! game-state [:hyperlanes/reset])
     (is (= state/default-hyperlane-settings (:hyperlane-settings @game-state)))))
+
+(deftest dispatch-dropdown-events
+  (let [game-state (atom (state/create-game-state))]
+    (events/dispatch-event! game-state [:ui.dropdown/toggle :colors])
+    (is (true? (state/dropdown-open? game-state :colors)))
+    (events/dispatch-event! game-state [:ui.dropdown/close :colors])
+    (is (false? (state/dropdown-open? game-state :colors)))))

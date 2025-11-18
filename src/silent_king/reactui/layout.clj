@@ -38,6 +38,25 @@
       (double snapped))
     (double value)))
 
+(defn- dropdown-option
+  [option]
+  (cond
+    (map? option)
+    (let [value (or (:value option)
+                    (:scheme option)
+                    (:id option)
+                    (:key option))]
+      (when (nil? value)
+        (throw (ex-info "Dropdown option missing :value" {:option option})))
+      {:value value
+       :label (or (:label option)
+                  (if (keyword? value)
+                    (name value)
+                    (str value)))})
+    :else
+    {:value option
+     :label (str option)}))
+
 (defn- clean-viewport
   [viewport]
   (normalize-bounds viewport))
@@ -239,6 +258,50 @@
                  (conj acc child-node)
                  next-x
                  (max max-height child-height)))))))
+
+(defmethod layout-node :dropdown
+  [node context]
+  (let [props (:props node)
+        bounds* (resolve-bounds node context)
+        width (let [w (:width bounds*)]
+                (if (pos? w) w 200.0))
+        header-height (double (or (:header-height props) 36.0))
+        option-height (double (or (:option-height props) 30.0))
+        option-gap (double (or (:option-gap props) 4.0))
+        expanded? (boolean (:expanded? props))
+        options (mapv dropdown-option (:options props))
+        header-bounds (assoc bounds*
+                             :width width
+                             :height header-height)
+        [options-layout total-height]
+        (if (and expanded? (seq options))
+          (loop [remaining options
+                 acc []
+                 cursor-y (+ (:y header-bounds) header-height option-gap)
+                 height (+ header-height option-gap)]
+            (if (empty? remaining)
+              [acc height]
+              (let [opt (first remaining)
+                    bounds {:x (:x header-bounds)
+                            :y cursor-y
+                            :width width
+                            :height option-height}
+                    next-y (+ cursor-y option-height option-gap)
+                    next-height (+ height option-height
+                                    (if (seq (rest remaining)) option-gap 0.0))]
+                (recur (rest remaining)
+                       (conj acc (assoc opt :bounds bounds))
+                       next-y
+                       next-height))))
+          [[] header-height])
+        final-bounds (assoc header-bounds :height total-height)]
+    (assoc node
+           :layout {:bounds final-bounds
+                    :dropdown {:header header-bounds
+                               :options options-layout
+                               :all-options options
+                               :expanded? expanded?}}
+           :children [])))
 
 (defmethod layout-node :default
   [node context]

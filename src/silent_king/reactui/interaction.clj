@@ -6,7 +6,7 @@
 (set! *warn-on-reflection* true)
 
 (def ^:private interactive-types
-  #{:button :slider})
+  #{:button :slider :dropdown})
 
 (defn- contains-point?
   [{:keys [x y width height]} px py]
@@ -25,6 +25,23 @@
         (or (some #(node-at % px py) (reverse (:children node)))
             (when (interactive-types (:type node))
               node))))))
+
+(defn dropdown-region
+  [node px py]
+  (let [{:keys [header options expanded?]} (get-in node [:layout :dropdown])]
+    (cond
+      (contains-point? header px py)
+      {:type :header}
+
+      (and expanded?)
+      (some (fn [option]
+              (when (contains-point? (:bounds option) px py)
+                {:type :option
+                 :value (:value option)}))
+            options)
+
+      :else
+      nil)))
 
 (defn- slider-value-from-point
   [node px]
@@ -63,8 +80,43 @@
                   [(conj event (slider-value-from-point node px))]
                   [])
                 [])
+      :dropdown (if-let [region (dropdown-region node px py)]
+                  (case (:type region)
+                    :header (let [event (-> node :props :on-toggle)]
+                              (if (vector? event) [event] []))
+                    :option (let [select (-> node :props :on-select)
+                                  close (-> node :props :on-close)
+                                  value (:value region)
+                                  events []
+                                  events (if (vector? select)
+                                           (conj events (conj select value))
+                                           events)
+                                  events (if (vector? close)
+                                           (conj events close)
+                                           events)]
+                              events)
+                    [])
+                  [])
       [])
     []))
+
+(defn dropdown-click!
+  [node game-state px py]
+  (when-let [region (dropdown-region node px py)]
+    (case (:type region)
+      :header (when-let [event (-> node :props :on-toggle)]
+                (when (vector? event)
+                  (ui-events/dispatch-event! game-state event))
+                true)
+      :option (let [value (:value region)]
+                (when-let [event (-> node :props :on-select)]
+                  (when (vector? event)
+                    (ui-events/dispatch-event! game-state (conj event value))))
+                (when-let [close-event (-> node :props :on-close)]
+                  (when (vector? close-event)
+                    (ui-events/dispatch-event! game-state close-event)))
+                true)
+      false)))
 
 (defn slider-drag!
   [node game-state px]
