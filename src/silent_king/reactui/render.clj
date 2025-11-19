@@ -36,6 +36,12 @@
      font-size
      0.55))
 
+(defn- clamp01
+  [value]
+  (-> value
+      (max 0.0)
+      (min 1.0)))
+
 (defn- adjust-channel
   [value factor]
   (-> (* (double value) factor)
@@ -57,6 +63,92 @@
                            (bit-shift-left nr 16)
                            (bit-shift-left ng 8)
                            nb))))
+
+(defn- ->color-int
+  "Convert the supplied value (which may be a long ARGB literal) into a signed 32-bit int.
+  Ensures we never trigger Math/toIntExact overflow even if the high bit is set."
+  [value default]
+  (let [raw (long (or value default))
+        signed (if (> raw 0x7FFFFFFF)
+                 (- raw 0x100000000)
+                 raw)]
+    (int signed)))
+
+(defn- lerp
+  [a b t]
+  (+ a (* t (- b a))))
+
+(defn- blend-colors
+  [color-a color-b t]
+  (let [t (clamp01 t)
+        ca (->color-int color-a color-a)
+        cb (->color-int color-b color-b)
+        a1 (bit-and (bit-shift-right ca 24) 0xFF)
+        r1 (bit-and (bit-shift-right ca 16) 0xFF)
+        g1 (bit-and (bit-shift-right ca 8) 0xFF)
+        b1 (bit-and ca 0xFF)
+        a2 (bit-and (bit-shift-right cb 24) 0xFF)
+        r2 (bit-and (bit-shift-right cb 16) 0xFF)
+        g2 (bit-and (bit-shift-right cb 8) 0xFF)
+        b2 (bit-and cb 0xFF)
+        a (Math/round (lerp a1 a2 t))
+        r (Math/round (lerp r1 r2 t))
+        g (Math/round (lerp g1 g2 t))
+        b (Math/round (lerp b1 b2 t))]
+    (->color-int (bit-or (bit-shift-left a 24)
+                         (bit-shift-left r 16)
+                         (bit-shift-left g 8)
+                         b)
+                 color-a)))
+
+(def ^:const heatmap-low-color 0x1A08244A)
+(def ^:const heatmap-high-color 0xFFF1C232)
+
+(defn- heatmap-cell-size
+  [width height]
+  (let [w (double (or width 0.0))
+        h (double (or height 0.0))
+        largest (max 1.0 (max w h))
+        target (/ largest 48.0)]
+    (-> target
+        (max 3.0)
+        (min 18.0))))
+
+(defn- bucket-stars-into-grid
+  [stars world-bounds widget-bounds cell-size]
+  (let [cols (max 1 (int (Math/ceil (/ (:width widget-bounds) cell-size))))
+        rows (max 1 (int (Math/ceil (/ (:height widget-bounds) cell-size))))
+        total (* rows cols)
+        counts (int-array total)]
+    (loop [remaining stars
+           max-density 0]
+      (if-let [star (first remaining)]
+        (let [pos (minimap-math/world->minimap star world-bounds widget-bounds)
+              local-x (- (:x pos) (:x widget-bounds))
+              local-y (- (:y pos) (:y widget-bounds))
+              col (int (Math/floor (/ local-x cell-size)))
+              row (int (Math/floor (/ local-y cell-size)))]
+          (if (and (>= col 0) (< col cols)
+                   (>= row 0) (< row rows))
+            (let [idx (+ (* row cols) col)
+                  new-count (unchecked-inc-int (aget ^ints counts idx))]
+              (aset-int counts idx new-count)
+              (recur (rest remaining)
+                     (max max-density new-count)))
+            (recur (rest remaining) max-density)))
+        {:counts counts
+         :cols cols
+         :rows rows
+         :cell-size cell-size
+         :max-density max-density}))))
+
+(defn- density->color
+  [count max-count]
+  (if (pos? max-count)
+    (let [ratio (double (/ count max-count))
+          eased (Math/pow ratio 0.6)]
+      (blend-colors heatmap-low-color heatmap-high-color eased))
+    (->color-int heatmap-low-color heatmap-low-color)))
 
 (defn- pointer-position
   []
@@ -104,12 +196,6 @@
   (let [active (active-interaction)]
     (and (= :dropdown (:type active))
          (= (:node active) node))))
-
-(defn- clamp01
-  [value]
-  (-> value
-      (max 0.0)
-      (min 1.0)))
 
 (defn- selected-label
   [options value]
@@ -370,12 +456,14 @@
 
 (defn- draw-minimap
   [^Canvas canvas node]
-  (let [{:keys [stars world-bounds viewport-rect background-color star-color viewport-color]} (:props node)
+  (let [{:keys [stars world-bounds viewport-rect background-color viewport-color]} (:props node)
         {:keys [x y width height]} (layout/bounds node)
         bg-color (->color-int background-color 0xFF000000)
-        star-color (->color-int star-color 0xFFFFFFFF)
         viewport-color (->color-int viewport-color 0xFF00FF00)
-        widget-bounds {:x x :y y :width width :height height}]
+        widget-bounds {:x x :y y :width width :height height}
+        cell-size (heatmap-cell-size width height)
+        {:keys [counts cols rows max-density]} (bucket-stars-into-grid stars world-bounds widget-bounds cell-size)
+        counts-array ^ints counts]
     ;; Background
     (with-open [^Paint bg (doto (Paint.)
                             (.setColor bg-color))]
@@ -384,15 +472,28 @@
         (catch ArithmeticException _ nil)
         (catch Exception _ nil)))
 
-    ;; Stars
-    (with-open [^Paint star-paint (doto (Paint.)
-                                    (.setColor star-color))]
-      (doseq [star stars]
-        (let [pos (minimap-math/world->minimap star world-bounds widget-bounds)]
-          (try
-            (.drawCircle canvas (float (:x pos)) (float (:y pos)) 1.5 star-paint)
-            (catch ArithmeticException _ nil)
-            (catch Exception _ nil)))))
+    ;; Heatmap density buckets
+    (when (pos? max-density)
+      (with-open [^Paint heatmap-paint (Paint.)]
+        (dotimes [row rows]
+          (dotimes [col cols]
+            (let [idx (+ (* row cols) col)
+                  count (aget counts-array idx)]
+              (when (pos? count)
+                (let [px (+ x (* col cell-size))
+                      py (+ y (* row cell-size))
+                      cell-w (max 0.0 (min cell-size (- (+ x width) px)))
+                      cell-h (max 0.0 (min cell-size (- (+ y height) py)))]
+                  (when (and (pos? cell-w) (pos? cell-h))
+                    (.setColor heatmap-paint (density->color count max-density))
+                    (try
+                      (.drawRect canvas (Rect/makeXYWH (float px)
+                                                       (float py)
+                                                       (float cell-w)
+                                                       (float cell-h))
+                                 heatmap-paint)
+                      (catch ArithmeticException _ nil)
+                      (catch Exception _ nil))))))))))
 
     ;; Viewport
     (when viewport-rect
