@@ -12,6 +12,7 @@
 (defonce ^:private last-layout (atom nil))
 (defonce ^:private pointer-capture (atom nil))
 (defonce ^:private active-interaction* (atom nil))
+(def ^:const ^:private minimap-window-drag-threshold 5.0)
 
 (defn- scale-factor
   [game-state]
@@ -196,6 +197,32 @@
   []
   @active-interaction*)
 
+(defn- pointer-distance
+  [{:keys [x y]} {x2 :x y2 :y}]
+  (let [dx (- (double x2) (double x))
+        dy (- (double y2) (double y))]
+    (Math/sqrt (+ (* dx dx) (* dy dy)))))
+
+(defn- find-node-path
+  [node target]
+  (when node
+    (cond
+      (identical? node target) [node]
+      (= node target) [node]
+      :else (some (fn [child]
+                    (when-let [path (find-node-path child target)]
+                      (cons node path)))
+                  (:children node)))))
+
+(defn- containing-window
+  [target]
+  (when-let [root (current-layout)]
+    (when-let [path (find-node-path root target)]
+      (->> path
+           butlast
+           (filter #(= :window (:type %)))
+           last))))
+
 (defn- set-active-interaction!
   ([node kind]
    (set-active-interaction! node kind nil))
@@ -210,13 +237,6 @@
   []
   (reset! active-interaction* nil))
 
-(defn- handle-minimap-pan!
-  [node game-state x y]
-  (let [{:keys [world-bounds]} (:props node)
-        widget-bounds (layout/bounds node)
-        world-pos (minimap-math/minimap->world {:x x :y y} world-bounds widget-bounds)]
-    (ui-events/dispatch-event! game-state [:camera/pan-to-world world-pos])))
-
 (defn- within-bounds?
   [{:keys [x y width height]} px py]
   (and (number? x) (number? y) (number? width) (number? height)
@@ -224,6 +244,60 @@
        (<= px (+ x width))
        (>= py y)
        (<= py (+ y height))))
+
+(defn- viewport-center
+  [{:keys [x y width height]}]
+  (when (and (number? x) (number? y) (number? width) (number? height))
+    {:x (+ (double x) (/ (double width) 2.0))
+     :y (+ (double y) (/ (double height) 2.0))}))
+
+(defn- minimap-interaction-value
+  [node px py]
+  (let [{:keys [world-bounds viewport-rect]} (:props node)
+        widget-bounds (layout/bounds node)
+        viewport-bounds (when (and viewport-rect world-bounds widget-bounds)
+                          (minimap-math/viewport->minimap-rect viewport-rect world-bounds widget-bounds))
+        viewport-hit? (and viewport-bounds (within-bounds? viewport-bounds px py))
+        center (viewport-center viewport-rect)
+        pointer-world (when (and world-bounds widget-bounds)
+                        (minimap-math/minimap->world {:x px :y py} world-bounds widget-bounds))
+        offset (when (and viewport-hit? pointer-world center)
+                 {:dx (- (:x pointer-world) (:x center))
+                  :dy (- (:y pointer-world) (:y center))})]
+    {:mode (if viewport-hit? :viewport-drag :click)
+     :offset offset
+     :viewport-bounds viewport-bounds}))
+
+(defn- handle-minimap-pan!
+  ([node game-state x y]
+   (handle-minimap-pan! node game-state x y nil))
+  ([node game-state x y interaction]
+   (let [{:keys [world-bounds]} (:props node)
+         widget-bounds (layout/bounds node)
+         world-pos (minimap-math/minimap->world {:x x :y y} world-bounds widget-bounds)
+         {:keys [mode offset]} (or interaction {})
+         adjusted (if (and (= mode :viewport-drag) offset)
+                    {:x (- (:x world-pos) (double (:dx offset)))
+                     :y (- (:y world-pos) (double (:dy offset)))}
+                    world-pos)]
+     (ui-events/dispatch-event! game-state [:camera/pan-to-world adjusted]))))
+
+(defn- start-window-move!
+  [node px py]
+  (let [bounds (layout/bounds node)
+        window-layout (get-in node [:layout :window])
+        stored-height (or (:stored-height window-layout) (:height bounds))
+        enriched-bounds (assoc bounds :stored-height stored-height)]
+    (capture-node! node)
+    (set-active-interaction! node :window-move
+                             {:value {:start-pointer {:x px :y py}
+                                      :start-bounds enriched-bounds}})
+    true))
+
+(defn- delegate-minimap-drag-to-window!
+  [node px py]
+  (when-let [window (containing-window node)]
+    (start-window-move! window px py)))
 
 (defn- dispatch-window-bounds!
   [node game-state bounds]
@@ -246,12 +320,7 @@
           stored-height (or (:stored-height window-layout) (:height bounds))
           enriched-bounds (assoc bounds :stored-height stored-height)]
       (case (:kind region)
-        :move (do
-                (capture-node! node)
-                (set-active-interaction! node :window-move
-                                         {:value {:start-pointer {:x px :y py}
-                                                  :start-bounds enriched-bounds}})
-                true)
+        :move (start-window-move! node px py)
         :resize (do
                   (capture-node! node)
                   (set-active-interaction! node :window-resize
@@ -343,9 +412,14 @@
                                                                               :value (:value region)})
                         :header (set-active-interaction! node :dropdown {:bounds (:bounds region)}))
                       true)
-          :minimap (do
+          :minimap (let [logical-x (/ (double x) scale)
+                         logical-y (/ (double y) scale)
+                         interaction (assoc (minimap-interaction-value node logical-x logical-y)
+                                            :start-pointer {:x logical-x :y logical-y})]
                      (capture-node! node)
-                     (handle-minimap-pan! node game-state (/ (double x) scale) (/ (double y) scale))
+                     (set-active-interaction! node :minimap {:value interaction})
+                     (when (= :viewport-drag (:mode interaction))
+                       (handle-minimap-pan! node game-state logical-x logical-y interaction))
                      true)
           :window (handle-window-pointer-down! node game-state (/ (double x) scale) (/ (double y) scale))
           false)))))
@@ -358,6 +432,12 @@
         :button (interaction/activate-button! node game-state (/ (double x) scale) (/ (double y) scale))
         :slider (interaction/slider-drag! node game-state (/ (double x) scale))
         :dropdown (interaction/dropdown-click! node game-state (/ (double x) scale) (/ (double y) scale))
+        :minimap (let [logical-x (/ (double x) scale)
+                        logical-y (/ (double y) scale)
+                        interaction (some-> (active-interaction) :value)]
+                    (when (= :click (:mode interaction))
+                      (handle-minimap-pan! node game-state logical-x logical-y interaction))
+                    true)
         :window (handle-window-pointer-up! node game-state (/ (double x) scale) (/ (double y) scale))
         nil)))
   (release-capture!)
@@ -372,8 +452,20 @@
         :slider (do
                   (interaction/slider-drag! node game-state (/ (double x) scale))
                   true)
-        :minimap (do
-                   (handle-minimap-pan! node game-state (/ (double x) scale) (/ (double y) scale))
-                   true)
+        :minimap (let [logical-x (/ (double x) scale)
+                        logical-y (/ (double y) scale)
+                        interaction (some-> (active-interaction) :value)
+                        {:keys [mode start-pointer]} interaction]
+                    (case mode
+                      :viewport-drag (do
+                                       (handle-minimap-pan! node game-state logical-x logical-y interaction)
+                                       true)
+                      :click (do
+                               (when (and start-pointer
+                                          (>= (pointer-distance start-pointer {:x logical-x :y logical-y})
+                                              minimap-window-drag-threshold))
+                                 (delegate-minimap-drag-to-window! node logical-x logical-y))
+                               true)
+                      true))
         :window (handle-window-pointer-drag! node game-state (/ (double x) scale) (/ (double y) scale))
         false))))

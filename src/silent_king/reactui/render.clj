@@ -628,28 +628,18 @@
                       (catch Exception _ nil))))))))))
 
     ;; Viewport
-    (when viewport-rect
-      (let [tl (minimap-math/world->minimap {:x (:x viewport-rect)
-                                             :y (:y viewport-rect)}
-                                            world-bounds
-                                            widget-bounds)
-            br (minimap-math/world->minimap {:x (+ (:x viewport-rect) (:width viewport-rect))
-                                             :y (+ (:y viewport-rect) (:height viewport-rect))}
-                                            world-bounds
-                                            widget-bounds)
-            vx (:x tl)
-            vy (:y tl)
-            vw (- (:x br) (:x tl))
-            vh (- (:y br) (:y tl))]
-        (with-open [^Paint viewport-paint (doto (Paint.)
-                                            (.setColor viewport-color)
-                                            (.setStrokeWidth 1.0)
-                                            (.setMode PaintMode/STROKE))]
-          ;; Skija/LWJGL sometimes throws integer overflow on Rect creation if coordinates blow up
-          (try
-            (.drawRect canvas (Rect/makeXYWH (float vx) (float vy) (float vw) (float vh)) viewport-paint)
-            (catch ArithmeticException _ nil)
-            (catch Exception _ nil)))))
+    (when-let [{:keys [x y width height]} (minimap-math/viewport->minimap-rect viewport-rect
+                                                                                world-bounds
+                                                                                widget-bounds)]
+      (with-open [^Paint viewport-paint (doto (Paint.)
+                                          (.setColor viewport-color)
+                                          (.setStrokeWidth 1.0)
+                                          (.setMode PaintMode/STROKE))]
+        ;; Skija/LWJGL sometimes throws integer overflow on Rect creation if coordinates blow up
+        (try
+          (.drawRect canvas (Rect/makeXYWH (float x) (float y) (float width) (float height)) viewport-paint)
+          (catch ArithmeticException _ nil)
+          (catch Exception _ nil))))
 
     ;; Border
     (with-open [^Paint border-paint (doto (Paint.)

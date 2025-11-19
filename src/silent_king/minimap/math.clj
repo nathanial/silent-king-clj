@@ -72,6 +72,30 @@
     {:x (+ (:min-x bounds) (/ (- (:x minimap-pos) start-x) scale))
      :y (+ (:min-y bounds) (/ (- (:y minimap-pos) start-y) scale))}))
 
+(defn viewport->minimap-rect
+  "Project the visible viewport rectangle into minimap widget coordinates.
+
+  Returns {:x :y :width :height} describing the rectangle inside the minimap,
+  or nil when the inputs are incomplete."
+  [viewport-rect world-bounds widget-bounds]
+  (when (and viewport-rect world-bounds widget-bounds)
+    (let [tl (world->minimap {:x (:x viewport-rect)
+                              :y (:y viewport-rect)}
+                             world-bounds
+                             widget-bounds)
+          br (world->minimap {:x (+ (:x viewport-rect) (:width viewport-rect))
+                              :y (+ (:y viewport-rect) (:height viewport-rect))}
+                             world-bounds
+                             widget-bounds)
+          vx (:x tl)
+          vy (:y tl)
+          vw (- (:x br) (:x tl))
+          vh (- (:y br) (:y tl))]
+      {:x vx
+       :y vy
+       :width vw
+       :height vh})))
+
 (defn viewport-rect
   "Calculate the visible world area based on camera state."
   [camera viewport]
