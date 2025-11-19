@@ -3,7 +3,8 @@
 
 (set! *warn-on-reflection* true)
 
-(def ^:const default-panel-bounds {:x 752 :y 24 :width 360})
+(def ^:const default-panel-bounds {:width 360.0
+                                   :height 620.0})
 (def ^:const panel-background 0xCC10131C)
 (def ^:const section-background 0xFF1F2330)
 (def ^:const accent-color 0xFF9CDCFE)
@@ -89,9 +90,8 @@
                          :suffix " MB"}))]))
 
 (defn- hidden-panel
-  [bounds]
+  []
   [:vstack {:key :performance-overlay
-            :bounds bounds
             :padding {:all 12}
             :gap 8
             :background-color panel-background}
@@ -107,52 +107,50 @@
              :text-color text-color}]])
 
 (defn performance-overlay
-  [{:keys [metrics visible? expanded? bounds fps-history]}]
-  (let [panel-bounds (or bounds default-panel-bounds)]
-    (if-not visible?
-      (hidden-panel panel-bounds)
-      [:vstack {:key :performance-overlay
-                :bounds panel-bounds
-                :padding {:all 12}
-                :gap 10
-                :background-color panel-background}
-       [:hstack {:gap 8}
-        [:label {:text "Performance Overlay"
-                 :color accent-color
-                 :font-size 16.0
-                 :bounds {:width 180.0}}]
-        [:button {:label (if expanded? "Collapse" "Expand")
-                  :on-click [:ui/perf-toggle-expanded]
-                  :background-color section-background
-                  :text-color text-color
-                  :bounds {:width 80.0 :height 32.0}}]
-        [:button {:label "Hide"
-                  :on-click [:ui/perf-toggle-visible]
-                  :background-color 0xFF3C4456
-                  :text-color text-color
-                  :bounds {:width 60.0 :height 32.0}}]]
-       (if expanded?
-         (summary-content metrics fps-history)
-         (section "Summary"
-                  (stat-row {:label "FPS"
-                             :value (:fps metrics)
-                             :precision 1})
-                  (stat-row {:label "Frame Time"
-                             :value (:frame-time-ms metrics)
-                             :precision 1
-                             :suffix " ms"})
-                  (stat-row {:label "Draw Calls"
-                             :value (:draw-calls metrics)
-                             :precision 0})
-                  [:bar-chart {:values (or fps-history [])
-                               :min 0.0
-                               :max 120.0
-                               :bar-gap 2.0
-                               :background-color 0x33171B25
-                               :bar-color accent-color
-                               :bounds {:height 80.0}}]))
-       [:button {:label "Reset Metrics"
-                 :on-click [:metrics/reset-performance]
-                 :background-color accent-color
-                 :text-color 0xFF0F111A
-                 :bounds {:height 32.0}}]])))
+  [{:keys [metrics visible? expanded? fps-history]}]
+  (if-not visible?
+    (hidden-panel)
+    [:vstack {:key :performance-overlay
+              :padding {:all 12}
+              :gap 10
+              :background-color panel-background}
+     [:hstack {:gap 8}
+      [:label {:text "Performance Overlay"
+               :color accent-color
+               :font-size 16.0
+               :bounds {:width 180.0}}]
+      [:button {:label (if expanded? "Collapse" "Expand")
+                :on-click [:ui/perf-toggle-expanded]
+                :background-color section-background
+                :text-color text-color
+                :bounds {:width 80.0 :height 32.0}}]
+      [:button {:label "Hide"
+                :on-click [:ui/perf-toggle-visible]
+                :background-color 0xFF3C4456
+                :text-color text-color
+                :bounds {:width 60.0 :height 32.0}}]]
+     (if expanded?
+       (summary-content metrics fps-history)
+       (section "Summary"
+                (stat-row {:label "FPS"
+                           :value (:fps metrics)
+                           :precision 1})
+                (stat-row {:label "Frame Time"
+                           :value (:frame-time-ms metrics)
+                           :precision 1
+                           :suffix " ms"})
+                (stat-row {:label "Draw Calls"
+                           :value (:draw-calls metrics)
+                           :precision 0})
+                [:bar-chart {:values (or fps-history [])
+                             :min 0.0
+                             :max 120.0
+                             :bar-gap 2.0
+                             :background-color 0x33171B25
+                             :bar-color accent-color
+                             :bounds {:height 80.0}}]))
+     [:button {:label "Reset Metrics"
+               :on-click [:metrics/reset-performance]
+               :background-color accent-color
+               :text-color 0xFF0F111A
+               :bounds {:height 32.0}}]]))

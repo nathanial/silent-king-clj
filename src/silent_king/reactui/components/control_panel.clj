@@ -3,7 +3,8 @@
 
 (set! *warn-on-reflection* true)
 
-(def ^:const panel-bounds {:x 24 :y 24 :width 320})
+(def ^:const default-panel-bounds {:width 320.0
+                                   :height 340.0})
 
 (def ^:const accent-color 0xFF9CDCFE)
 (def ^:const text-color 0xFFCBCBCB)
@@ -25,7 +26,6 @@
                        "Disable Hyperlanes"
                        "Enable Hyperlanes")]
     [:vstack {:key :control-panel
-              :bounds panel-bounds
               :padding {:all 12}
               :gap 8
               :background-color 0xCC171B25}

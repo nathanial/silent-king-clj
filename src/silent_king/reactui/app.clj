@@ -13,7 +13,12 @@
 (set! *warn-on-reflection* true)
 
 (def ^:const inspector-margin 24.0)
-(def ^:const inspector-hidden-gap 32.0)
+
+(def ^:private control-panel-window-id :ui/control-panel)
+(def ^:private hyperlane-window-id :ui/hyperlane-settings)
+(def ^:private performance-window-id :ui/performance-overlay)
+(def ^:private star-inspector-window-id :ui/star-inspector)
+(def ^:private minimap-window-id :ui/minimap)
 
 (defn control-panel-props
   [game-state]
@@ -46,12 +51,12 @@
                         (/ physical-width scale)
                         physical-width)
         x (max margin (- logical-width panel-width margin))
-        bounds (-> performance-overlay/default-panel-bounds
-                   (assoc :x x
-                          :y margin))]
+        default-bounds (-> performance-overlay/default-panel-bounds
+                           (assoc :x x
+                                  :y margin))]
     {:metrics metrics
      :fps-history fps-history
-     :bounds bounds
+     :default-bounds default-bounds
      :visible? (state/performance-overlay-visible? game-state)
      :expanded? (state/performance-overlay-expanded? game-state)}))
 
@@ -71,14 +76,10 @@
                         (assoc :x base-x
                                :y inspector-margin))
         visible? (or (state/star-inspector-visible? game-state)
-                     (some? selection))
-        bounds (if visible?
-                 base-bounds
-                 (assoc base-bounds
-                        :x (+ base-x panel-width inspector-hidden-gap)))]
+                     (some? selection))]
     {:selection selection
      :visible? visible?
-     :bounds bounds}))
+     :default-bounds base-bounds}))
 
 (defn minimap-props
   [game-state]
@@ -102,7 +103,100 @@
                             :width panel-width
                             :height panel-height})))
 
-(def ^:private minimap-window-id :ui/minimap)
+(defn- control-panel-default-bounds
+  []
+  {:x 24.0
+   :y 24.0
+   :width (:width control-panel/default-panel-bounds)
+   :height (:height control-panel/default-panel-bounds)})
+
+(defn- hyperlane-default-bounds
+  []
+  (let [margin 24.0
+        control-width (:width control-panel/default-panel-bounds)]
+    {:x (+ margin control-width margin)
+     :y margin
+     :width (:width hyperlane-settings/default-panel-bounds)
+     :height (:height hyperlane-settings/default-panel-bounds)}))
+
+(defn control-panel-window
+  [game-state]
+  (let [props (control-panel-props game-state)
+        default-bounds (control-panel-default-bounds)
+        bounds (state/window-bounds game-state control-panel-window-id default-bounds)
+        minimized? (state/window-minimized? game-state control-panel-window-id)
+        content (when-not minimized?
+                  (control-panel/control-panel props))]
+    {:type :window
+     :props {:title "Controls"
+             :bounds bounds
+             :minimized? minimized?
+             :resizable? true
+             :min-width (:width control-panel/default-panel-bounds)
+             :min-height (:height control-panel/default-panel-bounds)
+             :on-change-bounds [:ui.window/set-bounds control-panel-window-id]
+             :on-toggle-minimized [:ui.window/toggle-minimized control-panel-window-id]}
+     :children (cond-> []
+                 content (conj content))}))
+
+(defn hyperlane-settings-window
+  [game-state]
+  (let [props (hyperlane-settings-props game-state)
+        default-bounds (hyperlane-default-bounds)
+        bounds (state/window-bounds game-state hyperlane-window-id default-bounds)
+        minimized? (state/window-minimized? game-state hyperlane-window-id)
+        content (when-not minimized?
+                  (hyperlane-settings/hyperlane-settings-panel props))]
+    {:type :window
+     :props {:title "Hyperlane Settings"
+             :bounds bounds
+             :minimized? minimized?
+             :resizable? true
+             :min-width (:width hyperlane-settings/default-panel-bounds)
+             :min-height (:height hyperlane-settings/default-panel-bounds)
+             :on-change-bounds [:ui.window/set-bounds hyperlane-window-id]
+             :on-toggle-minimized [:ui.window/toggle-minimized hyperlane-window-id]}
+     :children (cond-> []
+                 content (conj content))}))
+
+(defn performance-overlay-window
+  [game-state]
+  (let [{:keys [default-bounds] :as props} (performance-overlay-props game-state)
+        bounds (state/window-bounds game-state performance-window-id default-bounds)
+        minimized? (state/window-minimized? game-state performance-window-id)
+        content (when-not minimized?
+                  (performance-overlay/performance-overlay (dissoc props :default-bounds)))]
+    {:type :window
+     :props {:title "Performance Overlay"
+             :bounds bounds
+             :minimized? minimized?
+             :resizable? true
+             :min-width (:width performance-overlay/default-panel-bounds)
+             :min-height (:height performance-overlay/default-panel-bounds)
+             :on-change-bounds [:ui.window/set-bounds performance-window-id]
+             :on-toggle-minimized [:ui.window/toggle-minimized performance-window-id]}
+     :children (cond-> []
+                 content (conj content))}))
+
+(defn star-inspector-window
+  [game-state]
+  (let [{:keys [visible? default-bounds] :as props} (star-inspector-props game-state)]
+    (when visible?
+      (let [bounds (state/window-bounds game-state star-inspector-window-id default-bounds)
+            minimized? (state/window-minimized? game-state star-inspector-window-id)
+            content (when-not minimized?
+                      (star-inspector/star-inspector (dissoc props :default-bounds)))]
+        {:type :window
+         :props {:title "Star Inspector"
+                 :bounds bounds
+                 :minimized? minimized?
+                 :resizable? true
+                 :min-width (:width star-inspector/default-panel-bounds)
+                 :min-height (:height star-inspector/default-panel-bounds)
+                 :on-change-bounds [:ui.window/set-bounds star-inspector-window-id]
+                 :on-toggle-minimized [:ui.window/toggle-minimized star-inspector-window-id]}
+         :children (cond-> []
+                     content (conj content))}))))
 
 (defn minimap-window
   [game-state]
@@ -131,13 +225,14 @@
 (defn root-tree
   [game-state]
   [:vstack {:key :ui-root}
-   (control-panel/control-panel (control-panel-props game-state))
-  (hyperlane-settings/hyperlane-settings-panel (hyperlane-settings-props game-state))
-  (performance-overlay/performance-overlay (performance-overlay-props game-state))
-  ;; Render last so it stacks on the right side without overlapping other panels.
-  (star-inspector/star-inspector (star-inspector-props game-state))
-  (when-let [window (minimap-window game-state)]
-    window)])
+   (control-panel-window game-state)
+   (hyperlane-settings-window game-state)
+   (performance-overlay-window game-state)
+   ;; Render last so it stacks on the right side without overlapping other panels.
+   (when-let [window (star-inspector-window game-state)]
+     window)
+   (when-let [window (minimap-window game-state)]
+     window)])
 
 (defn logical-viewport
   [scale {:keys [x y width height]}]

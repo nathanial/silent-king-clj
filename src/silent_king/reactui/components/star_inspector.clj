@@ -4,7 +4,8 @@
 
 (set! *warn-on-reflection* true)
 
-(def ^:const default-panel-bounds {:x 0.0 :y 24.0 :width 360.0})
+(def ^:const default-panel-bounds {:width 360.0
+                                   :height 520.0})
 (def ^:const panel-background 0xCC12151E)
 (def ^:const section-background 0xFF1F2330)
 (def ^:const accent-color 0xFF9CDCFE)
@@ -157,12 +158,9 @@
              :bounds {:height 34.0}}]])
 
 (defn star-inspector
-  [{:keys [selection visible? bounds]}]
-  (let [panel-bounds (merge default-panel-bounds
-                            (or bounds {}))
-        has-selection? (boolean selection)]
+  [{:keys [selection visible?]}]
+  (let [has-selection? (boolean selection)]
     [:vstack {:key :star-inspector
-              :bounds panel-bounds
               :padding {:all 14}
               :gap 12
               :background-color panel-background}

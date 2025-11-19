@@ -3,8 +3,8 @@
 
 (set! *warn-on-reflection* true)
 
-(def ^:const panel-bounds {:x 368 :y 24 :width 360})
-(def ^:const slider-width (- (:width panel-bounds) 24.0))
+(def ^:const default-panel-bounds {:width 360.0
+                                   :height 420.0})
 
 (def ^:const accent-color 0xFF9CDCFE)
 (def ^:const text-color 0xFFCBCBCB)
@@ -61,8 +61,7 @@
                :min min
                :max max
                :step step
-               :on-change event
-               :bounds {:width slider-width}}]]))
+               :on-change event}]]))
 
 (defn- color-row
   [selected expanded?]
@@ -70,7 +69,6 @@
    [:label {:text "Color Scheme"
             :color muted-color}]
    [:dropdown {:id color-dropdown-id
-               :bounds {:width slider-width}
                :options color-options
                :selected selected
                :expanded? expanded?
@@ -144,7 +142,6 @@
   (let [content (when expanded?
                   (settings-content settings {:color-dropdown-expanded? color-dropdown-expanded?}))]
     [:vstack {:key :hyperlane-settings-panel
-              :bounds panel-bounds
               :padding {:all 12}
               :gap 12
               :background-color panel-background}
