@@ -383,3 +383,11 @@ To make the work concrete and incremental, we can break it into phases:
   - For each new panel, add focused tests that exercise its event vectors and basic state wiring.
 
 Each phase should be small enough to validate at the REPL, and we can refine the layout, rendering quality, event model, and tests incrementally once the basic control panel is working.
+
+## Primitive Namespace Map (Nov 2025)
+
+- **Loader:** `silent-king.reactui.primitives` – requires every primitive namespace so multimethods are registered. Composition code (e.g. `reactui.app`, tests) should require this once at startup.
+- **Per‑primitive namespaces (under `src/silent_king/reactui/primitives/`):**
+  - `label`, `button`, `slider`, `dropdown`, `stack` (`:vstack`/`:hstack`), `bar_chart`, `window`, `minimap`.
+  - Each namespace owns normalization (`core/normalize-tag` defmethods), layout (`layout/layout-node` defmethods), rendering (`render/draw-node` and overlays), and pointer/interaction helpers for its element type.
+- **Base layer stays orchestration only:** `reactui.core`, `.layout`, `.render`, and `.interaction` define multimethods, shared helpers, and entry points; they do not require primitive namespaces directly.

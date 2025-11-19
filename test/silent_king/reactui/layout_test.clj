@@ -1,7 +1,8 @@
 (ns silent-king.reactui.layout-test
   (:require [clojure.test :refer [deftest is testing]]
             [silent-king.reactui.core :as reactui]
-            [silent-king.reactui.layout :as layout]))
+            [silent-king.reactui.layout :as layout]
+            [silent-king.reactui.primitives]))
 
 (deftest vstack-computes-child-bounds
   (let [tree (reactui/normalize-tree

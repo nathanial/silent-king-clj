@@ -5,6 +5,7 @@
             [silent-king.reactui.events :as ui-events]
             [silent-king.reactui.interaction :as interaction]
             [silent-king.reactui.layout :as layout]
+            [silent-king.reactui.primitives]
             [silent-king.state :as state]))
 
 (deftest render-ui-tree-smoke

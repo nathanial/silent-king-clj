@@ -6,6 +6,7 @@
             [silent-king.reactui.components.performance-overlay :as performance-overlay]
             [silent-king.reactui.components.star-inspector :as star-inspector]
             [silent-king.reactui.core :as ui-core]
+            [silent-king.reactui.primitives]
             [silent-king.selection :as selection]
             [silent-king.state :as state])
   (:import [io.github.humbleui.skija Canvas]))

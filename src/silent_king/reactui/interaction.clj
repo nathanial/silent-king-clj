@@ -10,7 +10,7 @@
 
 (declare dropdown-region)
 
-(defn- contains-point?
+(defn contains-point?
   [{:keys [x y width height]} px py]
   (and (number? x) (number? y)
        (number? width) (number? height)
@@ -88,7 +88,7 @@
       :else
       nil)))
 
-(defn- slider-value-from-point
+(defn slider-value-from-point
   [node px]
   (let [track (get-in node [:layout :slider :track])
         {:keys [min max step]} (get-in node [:layout :slider :range])
@@ -162,18 +162,3 @@
                     (ui-events/dispatch-event! game-state close-event)))
                 true)
       false)))
-
-(defn slider-drag!
-  [node game-state px]
-  (when-let [event (-> node :props :on-change)]
-    (when (vector? event)
-      (let [value (slider-value-from-point node px)]
-        (ui-events/dispatch-event! game-state (conj event value))))))
-
-(defn activate-button!
-  [node game-state px py]
-  (let [bounds (layout/bounds node)]
-    (when (contains-point? bounds px py)
-      (when-let [event (-> node :props :on-click)]
-        (when (vector? event)
-          (ui-events/dispatch-event! game-state event))))))

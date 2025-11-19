@@ -9,7 +9,7 @@
   [node]
   (get-in node [:layout :bounds]))
 
-(defn- normalize-bounds
+(defn normalize-bounds
   [bounds]
   (-> {:x 0.0 :y 0.0 :width 0.0 :height 0.0}
       (merge bounds)
@@ -18,19 +18,19 @@
       (update :width #(double (or % 0.0)))
       (update :height #(double (or % 0.0)))))
 
-(defn- clamp
+(defn clamp
   [value min-value max-value]
   (-> value
       (max min-value)
       (min max-value)))
 
-(defn- positive-step
+(defn positive-step
   [step]
   (when (some? step)
     (let [s (double step)]
       (when (pos? s) s))))
 
-(defn- snap-to-step
+(defn snap-to-step
   [value min-value step]
   (if-let [s (positive-step step)]
     (let [steps (/ (- value min-value) s)
@@ -38,30 +38,11 @@
       (double snapped))
     (double value)))
 
-(defn- dropdown-option
-  [option]
-  (cond
-    (map? option)
-    (let [value (or (:value option)
-                    (:scheme option)
-                    (:id option)
-                    (:key option))]
-      (when (nil? value)
-        (throw (ex-info "Dropdown option missing :value" {:option option})))
-      {:value value
-       :label (or (:label option)
-                  (if (keyword? value)
-                    (name value)
-                    (str value)))})
-    :else
-    {:value option
-     :label (str option)}))
-
-(defn- clean-viewport
+(defn clean-viewport
   [viewport]
   (normalize-bounds viewport))
 
-(defn- resolve-bounds
+(defn resolve-bounds
   [node context]
   (let [viewport (:viewport context)
         fallback (:bounds context)
@@ -69,7 +50,7 @@
         base (or fallback viewport)]
     (normalize-bounds (merge base (or explicit {})))))
 
-(defn- expand-padding
+(defn expand-padding
   [padding]
   (let [padding (or padding {})
         all (double (or (:all padding) 0.0))
@@ -84,7 +65,7 @@
      :top top
      :bottom bottom}))
 
-(defn- estimate-text-width
+(defn estimate-text-width
   [text font-size]
   (* (count (or text ""))
      font-size
@@ -99,299 +80,6 @@
   [node viewport]
   (layout-node node {:viewport (clean-viewport viewport)
                      :bounds (clean-viewport viewport)}))
-
-(defmethod layout-node :label
-  [node context]
-  (let [props (:props node)
-        text (or (:text props) "")
-        font-size (double (or (:font-size props) 16.0))
-        line-height (double (or (:line-height props) (+ font-size 4.0)))
-        bounds* (resolve-bounds node context)
-        width-provided (double (or (:width bounds*) 0.0))
-        measured-width (double (estimate-text-width text font-size))
-        width (double (if (pos? (double width-provided))
-                        (max width-provided measured-width)
-                        (max measured-width 0.0)))
-        final-bounds (-> bounds*
-                         (assoc :width width)
-                         (assoc :height line-height))]
-    (assoc node
-           :layout {:bounds final-bounds}
-           :children [])))
-
-(defmethod layout-node :button
-  [node context]
-  (let [bounds* (resolve-bounds node context)
-        height (double (if (pos? (:height bounds*))
-                         (:height bounds*)
-                         36.0))
-        final-bounds (assoc bounds* :height height)]
-    (assoc node
-           :layout {:bounds final-bounds}
-           :children [])))
-
-(defmethod layout-node :slider
-  [node context]
-  (let [props (:props node)
-        bounds* (resolve-bounds node context)
-        height (double (if (pos? (:height bounds*))
-                         (:height bounds*)
-                         32.0))
-        final-bounds (assoc bounds* :height height)
-        raw-min (double (or (:min props) 0.0))
-        raw-max (double (or (:max props) 1.0))
-        [min-value max-value] (if (> raw-min raw-max)
-                                [raw-max raw-min]
-                                [raw-min raw-max])
-        step (:step props)
-        value (double (or (:value props) min-value))
-        snapped-value (-> value
-                          (snap-to-step min-value step)
-                          (clamp min-value max-value))
-        track-padding (double (max 0.0 (or (:track-padding props) 12.0)))
-        track-height (double (or (:track-height props) 4.0))
-        track-width (max 0.0 (- (:width final-bounds) (* 2 track-padding)))
-        track-x (+ (:x final-bounds) track-padding)
-        track-y (+ (:y final-bounds)
-                   (/ (- height track-height) 2.0))
-        range-span (max (- max-value min-value) 1e-9)
-        ratio (/ (- snapped-value min-value) range-span)
-        clamped-ratio (clamp ratio 0.0 1.0)
-        handle-radius (double (or (:handle-radius props) 8.0))
-        handle-x (+ track-x (* track-width clamped-ratio))
-        handle-y (+ (:y final-bounds) (/ height 2.0))]
-    (assoc node
-           :layout {:bounds final-bounds
-                    :slider {:track {:x track-x
-                                     :y track-y
-                                     :width track-width
-                                     :height track-height}
-                             :handle {:x handle-x
-                                      :y handle-y
-                                      :radius handle-radius}
-                             :range {:min min-value
-                                     :max max-value
-                                     :step (positive-step step)}
-                             :value snapped-value}}
-           :children [])))
-
-(defmethod layout-node :bar-chart
-  [node context]
-  (let [props (:props node)
-        bounds* (resolve-bounds node context)
-        width (double (if (pos? (:width bounds*))
-                        (:width bounds*)
-                        (:width (:bounds context))))
-        height (double (if (pos? (:height bounds*))
-                         (:height bounds*)
-                         80.0))
-        values (mapv (fn [v]
-                       (if (number? v)
-                         (double v)
-                         0.0))
-                     (or (:values props) []))
-        explicit-min (:min props)
-        explicit-max (:max props)
-        auto-min (when (seq values) (apply min values))
-        auto-max (when (seq values) (apply max values))
-        min-value (double (or explicit-min auto-min 0.0))
-        raw-max (double (or explicit-max auto-max min-value))
-        max-value (if (= min-value raw-max)
-                    (+ min-value 1.0)
-                    raw-max)
-        bar-gap (double (max 0.0 (or (:bar-gap props) 2.0)))
-        final-bounds (-> bounds*
-                         (assoc :width width)
-                         (assoc :height height))]
-    (assoc node
-           :layout {:bounds final-bounds
-                    :bar-chart {:values values
-                                :min min-value
-                                :max max-value
-                                :bar-gap bar-gap}}
-           :children [])))
-
-(defmethod layout-node :vstack
-  [node context]
-  (let [props (:props node)
-        explicit-bounds (or (get-in node [:props :bounds]) {})
-        bounds* (resolve-bounds node context)
-        padding (expand-padding (:padding props))
-        gap (double (or (:gap props) 0.0))
-        inner-x (+ (:x bounds*) (:left padding))
-        inner-width (max 0.0 (- (:width bounds*) (:left padding) (:right padding)))
-        start-y (+ (:y bounds*) (:top padding))
-        viewport (:viewport context)
-        children (:children node)]
-    (loop [remaining children
-           acc []
-           cursor-y start-y]
-      (if (empty? remaining)
-        (let [content-height (- cursor-y start-y)
-              padded-height (+ (max 0.0 content-height) (:top padding) (:bottom padding))
-              height (if (contains? explicit-bounds :height)
-                       (:height explicit-bounds)
-                       padded-height)
-              final-bounds (assoc bounds* :height height)]
-          (assoc node
-                 :layout {:bounds final-bounds
-                          :padding padding}
-                 :children acc))
-        (let [child (first remaining)
-              child-node (layout-node child {:viewport viewport
-                                             :bounds {:x inner-x
-                                                      :y cursor-y
-                                                      :width inner-width}})
-              child-height (double (or (:height (bounds child-node)) 0.0))
-              has-more? (seq (rest remaining))
-              next-y (+ cursor-y child-height (if has-more? gap 0.0))]
-          (recur (rest remaining)
-                 (conj acc child-node)
-                 next-y))))))
-
-(defmethod layout-node :hstack
-  [node context]
-  (let [props (:props node)
-        explicit-bounds (or (get-in node [:props :bounds]) {})
-        bounds* (resolve-bounds node context)
-        padding (expand-padding (:padding props))
-        gap (double (or (:gap props) 0.0))
-        inner-y (+ (:y bounds*) (:top padding))
-        inner-x (+ (:x bounds*) (:left padding))
-        inner-width (max 0.0 (- (:width bounds*) (:left padding) (:right padding)))
-        explicit-height (when (contains? explicit-bounds :height)
-                          (double (:height explicit-bounds)))
-        inner-height (if explicit-height
-                       (max 0.0 (- explicit-height (:top padding) (:bottom padding)))
-                       0.0)
-        children (:children node)
-        viewport (:viewport context)]
-    (loop [remaining children
-           acc []
-           cursor-x inner-x
-           max-height 0.0]
-      (if (empty? remaining)
-        (let [computed-height (+ max-height (:top padding) (:bottom padding))
-              height (if explicit-height explicit-height computed-height)
-              final-bounds (assoc bounds* :height height)]
-          (assoc node
-                 :layout {:bounds final-bounds
-                          :padding padding}
-                 :children acc))
-        (let [child (first remaining)
-              available-width (max 0.0 (- (+ inner-x inner-width) cursor-x))
-              child-node (layout-node child {:viewport viewport
-                                             :bounds {:x cursor-x
-                                                      :y inner-y
-                                                      :width available-width
-                                                      :height inner-height}})
-              child-bounds (bounds child-node)
-              child-width (double (or (:width child-bounds) 0.0))
-              child-height (double (or (:height child-bounds) 0.0))
-              has-more? (seq (rest remaining))
-              next-x (+ cursor-x child-width (if has-more? gap 0.0))]
-          (recur (rest remaining)
-                 (conj acc child-node)
-                 next-x
-                 (max max-height child-height)))))))
-
-(defmethod layout-node :dropdown
-  [node context]
-  (let [props (:props node)
-        bounds* (resolve-bounds node context)
-        width (let [w (:width bounds*)]
-                (if (pos? w) w 200.0))
-        header-height (double (or (:header-height props) 36.0))
-        option-height (double (or (:option-height props) 30.0))
-        option-gap (double (or (:option-gap props) 4.0))
-        expanded? (boolean (:expanded? props))
-        options (mapv dropdown-option (:options props))
-        header-bounds (assoc bounds*
-                             :width width
-                             :height header-height)
-        options-layout (when (and expanded? (seq options))
-                         (loop [remaining options
-                                acc []
-                                cursor-y (+ (:y header-bounds) header-height option-gap)]
-                           (if (empty? remaining)
-                             acc
-                             (let [opt (first remaining)
-                                   bounds {:x (:x header-bounds)
-                                           :y cursor-y
-                                           :width width
-                                           :height option-height}
-                                   next-y (+ cursor-y option-height option-gap)]
-                               (recur (rest remaining)
-                                      (conj acc (assoc opt :bounds bounds))
-                                      next-y)))))]
-    (assoc node
-           :layout {:bounds header-bounds
-                    :dropdown {:header header-bounds
-                               :options options-layout
-                               :all-options options
-                               :expanded? expanded?}}
-           :children [])))
-
-(defmethod layout-node :window
-  [node context]
-  (let [props (:props node)
-        bounds* (resolve-bounds node context)
-        min-width (double (max 120.0 (or (:min-width props) 200.0)))
-        min-height (double (max 80.0 (or (:min-height props) 200.0)))
-        header-height (double (max 20.0 (or (:header-height props) 32.0)))
-        resizable? (if (contains? props :resizable?)
-                     (boolean (:resizable? props))
-                     true)
-        minimized? (boolean (:minimized? props))
-        width (max min-width (double (or (:width bounds*) min-width)))
-        stored-height (double (or (:height bounds*) min-height))
-        desired-height (max min-height stored-height)
-        final-height (if minimized?
-                       header-height
-                       desired-height)
-        final-bounds (assoc bounds* :width width :height final-height)
-        padding (expand-padding (:content-padding props))
-        content-width (max 0.0 (- width (:left padding) (:right padding)))
-        content-height (max 0.0 (- final-height header-height (:top padding) (:bottom padding)))
-        content-bounds {:x (+ (:x final-bounds) (:left padding))
-                        :y (+ (:y final-bounds) header-height (:top padding))
-                        :width content-width
-                        :height content-height}
-        header-bounds {:x (:x final-bounds)
-                       :y (:y final-bounds)
-                       :width width
-                       :height header-height}
-        control-size (double (max 12.0 (or (:control-size props) 18.0)))
-        minimize-bounds {:x (- (+ (:x final-bounds) width) control-size 8.0)
-                         :y (+ (:y final-bounds)
-                               (/ (- header-height control-size) 2.0))
-                         :width control-size
-                         :height control-size}
-        resize-size 16.0
-        resize-bounds (when resizable?
-                        {:x (- (+ (:x final-bounds) width) resize-size)
-                         :y (- (+ (:y final-bounds) final-height) resize-size)
-                         :width resize-size
-                         :height resize-size})
-        viewport (:viewport context)
-        child-context {:viewport viewport
-                       :bounds content-bounds}
-        laid-out-children (if minimized?
-                            []
-                            (mapv #(layout-node % child-context) (:children node)))]
-    (assoc node
-           :layout {:bounds final-bounds
-                    :window {:header header-bounds
-                             :content content-bounds
-                             :minimize minimize-bounds
-                             :resize resize-bounds
-                             :resizable? resizable?
-                             :minimized? minimized?
-                             :header-height header-height
-                             :stored-height desired-height
-                             :constraints {:min-width min-width
-                                           :min-height min-height}}}
-           :children laid-out-children)))
 
 (defmethod layout-node :minimap
   [node context]

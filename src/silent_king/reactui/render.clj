@@ -13,7 +13,7 @@
 (def ^:dynamic *overlay-collector* nil)
 (def ^:dynamic *render-context* nil)
 
-(defn- queue-overlay!
+(defn queue-overlay!
   [overlay]
   (when *overlay-collector*
     (swap! *overlay-collector* conj overlay)))
@@ -26,17 +26,17 @@
   (fn [_ overlay]
     (:type overlay)))
 
-(defn- make-font
+(defn make-font
   [font-size]
   (Font. default-typeface (float font-size)))
 
-(defn- approx-text-width
+(defn approx-text-width
   [text font-size]
   (* (count (or text ""))
      font-size
      0.55))
 
-(defn- clamp01
+(defn clamp01
   [value]
   (-> value
       (max 0.0)
@@ -50,7 +50,7 @@
       (max 0)
       (min 255)))
 
-(defn- adjust-color
+(defn adjust-color
   [color factor]
   (let [a (bit-and (bit-shift-right color 24) 0xFF)
         r (bit-and (bit-shift-right color 16) 0xFF)
@@ -64,7 +64,7 @@
                            (bit-shift-left ng 8)
                            nb))))
 
-(defn- ->color-int
+(defn ->color-int
   "Convert the supplied value (which may be a long ARGB literal) into a signed 32-bit int.
   Ensures we never trigger Math/toIntExact overflow even if the high bit is set."
   [value default]
@@ -82,7 +82,7 @@
   [value]
   (int (long (Math/round (double value)))))
 
-(defn- blend-colors
+(defn blend-colors
   [color-a color-b t]
   (let [t (clamp01 t)
         ca (->color-int color-a color-a)
@@ -108,7 +108,7 @@
 (def ^:const heatmap-low-color 0x1A08244A)
 (def ^:const heatmap-high-color 0xFFF1C232)
 
-(defn- heatmap-cell-size
+(defn heatmap-cell-size
   [width height]
   (let [w (double (or width 0.0))
         h (double (or height 0.0))
@@ -118,7 +118,7 @@
         (max 3.0)
         (min 18.0))))
 
-(defn- bucket-stars-into-grid
+(defn bucket-stars-into-grid
   [stars world-bounds widget-bounds cell-size]
   (let [cols (max 1 (int (Math/ceil (/ (:width widget-bounds) cell-size))))
         rows (max 1 (int (Math/ceil (/ (:height widget-bounds) cell-size))))
@@ -146,7 +146,7 @@
          :cell-size cell-size
          :max-density max-density}))))
 
-(defn- density->color
+(defn density->color
   [count max-count]
   (if (pos? max-count)
     (let [ratio (double (/ count max-count))
@@ -154,11 +154,11 @@
       (blend-colors heatmap-low-color heatmap-high-color eased))
     (->color-int heatmap-low-color heatmap-low-color)))
 
-(defn- pointer-position
+(defn pointer-position
   []
   (:pointer *render-context*))
 
-(defn- pointer-in-bounds?
+(defn pointer-in-bounds?
   [{:keys [x y width height]}]
   (when-let [{px :x py :y} (pointer-position)]
     (let [px* (double px)
@@ -168,558 +168,14 @@
            (>= py* (double y))
            (<= py* (+ (double y) height))))))
 
-(defn- pointer-over-node?
+(defn pointer-over-node?
   [node]
   (pointer-in-bounds? (layout/bounds node)))
 
-(defn- active-interaction
+(defn active-interaction
   []
   (:active-interaction *render-context*))
 
-(defn- active-button?
-  [node]
-  (let [active (active-interaction)]
-    (and (= :button (:type active))
-         (= (:bounds active) (layout/bounds node)))))
-
-(defn- active-slider?
-  [node]
-  (let [active (active-interaction)]
-    (and (= :slider (:type active))
-         (= (:bounds active) (layout/bounds node)))))
-
-(defn- active-dropdown-option?
-  [node option]
-  (let [active (active-interaction)]
-    (and (= :dropdown-option (:type active))
-         (= (:node active) node)
-         (= (:value active) (:value option)))))
-
-(defn- active-dropdown-header?
-  [node]
-  (let [active (active-interaction)]
-    (and (= :dropdown (:type active))
-         (= (:node active) node))))
-
-(defn- active-window-kind?
-  [node kind]
-  (let [active (active-interaction)]
-    (and (= kind (:type active))
-         (= (:node active) node))))
-
-(defn- selected-label
-  [options value]
-  (or (some (fn [opt]
-              (when (= (:value opt) value)
-                (:label opt)))
-            options)
-      (when value
-        (if (keyword? value)
-          (name value)
-          (str value)))
-      "Select"))
-
-(defn- draw-label
-  [^Canvas canvas node]
-  (let [{:keys [text color font-size]} (:props node)
-        {:keys [x y]} (layout/bounds node)
-        size (double (or font-size 16.0))
-        baseline (+ y size)]
-    (with-open [^Paint paint (doto (Paint.)
-                               (.setColor (unchecked-int (or color 0xFFFFFFFF))))]
-      (with-open [^Font font (make-font size)]
-        (.drawString canvas (or text "")
-                     (float x)
-                     (float baseline)
-                     font
-                     paint)))))
-
-(defn- draw-stack
-  [^Canvas canvas node]
-  (let [{:keys [background-color]} (:props node)
-        {:keys [x y width height]} (layout/bounds node)]
-    (when background-color
-      (with-open [^Paint paint (doto (Paint.)
-                                  (.setColor (unchecked-int background-color)))]
-        (.drawRect canvas
-                   (Rect/makeXYWH (float x) (float y) (float width) (float height))
-                   paint)))
-    (doseq [child (:children node)]
-      (draw-node canvas child))))
-
-(defn- draw-window
-  [^Canvas canvas node]
-  (let [{:keys [title background-color header-color border-color content-background-color title-color button-icon-color]} (:props node)
-        {:keys [bounds window]} (:layout node)
-        {:keys [header content minimize resize resizable? minimized?]} window
-        body-color (->color-int background-color 0xF021252F)
-        header-base (->color-int header-color 0xFF1C1F2C)
-        border-color (->color-int border-color 0x802C303C)
-        content-color (->color-int (or content-background-color (adjust-color body-color 1.07))
-                                   (adjust-color body-color 1.07))
-        text-color (->color-int title-color 0xFFFFFFFF)
-        icon-color (->color-int button-icon-color text-color)
-        header-hover? (and header (pointer-in-bounds? header)
-                           (not (and minimize (pointer-in-bounds? minimize))))
-        header-active? (active-window-kind? node :window-move)
-        header-fill (cond header-active? (adjust-color header-base 0.9)
-                          header-hover? (adjust-color header-base 1.08)
-                          :else header-base)
-        minimize-hover? (and minimize (pointer-in-bounds? minimize))
-        minimize-active? (active-window-kind? node :window-minimize)
-        minimize-fill (cond minimize-active? (adjust-color header-base 0.85)
-                            minimize-hover? (adjust-color header-base 1.18)
-                            :else (adjust-color header-base 1.02))
-        resize-hover? (and resize (pointer-in-bounds? resize))
-        resize-active? (active-window-kind? node :window-resize)
-        resize-color (cond resize-active? (adjust-color border-color 0.85)
-                           resize-hover? (adjust-color border-color 1.2)
-                           :else border-color)
-        content-rect (when (and content (pos? (:width content)) (pos? (:height content)))
-                       (Rect/makeXYWH (float (:x content))
-                                      (float (:y content))
-                                      (float (:width content))
-                                      (float (:height content))))
-        bounds-rect (Rect/makeXYWH (float (:x bounds))
-                                   (float (:y bounds))
-                                   (float (:width bounds))
-                                   (float (:height bounds)))
-        header-rect (when header
-                      (Rect/makeXYWH (float (:x header))
-                                     (float (:y header))
-                                     (float (:width header))
-                                     (float (:height header))))
-        minimize-rect (when minimize
-                        (Rect/makeXYWH (float (:x minimize))
-                                       (float (:y minimize))
-                                       (float (:width minimize))
-                                       (float (:height minimize))))
-        resize-rect (when resize
-                      (Rect/makeXYWH (float (:x resize))
-                                     (float (:y resize))
-                                     (float (:width resize))
-                                     (float (:height resize))))]
-    (with-open [^Paint body (doto (Paint.)
-                               (.setColor body-color))]
-      (.drawRect canvas bounds-rect body))
-    (when header-rect
-      (with-open [^Paint header-paint (doto (Paint.)
-                                        (.setColor header-fill))]
-        (.drawRect canvas header-rect header-paint)))
-    (when (and content-rect (not minimized?))
-      (with-open [^Paint content-paint (doto (Paint.)
-                                          (.setColor content-color))]
-        (.drawRect canvas content-rect content-paint)))
-    (when minimize-rect
-      (with-open [^Paint btn (doto (Paint.)
-                                (.setColor minimize-fill))]
-        (.drawRect canvas minimize-rect btn))
-      (let [padding 4.0
-            mx (float (+ (:x minimize) padding))
-            my (float (+ (:y minimize) padding))
-            mw (- (:width minimize) (* 2.0 padding))
-            mh (- (:height minimize) (* 2.0 padding))
-            line-y (+ my (float (* mh 0.65)))]
-        (with-open [^Paint icon (doto (Paint.)
-                                   (.setColor icon-color)
-                                   (.setStrokeWidth 2.0))]
-          (if minimized?
-            (.drawRect canvas
-                       (Rect/makeXYWH mx my (float mw) (float mh))
-                       icon)
-            (.drawLine canvas
-                       mx
-                       line-y
-                       (float (+ mx mw))
-                       line-y
-                       icon)))))
-    (when (pos? (:width bounds))
-      (with-open [^Paint border (doto (Paint.)
-                                   (.setColor border-color)
-                                   (.setStrokeWidth 1.0)
-                                   (.setMode PaintMode/STROKE))]
-        (.drawRect canvas bounds-rect border)))
-    (when header-rect
-      (with-open [^Paint text-paint (doto (Paint.)
-                                       (.setColor text-color))]
-        (with-open [^Font font (make-font 16.0)]
-          (let [label (or title "Window")
-                text-x (+ (:x header) 12.0)
-                baseline (+ (:y header) (/ (:height header) 2.0) 6.0)]
-            (.drawString canvas label
-                         (float text-x)
-                         (float baseline)
-                         font
-                         text-paint)))))
-    (when (and resizable? resize-rect (not minimized?))
-      (with-open [^Paint handle (doto (Paint.)
-                                   (.setColor resize-color)
-                                   (.setStrokeWidth 1.5))]
-        (let [rx (+ (:x resize) (:width resize))
-              ry (+ (:y resize) (:height resize))]
-          (.drawLine canvas
-                     (float (- rx 12.0))
-                     (float ry)
-                     (float rx)
-                     (float (- ry 12.0))
-                     handle)
-          (.drawLine canvas
-                     (float (- rx 8.0))
-                     (float ry)
-                     (float rx)
-                     (float (- ry 8.0))
-                     handle))))
-    (when (and (seq (:children node))
-               content-rect
-               (pos? (:width content))
-               (pos? (:height content))
-               (not minimized?))
-      (.save canvas)
-      (.clipRect canvas content-rect)
-      (doseq [child (:children node)]
-        (draw-node canvas child))
-      (.restore canvas))))
-(defn- draw-button
-  [^Canvas canvas node]
-  (let [{:keys [label background-color text-color font-size]} (:props node)
-        {:keys [x y width height]} (layout/bounds node)
-        bg-color (or background-color 0xFF2D2F38)
-        txt-color (or text-color 0xFFFFFFFF)
-        hovered? (pointer-over-node? node)
-        active? (active-button? node)
-        shade (cond active? 0.9
-                    hovered? 1.1
-                    :else 1.0)
-        final-bg (if (= shade 1.0) bg-color (adjust-color bg-color shade))
-        final-text (if active?
-                     (adjust-color txt-color 0.95)
-                     txt-color)
-        size (double (or font-size 16.0))
-        text (or label "")
-        text-width (approx-text-width text size)
-        text-x (+ x (/ (- width text-width) 2.0))
-        baseline (+ y (/ height 2.0) (/ size 2.5))
-        border-color (cond active? (adjust-color bg-color 0.7)
-                               hovered? (adjust-color bg-color 1.2)
-                               :else nil)]
-    (with-open [^Paint paint (doto (Paint.)
-                               (.setColor (unchecked-int final-bg)))]
-      (.drawRect canvas
-                 (Rect/makeXYWH (float x) (float y) (float width) (float height))
-                 paint))
-    (when border-color
-      (with-open [^Paint border (doto (Paint.)
-                                   (.setColor (unchecked-int border-color))
-                                   (.setStrokeWidth 1.0)
-                                   (.setMode PaintMode/STROKE))]
-        (.drawRect canvas
-                   (Rect/makeXYWH (float x) (float y) (float width) (float height))
-                   border)))
-    (with-open [^Paint text-paint (doto (Paint.)
-                                    (.setColor (unchecked-int final-text)))]
-      (with-open [^Font font (make-font size)]
-        (.drawString canvas text
-                     (float text-x)
-                     (float baseline)
-                     font
-                     text-paint)))))
-
-(defn- draw-slider
-  [^Canvas canvas node]
-  (let [{:keys [background-color track-color handle-color]} (:props node)
-        {:keys [x y width height]} (layout/bounds node)
-        {:keys [track handle]} (get-in node [:layout :slider])
-        bg-color (or background-color 0x00111111)
-        t-color (or track-color 0xFF3C3F4A)
-        h-color (or handle-color 0xFFF0F0F0)
-        hovered? (pointer-over-node? node)
-        active? (active-slider? node)
-        track-color (cond active? (adjust-color t-color 0.9)
-                          hovered? (adjust-color t-color 1.1)
-                          :else t-color)
-        handle-color (cond active? (adjust-color h-color 0.9)
-                           hovered? (adjust-color h-color 1.05)
-                           :else h-color)]
-    (when background-color
-      (with-open [^Paint bg (doto (Paint.)
-                               (.setColor (unchecked-int bg-color)))]
-        (.drawRect canvas
-                   (Rect/makeXYWH (float x) (float y) (float width) (float height))
-                   bg)))
-    (when (pos? (:width track))
-      (with-open [^Paint track-paint (doto (Paint.)
-                                       (.setColor (unchecked-int track-color)))]
-        (.drawRect canvas
-                   (Rect/makeXYWH (float (:x track))
-                                  (float (:y track))
-                                  (float (:width track))
-                                  (float (:height track)))
-                   track-paint))
-      (with-open [^Paint handle-paint (doto (Paint.)
-                                         (.setColor (unchecked-int handle-color)))]
-        (.drawCircle canvas
-                     (float (:x handle))
-                     (float (:y handle))
-                     (float (:radius handle))
-                     handle-paint)))))
-
-(defn- draw-dropdown
-  [^Canvas canvas node]
-  (let [{:keys [selected
-                background-color
-                text-color
-                option-background
-                option-selected-background
-                option-selected-text-color
-                border-color]} (:props node)
-        {:keys [header options expanded? all-options]} (get-in node [:layout :dropdown])
-        header-bg (or background-color 0xFF2D2F38)
-        option-bg (or option-background 0xFF1E2230)
-        selected-bg (or option-selected-background 0xFF3C4456)
-        txt-color (or text-color 0xFFCBCBCB)
-        selected-txt-color (or option-selected-text-color 0xFF0F111A)
-        caret (if expanded? "▲" "▼")
-        caret-color txt-color
-        header-rect (Rect/makeXYWH (float (:x header))
-                                   (float (:y header))
-                                   (float (:width header))
-                                   (float (:height header)))
-        padding 10.0
-        font-size 16.0
-        text-x (+ (:x header) padding)
-        text-baseline (+ (:y header) (/ (:height header) 2.0) 5.0)
-        caret-x (- (+ (:x header) (:width header)) (+ padding 6.0))
-        caret-baseline text-baseline
-        label (selected-label (or all-options []) selected)
-        header-hovered? (pointer-in-bounds? header)
-        header-active? (active-dropdown-header? node)
-        header-color (cond header-active? (adjust-color header-bg 0.9)
-                           header-hovered? (adjust-color header-bg 1.1)
-                           :else header-bg)
-        header-border (cond header-active? (adjust-color header-bg 0.8)
-                             header-hovered? (adjust-color header-bg 1.2)
-                             :else border-color)
-        header-text-color (if header-active?
-                            (adjust-color txt-color 0.95)
-                            txt-color)]
-    (with-open [^Paint header-paint (doto (Paint.)
-                                      (.setColor (unchecked-int header-color)))]
-      (.drawRect canvas header-rect header-paint))
-    (when header-border
-      (with-open [^Paint border-paint (doto (Paint.)
-                                         (.setColor (unchecked-int header-border))
-                                         (.setStrokeWidth 1.0)
-                                         (.setMode PaintMode/STROKE))]
-        (.drawRect canvas header-rect border-paint)))
-    (with-open [^Paint text-paint (doto (Paint.)
-                                     (.setColor (unchecked-int header-text-color)))]
-      (with-open [^Font font (make-font font-size)]
-        (.drawString canvas label
-                     (float text-x)
-                     (float text-baseline)
-                     font
-                     text-paint)
-        (.drawString canvas caret
-                     (float caret-x)
-                     (float caret-baseline)
-                     font
-                     text-paint)))
-    (when (and expanded? (seq options))
-      (queue-overlay! {:type :dropdown
-                       :node node
-                       :selected selected
-                       :options options
-                       :padding padding
-                       :option-bg option-bg
-                       :selected-bg selected-bg
-                       :text-color txt-color
-                       :selected-text-color selected-txt-color}))))
-
-(defn- draw-bar-chart
-  [^Canvas canvas node]
-  (let [{:keys [x y width height]} (layout/bounds node)
-        {:keys [values min max bar-gap]} (get-in node [:layout :bar-chart])
-        {:keys [background-color bar-color grid-color baseline-value]} (:props node)
-        background-color (unchecked-int (or background-color 0x3310131C))
-        bar-color (unchecked-int (or bar-color 0xFF9CDCFE))
-        grid-color (unchecked-int (or grid-color 0x33FFFFFF))
-        bars (vec values)
-        count (count bars)
-        safe-width (double (clojure.core/max width 0.0))
-        gap (double (or bar-gap 2.0))
-        total-gap (* gap (clojure.core/max 0 (dec count)))
-        bar-width (if (pos? count)
-                    (clojure.core/max 1.0 (/ (clojure.core/max 0.0 (- safe-width total-gap)) (double count)))
-                    safe-width)
-        min-value min
-        max-value max
-        span (clojure.core/max (- max-value min-value) 1e-6)
-        baseline (double (or baseline-value min-value))
-        baseline-ratio (clamp01 (/ (- baseline min-value) span))
-        baseline-y (+ y (* (- 1.0 baseline-ratio) height))]
-    (with-open [^Paint bg (doto (Paint.)
-                             (.setColor background-color))]
-      (let [rect (Rect/makeXYWH (float x) (float y) (float width) (float height))]
-        (.drawRect canvas rect bg)))
-    (when grid-color
-      (with-open [^Paint grid (doto (Paint.)
-                                (.setColor grid-color)
-                                (.setStrokeWidth 1.0))]
-        (.drawLine canvas (float x)
-                    (float baseline-y)
-                    (float (+ x width))
-                    (float baseline-y)
-                    grid)))
-    (when (pos? count)
-      (with-open [^Paint paint (doto (Paint.)
-                                  (.setColor bar-color))]
-        (doseq [[idx value] (map-indexed vector bars)]
-          (let [ratio (clamp01 (/ (- (double value) min-value) span))
-                bar-height (* ratio height)
-                bar-x (+ x (* idx (+ bar-width gap)))
-                bar-y (+ y (- height bar-height))
-                rect (Rect/makeXYWH (float bar-x)
-                                    (float bar-y)
-                                    (float bar-width)
-                                    (float bar-height))]
-            (.drawRect canvas rect paint)))))
-    )
-  )
-
-(defn- draw-minimap
-  [^Canvas canvas node]
-  (let [{:keys [stars world-bounds viewport-rect background-color viewport-color]} (:props node)
-        {:keys [x y width height]} (layout/bounds node)
-        bg-color (->color-int background-color 0xFF000000)
-        viewport-color (->color-int viewport-color 0xFF00FF00)
-        widget-bounds {:x x :y y :width width :height height}
-        cell-size (heatmap-cell-size width height)
-        {:keys [counts cols rows max-density]} (bucket-stars-into-grid stars world-bounds widget-bounds cell-size)
-        counts-array ^ints counts]
-    ;; Background
-    (with-open [^Paint bg (doto (Paint.)
-                            (.setColor bg-color))]
-      (try
-        (.drawRect canvas (Rect/makeXYWH (float x) (float y) (float width) (float height)) bg)
-        (catch ArithmeticException _ nil)
-        (catch Exception _ nil)))
-
-    ;; Heatmap density buckets
-    (when (pos? max-density)
-      (with-open [^Paint heatmap-paint (Paint.)]
-        (dotimes [row rows]
-          (dotimes [col cols]
-            (let [idx (+ (* row cols) col)
-                  count (aget counts-array idx)]
-              (when (pos? count)
-                (let [px (+ x (* col cell-size))
-                      py (+ y (* row cell-size))
-                      cell-w (max 0.0 (min cell-size (- (+ x width) px)))
-                      cell-h (max 0.0 (min cell-size (- (+ y height) py)))]
-                  (when (and (pos? cell-w) (pos? cell-h))
-                    (.setColor heatmap-paint (density->color count max-density))
-                    (try
-                      (.drawRect canvas (Rect/makeXYWH (float px)
-                                                       (float py)
-                                                       (float cell-w)
-                                                       (float cell-h))
-                                 heatmap-paint)
-                      (catch ArithmeticException _ nil)
-                      (catch Exception _ nil))))))))))
-
-    ;; Viewport
-    (when-let [{:keys [x y width height]} (minimap-math/viewport->minimap-rect viewport-rect
-                                                                                world-bounds
-                                                                                widget-bounds)]
-      (with-open [^Paint viewport-paint (doto (Paint.)
-                                          (.setColor viewport-color)
-                                          (.setStrokeWidth 1.0)
-                                          (.setMode PaintMode/STROKE))]
-        ;; Skija/LWJGL sometimes throws integer overflow on Rect creation if coordinates blow up
-        (try
-          (.drawRect canvas (Rect/makeXYWH (float x) (float y) (float width) (float height)) viewport-paint)
-          (catch ArithmeticException _ nil)
-          (catch Exception _ nil))))
-
-    ;; Border
-    (with-open [^Paint border-paint (doto (Paint.)
-                                      (.setColor (->color-int nil 0xFF444444))
-                                      (.setStrokeWidth 1.0)
-                                      (.setMode PaintMode/STROKE))]
-      (try
-        (.drawRect canvas (Rect/makeXYWH (float x) (float y) (float width) (float height)) border-paint)
-        (catch ArithmeticException _ nil)
-        (catch Exception _ nil)))))
-
-(defmethod draw-node :label
-  [canvas node]
-  (draw-label canvas node))
-
-(defmethod draw-node :button
-  [canvas node]
-  (draw-button canvas node))
-
-(defmethod draw-node :slider
-  [canvas node]
-  (draw-slider canvas node))
-
-(defmethod draw-node :vstack
-  [canvas node]
-  (draw-stack canvas node))
-
-(defmethod draw-node :hstack
-  [canvas node]
-  (draw-stack canvas node))
-
-(defmethod draw-node :dropdown
-  [canvas node]
-  (draw-dropdown canvas node))
-
-(defmethod draw-node :bar-chart
-  [canvas node]
-  (draw-bar-chart canvas node))
-
-(defmethod draw-node :window
-  [canvas node]
-  (draw-window canvas node))
-
-(defmethod draw-node :minimap
-  [canvas node]
-  (draw-minimap canvas node))
-
-(defmethod draw-overlay :dropdown
-  [^Canvas canvas {:keys [node selected options padding option-bg selected-bg text-color selected-text-color]}]
-  (doseq [option options]
-    (let [bounds (:bounds option)
-          selected? (= (:value option) selected)
-          hovered? (pointer-in-bounds? bounds)
-          active? (active-dropdown-option? node option)
-          base-bg (cond active? (adjust-color option-bg 0.85)
-                        hovered? (adjust-color option-bg 1.1)
-                        :else option-bg)
-          bg (if selected?
-               (cond active? (adjust-color selected-bg 0.9)
-                     hovered? (adjust-color selected-bg 1.05)
-                     :else selected-bg)
-               base-bg)
-          option-text-color (if (or selected? active?)
-                              selected-text-color
-                              text-color)
-          rect (Rect/makeXYWH (float (:x bounds))
-                               (float (:y bounds))
-                               (float (:width bounds))
-                               (float (:height bounds)))]
-      (with-open [^Paint option-paint (doto (Paint.)
-                                        (.setColor (unchecked-int bg)))]
-        (.drawRect canvas rect option-paint))
-      (with-open [^Paint text-paint (doto (Paint.)
-                                       (.setColor (unchecked-int option-text-color)))]
-        (with-open [^Font font (make-font 15.0)]
-          (.drawString canvas (:label option)
-                       (float (+ (:x bounds) padding))
-                       (float (+ (:y bounds) (/ (:height bounds) 2.0) 5.0))
-                       font
-                       text-paint))))))
 
 (defmethod draw-node :default
   [_ _]

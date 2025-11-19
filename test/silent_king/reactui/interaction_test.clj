@@ -2,7 +2,8 @@
   (:require [clojure.test :refer [deftest is testing]]
             [silent-king.reactui.core :as reactui]
             [silent-king.reactui.interaction :as interaction]
-            [silent-king.reactui.layout :as layout]))
+            [silent-king.reactui.layout :as layout]
+            [silent-king.reactui.primitives]))
 
 (defn- layout-tree
   [tree]
