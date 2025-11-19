@@ -78,6 +78,10 @@
   [a b t]
   (+ a (* t (- b a))))
 
+(defn- round-channel
+  [value]
+  (int (long (Math/round (double value)))))
+
 (defn- blend-colors
   [color-a color-b t]
   (let [t (clamp01 t)
@@ -91,10 +95,10 @@
         r2 (bit-and (bit-shift-right cb 16) 0xFF)
         g2 (bit-and (bit-shift-right cb 8) 0xFF)
         b2 (bit-and cb 0xFF)
-        a (Math/round (lerp a1 a2 t))
-        r (Math/round (lerp r1 r2 t))
-        g (Math/round (lerp g1 g2 t))
-        b (Math/round (lerp b1 b2 t))]
+        a (round-channel (lerp a1 a2 t))
+        r (round-channel (lerp r1 r2 t))
+        g (round-channel (lerp g1 g2 t))
+        b (round-channel (lerp b1 b2 t))]
     (->color-int (bit-or (bit-shift-left a 24)
                          (bit-shift-left r 16)
                          (bit-shift-left g 8)
@@ -443,16 +447,6 @@
             (.drawRect canvas rect paint)))))
     )
   )
-
-(defn- ->color-int
-  "Convert the supplied value (which may be a long ARGB literal) into a signed 32-bit int.
-  Ensures we never trigger Math/toIntExact overflow even if the high bit is set."
-  [value default]
-  (let [raw (long (or value default))
-        signed (if (> raw 0x7FFFFFFF)
-                 (- raw 0x100000000)
-                 raw)]
-    (int signed)))
 
 (defn- draw-minimap
   [^Canvas canvas node]
