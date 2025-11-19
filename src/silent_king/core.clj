@@ -267,6 +267,7 @@
         pan-x (:pan-x camera)
         pan-y (:pan-y camera)
         hyperlanes-enabled (state/hyperlanes-enabled? game-state)
+        selected-star-id (state/selected-star-id game-state)
 
         ;; 4-Level LOD system
         lod-level (cond
@@ -333,6 +334,8 @@
             screen-size (transform-size base-size zoom)
             rotation-speed (:rotation-speed physics)
             rotation (* time 30 rotation-speed)]
+        (when (= entity-id selected-star-id)
+          (draw-selection-highlight canvas screen-x screen-y screen-size time))
         (if (= lod-level :full)
           ;; Draw from full-resolution image
           (draw-full-res-star canvas star-images path screen-x screen-y screen-size rotation)
