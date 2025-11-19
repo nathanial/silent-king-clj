@@ -1,6 +1,7 @@
 (ns silent-king.reactui.app-test
   (:require [clojure.test :refer [deftest is]]
             [silent-king.reactui.app :as app]
+            [silent-king.reactui.components.star-inspector :as star-inspector]
             [silent-king.reactui.core :as ui-core]
             [silent-king.reactui.events :as events]
             [silent-king.reactui.interaction :as interaction]
@@ -45,6 +46,11 @@
   [tree]
   (find-node-by tree (fn [node]
                        (= :bar-chart (:type node)))))
+
+(defn- find-node-with-key
+  [tree key]
+  (find-node-by tree (fn [node]
+                       (= key (get-in node [:props :key])))))
 
 (deftest control-panel-props-reflect-game-state
   (let [game-state (atom (state/create-game-state))]
@@ -184,3 +190,41 @@
           data (get-in chart [:layout :bar-chart])]
       (is chart)
       (is (= [30.0 45.0 60.0] (:values data))))))
+
+(defn- create-test-star
+  [x y]
+  (state/create-entity
+   :position {:x x :y y}
+   :renderable {:path "stars/bright.png"}
+   :transform {:size 40.0}
+   :physics {:rotation-speed 1.0}
+   :star {:density 0.5}))
+
+(deftest star-inspector-hidden-when-no-selection
+  (let [game-state (atom (state/create-game-state))
+        tree (build-layout game-state)
+        panel (find-node-with-key tree :star-inspector)
+        bounds (layout/bounds panel)
+        panel-width (:width star-inspector/default-panel-bounds)
+        scale (state/ui-scale game-state)
+        logical-width (/ (:width test-viewport) scale)
+        base-x (max 24.0 (- logical-width panel-width 24.0))
+        hidden-x (+ base-x panel-width 32.0)]
+    (is (= hidden-x (:x bounds)))))
+
+(deftest star-inspector-active-with-selection
+  (let [game-state (atom (state/create-game-state))
+        star-id (state/add-entity! game-state (create-test-star 200.0 300.0))]
+    (state/set-selection! game-state {:star-id star-id})
+    (let [tree (build-layout game-state)
+          panel (find-node-with-key tree :star-inspector)
+          bounds (layout/bounds panel)
+          panel-width (:width star-inspector/default-panel-bounds)
+          scale (state/ui-scale game-state)
+          logical-width (/ (:width test-viewport) scale)
+          base-x (max 24.0 (- logical-width panel-width 24.0))
+          zoom-button (find-button-with-event tree [:ui/zoom-to-selected-star {:zoom 2.4}])
+          clear-button (find-button-with-event tree [:ui/clear-selection])]
+      (is (= base-x (:x bounds)))
+      (is zoom-button)
+      (is clear-button))))

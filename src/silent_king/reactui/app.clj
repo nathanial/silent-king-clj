@@ -3,11 +3,16 @@
   (:require [silent-king.reactui.components.control-panel :as control-panel]
             [silent-king.reactui.components.hyperlane-settings :as hyperlane-settings]
             [silent-king.reactui.components.performance-overlay :as performance-overlay]
+            [silent-king.reactui.components.star-inspector :as star-inspector]
             [silent-king.reactui.core :as ui-core]
+            [silent-king.selection :as selection]
             [silent-king.state :as state])
   (:import [io.github.humbleui.skija Canvas]))
 
 (set! *warn-on-reflection* true)
+
+(def ^:const inspector-margin 24.0)
+(def ^:const inspector-hidden-gap 32.0)
 
 (defn control-panel-props
   [game-state]
@@ -49,12 +54,39 @@
      :visible? (state/performance-overlay-visible? game-state)
      :expanded? (state/performance-overlay-expanded? game-state)}))
 
+(defn star-inspector-props
+  [game-state]
+  (let [selection (selection/selected-view game-state)
+        viewport (state/ui-viewport game-state)
+        scale (state/ui-scale game-state)
+        panel-width (:width star-inspector/default-panel-bounds)
+        physical-width (double (or (:width viewport) panel-width))
+        logical-width (if (pos? scale)
+                        (/ physical-width scale)
+                        physical-width)
+        base-x (max inspector-margin
+                    (- logical-width panel-width inspector-margin))
+        base-bounds (-> star-inspector/default-panel-bounds
+                        (assoc :x base-x
+                               :y inspector-margin))
+        visible? (or (state/star-inspector-visible? game-state)
+                     (some? selection))
+        bounds (if visible?
+                 base-bounds
+                 (assoc base-bounds
+                        :x (+ base-x panel-width inspector-hidden-gap)))]
+    {:selection selection
+     :visible? visible?
+     :bounds bounds}))
+
 (defn root-tree
   [game-state]
   [:vstack {:key :ui-root}
    (control-panel/control-panel (control-panel-props game-state))
    (hyperlane-settings/hyperlane-settings-panel (hyperlane-settings-props game-state))
-   (performance-overlay/performance-overlay (performance-overlay-props game-state))])
+   (performance-overlay/performance-overlay (performance-overlay-props game-state))
+   ;; Render last so it stacks on the right side without overlapping other panels.
+   (star-inspector/star-inspector (star-inspector-props game-state))])
 
 (defn logical-viewport
   [scale {:keys [x y width height]}]

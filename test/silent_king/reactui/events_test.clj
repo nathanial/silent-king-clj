@@ -1,5 +1,6 @@
 (ns silent-king.reactui.events-test
   (:require [clojure.test :refer [deftest is testing]]
+            [silent-king.camera :as camera]
             [silent-king.reactui.events :as events]
             [silent-king.state :as state]))
 
@@ -56,3 +57,33 @@
     (is (true? (state/dropdown-open? game-state :colors)))
     (events/dispatch-event! game-state [:ui.dropdown/close :colors])
     (is (false? (state/dropdown-open? game-state :colors)))))
+
+(defn- star-entity
+  [x y]
+  (state/create-entity
+   :position {:x x :y y}
+   :renderable {:path "stars/bright.png"}
+   :transform {:size 40.0}
+   :physics {:rotation-speed 1.0}
+   :star {:density 0.5}))
+
+(deftest dispatch-clear-selection
+  (let [game-state (atom (state/create-game-state))]
+    (state/set-selection! game-state {:star-id 1})
+    (state/show-star-inspector! game-state)
+    (events/dispatch-event! game-state [:ui/clear-selection])
+    (is (nil? (state/selected-star-id game-state)))
+    (is (false? (state/star-inspector-visible? game-state)))))
+
+(deftest dispatch-zoom-to-selected-star
+  (let [game-state (atom (state/create-game-state))
+        star-id (state/add-entity! game-state (star-entity 120.0 80.0))]
+    (state/set-selection! game-state {:star-id star-id})
+    (state/set-ui-viewport! game-state {:width 800.0 :height 600.0})
+    (events/dispatch-event! game-state [:ui/zoom-to-selected-star {:zoom 3.0}])
+    (let [camera-state (state/get-camera game-state)
+          expected-pan-x (camera/center-pan 120.0 3.0 800.0)
+          expected-pan-y (camera/center-pan 80.0 3.0 600.0)]
+      (is (= 3.0 (:zoom camera-state)))
+      (is (= expected-pan-x (:pan-x camera-state)))
+      (is (= expected-pan-y (:pan-y camera-state))))))

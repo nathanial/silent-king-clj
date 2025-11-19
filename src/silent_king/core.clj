@@ -4,6 +4,7 @@
             [silent-king.state :as state]
             [silent-king.reactui.app :as react-app]
             [silent-king.reactui.core :as reactui]
+            [silent-king.selection :as selection]
             [silent-king.galaxy :as galaxy]
             [silent-king.hyperlanes :as hyperlanes]
             [nrepl.server :as nrepl]
@@ -23,6 +24,7 @@
 
 (defonce game-state (atom (state/create-game-state)))
 (defonce render-state (atom (state/create-render-state)))
+(def ^:const world-click-threshold 6.0)
 
 ;; Backwards-compatibility aliases for widely-referenced camera helpers
 (def zoom->position-scale camera/zoom->position-scale)
@@ -110,19 +112,30 @@
    (reify GLFWMouseButtonCallbackI
      (invoke [_ win button action mods]
        (when (= button GLFW/GLFW_MOUSE_BUTTON_LEFT)
-       (let [input (state/get-input game-state)
-             x (:mouse-x input)
-             y (:mouse-y input)
-             pressed? (= action GLFW/GLFW_PRESS)]
-         (if pressed?
-           (let [handled? (reactui/handle-pointer-down! game-state x y)]
-             (state/update-input! game-state assoc
-                                  :dragging (not handled?)
-                                  :mouse-down-x x
-                                  :mouse-down-y y))
+        (let [input (state/get-input game-state)
+              x (:mouse-x input)
+              y (:mouse-y input)
+              pressed? (= action GLFW/GLFW_PRESS)]
+          (if pressed?
+            (let [handled? (reactui/handle-pointer-down! game-state x y)]
+              (state/update-input! game-state assoc
+                                   :dragging (not handled?)
+                                   :ui-active? (boolean handled?)
+                                   :mouse-down-x x
+                                   :mouse-down-y y))
             (do
               (reactui/handle-pointer-up! game-state x y)
-              (state/update-input! game-state assoc :dragging false))))))))
+              (let [ui-active? (boolean (:ui-active? input))
+                    dx (- (double x) (double (:mouse-down-x input)))
+                    dy (- (double y) (double (:mouse-down-y input)))
+                    movement (Math/sqrt (+ (* dx dx) (* dy dy)))
+                    click? (and (not ui-active?)
+                                (<= movement world-click-threshold))]
+                (when click?
+                  (selection/handle-screen-click! game-state x y)))
+              (state/update-input! game-state assoc
+                                   :dragging false
+                                   :ui-active? false))))))))
 
   (GLFW/glfwSetScrollCallback
    window

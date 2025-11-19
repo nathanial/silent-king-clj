@@ -94,6 +94,18 @@
   (state/close-dropdown! game-state dropdown-id)
   nil)
 
+(defmethod dispatch-event! :ui/clear-selection
+  [game-state _]
+  (state/clear-selection! game-state)
+  (state/hide-star-inspector! game-state)
+  nil)
+
+(defmethod dispatch-event! :ui/zoom-to-selected-star
+  [game-state [_ opts]]
+  (let [opts* (when (map? opts) opts)]
+    (state/zoom-to-selection! game-state opts*))
+  nil)
+
 (defmethod dispatch-event! :ui/perf-toggle-visible
   [game-state _]
   (state/toggle-performance-overlay-visible! game-state)

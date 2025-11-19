@@ -1,5 +1,6 @@
 (ns silent-king.state
-  "Game state management with entity-component system")
+  "Game state management with entity-component system"
+  (:require [silent-king.camera :as camera]))
 
 (set! *warn-on-reflection* true)
 
@@ -31,6 +32,11 @@
    :last-sample-time 0.0
    :latest {}})
 
+(def default-selection
+  {:star-id nil
+   :last-world-click nil
+   :details nil})
+
 (def ^:const max-performance-samples 120)
 
 (defn- append-sample
@@ -59,6 +65,7 @@
            :mouse-down-x 0.0
            :mouse-down-y 0.0
            :dragging false
+           :ui-active? false
            :mouse-initialized? false}
    :time {:start-time (System/nanoTime)
           :current-time 0.0
@@ -77,10 +84,10 @@
            :atlas-metadata-lg {}
            :atlas-size-lg 8192}
    :widgets {:layout-dirty #{}}
-   :selection {:star-id nil
-               :last-world-click nil
-               :details nil}
+   :selection default-selection
    :ui {:scale 2.0
+        :star-inspector {:visible? false
+                         :pinned? false}
         :hyperlane-panel {:expanded? true}
         :viewport {:width 0.0
                    :height 0.0}
@@ -199,6 +206,32 @@
   [game-state]
   (:time @game-state))
 
+;; =============================================================================
+;; Selection Helpers
+;; =============================================================================
+
+(defn selection
+  "Return the current selection map merged with defaults."
+  [game-state]
+  (merge default-selection
+         (or (:selection @game-state) default-selection)))
+
+(defn selected-star-id
+  "Return the currently selected star id (or nil)."
+  [game-state]
+  (:star-id (selection game-state)))
+
+(defn set-selection!
+  "Replace the selection map with the supplied data merged onto defaults."
+  [game-state selection-map]
+  (swap! game-state assoc :selection
+         (merge default-selection (or selection-map {}))))
+
+(defn clear-selection!
+  "Clear any active selection."
+  [game-state]
+  (swap! game-state assoc :selection default-selection))
+
 (defn get-assets
   "Get assets"
   [game-state]
@@ -253,6 +286,22 @@
   (swap! game-state assoc-in [:ui :viewport]
          {:width (double (or width 0.0))
           :height (double (or height 0.0))}))
+
+(defn star-inspector-visible?
+  [game-state]
+  (boolean (get-in @game-state [:ui :star-inspector :visible?] false)))
+
+(defn set-star-inspector-visible!
+  [game-state value]
+  (swap! game-state assoc-in [:ui :star-inspector :visible?] (boolean value)))
+
+(defn show-star-inspector!
+  [game-state]
+  (set-star-inspector-visible! game-state true))
+
+(defn hide-star-inspector!
+  [game-state]
+  (set-star-inspector-visible! game-state false))
 
 (defn hyperlane-panel-expanded?
   [game-state]
@@ -324,6 +373,50 @@
   "Update camera state using function f"
   [game-state f & args]
   (swap! game-state update :camera #(apply f % args)))
+
+(defn focus-camera-on-world!
+  "Center the camera pan on the supplied world coordinate (map with :x/:y).
+  Optionally accepts {:zoom value} to compute pan for the supplied zoom."
+  ([game-state position]
+   (focus-camera-on-world! game-state position {}))
+  ([game-state {:keys [x y]} {:keys [zoom]}]
+   (when (and (number? x) (number? y))
+     (let [viewport (ui-viewport game-state)
+           width (double (max 1.0 (or (:width viewport) 1280.0)))
+           height (double (max 1.0 (or (:height viewport) 720.0)))
+           camera (get-camera game-state)
+           zoom-value (double (or zoom (:zoom camera) 1.0))
+           pan-x (camera/center-pan (double x) zoom-value width)
+           pan-y (camera/center-pan (double y) zoom-value height)]
+       (update-camera! game-state assoc :pan-x pan-x :pan-y pan-y)
+       {:pan-x pan-x
+        :pan-y pan-y}))))
+
+(defn zoom-to-star!
+  "Focus the camera on the given star-id and optionally set zoom via {:zoom v}."
+  ([game-state star-id]
+   (zoom-to-star! game-state star-id {}))
+  ([game-state star-id {:keys [zoom]}]
+   (when-let [star (get-entity game-state star-id)]
+     (when-let [pos (get-component star :position)]
+       (let [camera (get-camera game-state)
+             requested (if (number? zoom)
+                         (double zoom)
+                         (max 2.0 (double (or (:zoom camera) 1.0))))
+             clamped (-> requested
+                         (max 0.4)
+                         (min 10.0))]
+         (focus-camera-on-world! game-state pos {:zoom clamped})
+         (update-camera! game-state assoc :zoom clamped)
+         clamped)))))
+
+(defn zoom-to-selection!
+  "Zoom and pan the camera to the currently selected star."
+  ([game-state]
+   (zoom-to-selection! game-state {}))
+  ([game-state opts]
+   (when-let [star-id (selected-star-id game-state)]
+     (zoom-to-star! game-state star-id opts))))
 
 (defn update-input!
   "Update input state using function f"
