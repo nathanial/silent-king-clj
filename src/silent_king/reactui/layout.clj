@@ -332,6 +332,67 @@
                                :expanded? expanded?}}
            :children [])))
 
+(defmethod layout-node :window
+  [node context]
+  (let [props (:props node)
+        bounds* (resolve-bounds node context)
+        min-width (double (max 120.0 (or (:min-width props) 200.0)))
+        min-height (double (max 80.0 (or (:min-height props) 200.0)))
+        header-height (double (max 20.0 (or (:header-height props) 32.0)))
+        resizable? (if (contains? props :resizable?)
+                     (boolean (:resizable? props))
+                     true)
+        minimized? (boolean (:minimized? props))
+        width (max min-width (double (or (:width bounds*) min-width)))
+        stored-height (double (or (:height bounds*) min-height))
+        desired-height (max min-height stored-height)
+        final-height (if minimized?
+                       header-height
+                       desired-height)
+        final-bounds (assoc bounds* :width width :height final-height)
+        padding (expand-padding (:content-padding props))
+        content-width (max 0.0 (- width (:left padding) (:right padding)))
+        content-height (max 0.0 (- final-height header-height (:top padding) (:bottom padding)))
+        content-bounds {:x (+ (:x final-bounds) (:left padding))
+                        :y (+ (:y final-bounds) header-height (:top padding))
+                        :width content-width
+                        :height content-height}
+        header-bounds {:x (:x final-bounds)
+                       :y (:y final-bounds)
+                       :width width
+                       :height header-height}
+        control-size (double (max 12.0 (or (:control-size props) 18.0)))
+        minimize-bounds {:x (- (+ (:x final-bounds) width) control-size 8.0)
+                         :y (+ (:y final-bounds)
+                               (/ (- header-height control-size) 2.0))
+                         :width control-size
+                         :height control-size}
+        resize-size 16.0
+        resize-bounds (when resizable?
+                        {:x (- (+ (:x final-bounds) width) resize-size)
+                         :y (- (+ (:y final-bounds) final-height) resize-size)
+                         :width resize-size
+                         :height resize-size})
+        viewport (:viewport context)
+        child-context {:viewport viewport
+                       :bounds content-bounds}
+        laid-out-children (if minimized?
+                            []
+                            (mapv #(layout-node % child-context) (:children node)))]
+    (assoc node
+           :layout {:bounds final-bounds
+                    :window {:header header-bounds
+                             :content content-bounds
+                             :minimize minimize-bounds
+                             :resize resize-bounds
+                             :resizable? resizable?
+                             :minimized? minimized?
+                             :header-height header-height
+                             :stored-height desired-height
+                             :constraints {:min-width min-width
+                                           :min-height min-height}}}
+           :children laid-out-children)))
+
 (defmethod layout-node :minimap
   [node context]
   (let [bounds* (resolve-bounds node context)

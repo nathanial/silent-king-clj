@@ -95,21 +95,49 @@
                         physical-width)
         logical-height (if (pos? scale)
                          (/ physical-height scale)
-                         physical-height)
-        x (- logical-width panel-width margin)
-        y (- logical-height panel-height margin)
-        bounds {:x x :y y :width panel-width :height panel-height}]
-    (assoc base-props :bounds bounds)))
+                         physical-height)]
+    (assoc base-props
+           :default-bounds {:x (- logical-width panel-width margin)
+                            :y (- logical-height panel-height margin)
+                            :width panel-width
+                            :height panel-height})))
+
+(def ^:private minimap-window-id :ui/minimap)
+
+(defn minimap-window
+  [game-state]
+  (let [props (minimap-props game-state)
+        visible? (:visible? props)
+        default-bounds (:default-bounds props)
+        minimap-props (dissoc props :default-bounds)
+        bounds (state/window-bounds game-state minimap-window-id default-bounds)
+        minimized? (state/window-minimized? game-state minimap-window-id)
+        content (when-not minimized?
+                  (minimap/minimap minimap-props))]
+    (when visible?
+      {:type :window
+       :props {:title "Minimap"
+               :bounds bounds
+               :minimized? minimized?
+               :resizable? true
+               :min-width (:width minimap/default-panel-bounds)
+               :min-height (:height minimap/default-panel-bounds)
+               :content-padding {:all 12.0}
+               :on-change-bounds [:ui.window/set-bounds minimap-window-id]
+               :on-toggle-minimized [:ui.window/toggle-minimized minimap-window-id]}
+       :children (cond-> []
+                   content (conj content))})))
 
 (defn root-tree
   [game-state]
   [:vstack {:key :ui-root}
    (control-panel/control-panel (control-panel-props game-state))
-   (hyperlane-settings/hyperlane-settings-panel (hyperlane-settings-props game-state))
-   (performance-overlay/performance-overlay (performance-overlay-props game-state))
-   ;; Render last so it stacks on the right side without overlapping other panels.
-   (star-inspector/star-inspector (star-inspector-props game-state))
-   (minimap/minimap (minimap-props game-state))])
+  (hyperlane-settings/hyperlane-settings-panel (hyperlane-settings-props game-state))
+  (performance-overlay/performance-overlay (performance-overlay-props game-state))
+  ;; Render last so it stacks on the right side without overlapping other panels.
+  (star-inspector/star-inspector (star-inspector-props game-state))
+  (when-let [window (minimap-window game-state)]
+    window)])
 
 (defn logical-viewport
   [scale {:keys [x y width height]}]

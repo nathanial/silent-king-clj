@@ -80,6 +80,15 @@
               (update :values #(vec (or % []))))
    :children []})
 
+(defn- normalize-window
+  [props raw-children]
+  {:type :window
+   :props (or props {})
+   :children (->> raw-children
+                  (map normalize-element)
+                  (remove nil?)
+                  vec)})
+
 (defn- normalize-minimap
   [props _raw-children]
   {:type :minimap
@@ -115,6 +124,7 @@
         :dropdown (normalize-dropdown props child-forms)
         :bar-chart (normalize-bar-chart props child-forms)
         :minimap (normalize-minimap props child-forms)
+        :window (normalize-window props child-forms)
         {:type tag*
          :props (or props {})
          :children (->> child-forms
@@ -193,6 +203,107 @@
         world-pos (minimap-math/minimap->world {:x x :y y} world-bounds widget-bounds)]
     (ui-events/dispatch-event! game-state [:camera/pan-to-world world-pos])))
 
+(defn- within-bounds?
+  [{:keys [x y width height]} px py]
+  (and (number? x) (number? y) (number? width) (number? height)
+       (>= px x)
+       (<= px (+ x width))
+       (>= py y)
+       (<= py (+ y height))))
+
+(defn- dispatch-window-bounds!
+  [node game-state bounds]
+  (when-let [event (-> node :props :on-change-bounds)]
+    (when (vector? event)
+      (ui-events/dispatch-event! game-state (conj event bounds)))))
+
+(defn- dispatch-window-toggle!
+  [node game-state]
+  (when-let [event (-> node :props :on-toggle-minimized)]
+    (when (vector? event)
+      (ui-events/dispatch-event! game-state event))))
+
+(defn- handle-window-pointer-down!
+  [node game-state px py]
+  (when-let [region (interaction/window-region node px py)]
+    (let [bounds (layout/bounds node)
+          window-layout (get-in node [:layout :window])
+          constraints (:constraints window-layout)
+          stored-height (or (:stored-height window-layout) (:height bounds))
+          enriched-bounds (assoc bounds :stored-height stored-height)]
+      (case (:kind region)
+        :move (do
+                (capture-node! node)
+                (set-active-interaction! node :window-move
+                                         {:value {:start-pointer {:x px :y py}
+                                                  :start-bounds enriched-bounds}})
+                true)
+        :resize (do
+                  (capture-node! node)
+                  (set-active-interaction! node :window-resize
+                                           {:value {:start-pointer {:x px :y py}
+                                                    :start-bounds enriched-bounds
+                                                    :constraints constraints}})
+                  true)
+        :minimize (do
+                    (capture-node! node)
+                    (set-active-interaction! node :window-minimize
+                                             {:value {:button-bounds (:bounds region)}})
+                    true)
+        false))))
+
+(defn- handle-window-pointer-drag!
+  [node game-state px py]
+  (when-let [active (active-interaction)]
+    (when (= (:node active) node)
+      (case (:type active)
+        :window-move
+        (let [{:keys [start-pointer start-bounds]} (:value active)
+              dx (- px (double (:x start-pointer)))
+              dy (- py (double (:y start-pointer)))
+              stored-height (double (or (:stored-height start-bounds) (:height start-bounds)))
+              new-bounds {:x (+ (double (:x start-bounds)) dx)
+                          :y (+ (double (:y start-bounds)) dy)
+                          :width (double (:width start-bounds))
+                          :height stored-height}]
+          (dispatch-window-bounds! node game-state new-bounds)
+          true)
+
+        :window-resize
+        (let [{:keys [start-pointer start-bounds constraints]} (:value active)
+              dx (- px (double (:x start-pointer)))
+              dy (- py (double (:y start-pointer)))
+              min-width (double (max 80.0 (or (get constraints :min-width) 120.0)))
+              min-height (double (max 60.0 (or (get constraints :min-height) 100.0)))
+              base-height (double (or (:stored-height start-bounds) (:height start-bounds)))
+              new-width (max min-width (+ (double (:width start-bounds)) dx))
+              new-height (max min-height (+ base-height dy))
+              new-bounds {:x (double (:x start-bounds))
+                          :y (double (:y start-bounds))
+                          :width new-width
+                          :height new-height}]
+          (dispatch-window-bounds! node game-state new-bounds)
+          true)
+
+        :window-minimize
+        false
+
+        false))))
+
+(defn- handle-window-pointer-up!
+  [node game-state px py]
+  (when-let [active (active-interaction)]
+    (when (= (:node active) node)
+      (case (:type active)
+        :window-minimize
+        (let [{:keys [button-bounds]} (:value active)]
+          (when (within-bounds? button-bounds px py)
+            (dispatch-window-toggle! node game-state))
+          true)
+        :window-move true
+        :window-resize true
+        false))))
+
 (defn handle-pointer-down!
   [game-state x y]
   (let [scale (scale-factor game-state)]
@@ -222,6 +333,7 @@
                      (capture-node! node)
                      (handle-minimap-pan! node game-state (/ (double x) scale) (/ (double y) scale))
                      true)
+          :window (handle-window-pointer-down! node game-state (/ (double x) scale) (/ (double y) scale))
           false)))))
 
 (defn handle-pointer-up!
@@ -232,6 +344,7 @@
         :button (interaction/activate-button! node game-state (/ (double x) scale) (/ (double y) scale))
         :slider (interaction/slider-drag! node game-state (/ (double x) scale))
         :dropdown (interaction/dropdown-click! node game-state (/ (double x) scale) (/ (double y) scale))
+        :window (handle-window-pointer-up! node game-state (/ (double x) scale) (/ (double y) scale))
         nil)))
   (release-capture!)
   (clear-active-interaction!)
@@ -248,4 +361,5 @@
         :minimap (do
                    (handle-minimap-pan! node game-state (/ (double x) scale) (/ (double y) scale))
                    true)
+        :window (handle-window-pointer-drag! node game-state (/ (double x) scale) (/ (double y) scale))
         false))))

@@ -6,7 +6,7 @@
 (set! *warn-on-reflection* true)
 
 (def ^:private interactive-types
-  #{:button :slider :dropdown :minimap})
+  #{:button :slider :dropdown :minimap :window})
 
 (declare dropdown-region)
 
@@ -28,10 +28,36 @@
               node)))
         (some #(dropdown-overlay-hit % px py) (:children node)))))
 
+(defn window-region
+  [node px py]
+  (let [{:keys [header minimize resize resizable? minimized?]} (get-in node [:layout :window])]
+    (cond
+      (and minimize (contains-point? minimize px py))
+      {:kind :minimize
+       :bounds minimize}
+
+      (and (not minimized?) resizable? resize (contains-point? resize px py))
+      {:kind :resize
+       :bounds resize}
+
+      (and header (contains-point? header px py))
+      {:kind :move
+       :bounds header}
+
+      :else
+      nil)))
+
+(defn- window-overlay-hit
+  [node px py]
+  (when (= (:type node) :window)
+    (when (window-region node px py)
+      node)))
+
 (defn node-at
   [node px py]
   (when node
     (or (dropdown-overlay-hit node px py)
+        (window-overlay-hit node px py)
         (let [bounds (layout/bounds node)
               type (:type node)]
           (when (contains-point? bounds px py)

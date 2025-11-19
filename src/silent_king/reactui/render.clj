@@ -201,6 +201,12 @@
     (and (= :dropdown (:type active))
          (= (:node active) node))))
 
+(defn- active-window-kind?
+  [node kind]
+  (let [active (active-interaction)]
+    (and (= kind (:type active))
+         (= (:node active) node))))
+
 (defn- selected-label
   [options value]
   (or (some (fn [opt]
@@ -241,6 +247,138 @@
     (doseq [child (:children node)]
       (draw-node canvas child))))
 
+(defn- draw-window
+  [^Canvas canvas node]
+  (let [{:keys [title background-color header-color border-color content-background-color title-color button-icon-color]} (:props node)
+        {:keys [bounds window]} (:layout node)
+        {:keys [header content minimize resize resizable? minimized?]} window
+        body-color (->color-int background-color 0xF021252F)
+        header-base (->color-int header-color 0xFF1C1F2C)
+        border-color (->color-int border-color 0x802C303C)
+        content-color (->color-int (or content-background-color (adjust-color body-color 1.07))
+                                   (adjust-color body-color 1.07))
+        text-color (->color-int title-color 0xFFFFFFFF)
+        icon-color (->color-int button-icon-color text-color)
+        header-hover? (and header (pointer-in-bounds? header)
+                           (not (and minimize (pointer-in-bounds? minimize))))
+        header-active? (active-window-kind? node :window-move)
+        header-fill (cond header-active? (adjust-color header-base 0.9)
+                          header-hover? (adjust-color header-base 1.08)
+                          :else header-base)
+        minimize-hover? (and minimize (pointer-in-bounds? minimize))
+        minimize-active? (active-window-kind? node :window-minimize)
+        minimize-fill (cond minimize-active? (adjust-color header-base 0.85)
+                            minimize-hover? (adjust-color header-base 1.18)
+                            :else (adjust-color header-base 1.02))
+        resize-hover? (and resize (pointer-in-bounds? resize))
+        resize-active? (active-window-kind? node :window-resize)
+        resize-color (cond resize-active? (adjust-color border-color 0.85)
+                           resize-hover? (adjust-color border-color 1.2)
+                           :else border-color)
+        content-rect (when (and content (pos? (:width content)) (pos? (:height content)))
+                       (Rect/makeXYWH (float (:x content))
+                                      (float (:y content))
+                                      (float (:width content))
+                                      (float (:height content))))
+        bounds-rect (Rect/makeXYWH (float (:x bounds))
+                                   (float (:y bounds))
+                                   (float (:width bounds))
+                                   (float (:height bounds)))
+        header-rect (when header
+                      (Rect/makeXYWH (float (:x header))
+                                     (float (:y header))
+                                     (float (:width header))
+                                     (float (:height header))))
+        minimize-rect (when minimize
+                        (Rect/makeXYWH (float (:x minimize))
+                                       (float (:y minimize))
+                                       (float (:width minimize))
+                                       (float (:height minimize))))
+        resize-rect (when resize
+                      (Rect/makeXYWH (float (:x resize))
+                                     (float (:y resize))
+                                     (float (:width resize))
+                                     (float (:height resize))))]
+    (with-open [^Paint body (doto (Paint.)
+                               (.setColor body-color))]
+      (.drawRect canvas bounds-rect body))
+    (when header-rect
+      (with-open [^Paint header-paint (doto (Paint.)
+                                        (.setColor header-fill))]
+        (.drawRect canvas header-rect header-paint)))
+    (when (and content-rect (not minimized?))
+      (with-open [^Paint content-paint (doto (Paint.)
+                                          (.setColor content-color))]
+        (.drawRect canvas content-rect content-paint)))
+    (when minimize-rect
+      (with-open [^Paint btn (doto (Paint.)
+                                (.setColor minimize-fill))]
+        (.drawRect canvas minimize-rect btn))
+      (let [padding 4.0
+            mx (float (+ (:x minimize) padding))
+            my (float (+ (:y minimize) padding))
+            mw (- (:width minimize) (* 2.0 padding))
+            mh (- (:height minimize) (* 2.0 padding))
+            line-y (+ my (float (* mh 0.65)))]
+        (with-open [^Paint icon (doto (Paint.)
+                                   (.setColor icon-color)
+                                   (.setStrokeWidth 2.0))]
+          (if minimized?
+            (.drawRect canvas
+                       (Rect/makeXYWH mx my (float mw) (float mh))
+                       icon)
+            (.drawLine canvas
+                       mx
+                       line-y
+                       (float (+ mx mw))
+                       line-y
+                       icon)))))
+    (when (pos? (:width bounds))
+      (with-open [^Paint border (doto (Paint.)
+                                   (.setColor border-color)
+                                   (.setStrokeWidth 1.0)
+                                   (.setMode PaintMode/STROKE))]
+        (.drawRect canvas bounds-rect border)))
+    (when header-rect
+      (with-open [^Paint text-paint (doto (Paint.)
+                                       (.setColor text-color))]
+        (with-open [^Font font (make-font 16.0)]
+          (let [label (or title "Window")
+                text-x (+ (:x header) 12.0)
+                baseline (+ (:y header) (/ (:height header) 2.0) 6.0)]
+            (.drawString canvas label
+                         (float text-x)
+                         (float baseline)
+                         font
+                         text-paint)))))
+    (when (and resizable? resize-rect (not minimized?))
+      (with-open [^Paint handle (doto (Paint.)
+                                   (.setColor resize-color)
+                                   (.setStrokeWidth 1.5))]
+        (let [rx (+ (:x resize) (:width resize))
+              ry (+ (:y resize) (:height resize))]
+          (.drawLine canvas
+                     (float (- rx 12.0))
+                     (float ry)
+                     (float rx)
+                     (float (- ry 12.0))
+                     handle)
+          (.drawLine canvas
+                     (float (- rx 8.0))
+                     (float ry)
+                     (float rx)
+                     (float (- ry 8.0))
+                     handle))))
+    (when (and (seq (:children node))
+               content-rect
+               (pos? (:width content))
+               (pos? (:height content))
+               (not minimized?))
+      (.save canvas)
+      (.clipRect canvas content-rect)
+      (doseq [child (:children node)]
+        (draw-node canvas child))
+      (.restore canvas))))
 (defn- draw-button
   [^Canvas canvas node]
   (let [{:keys [label background-color text-color font-size]} (:props node)
@@ -550,6 +688,10 @@
 (defmethod draw-node :bar-chart
   [canvas node]
   (draw-bar-chart canvas node))
+
+(defmethod draw-node :window
+  [canvas node]
+  (draw-window canvas node))
 
 (defmethod draw-node :minimap
   [canvas node]

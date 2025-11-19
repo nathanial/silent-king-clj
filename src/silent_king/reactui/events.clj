@@ -121,6 +121,18 @@
   (state/reset-performance-metrics! game-state)
   nil)
 
+(defmethod dispatch-event! :ui.window/set-bounds
+  [game-state [_ window-id bounds]]
+  (when (and window-id (map? bounds))
+    (state/set-window-bounds! game-state window-id bounds))
+  nil)
+
+(defmethod dispatch-event! :ui.window/toggle-minimized
+  [game-state [_ window-id]]
+  (when window-id
+    (state/toggle-window-minimized! game-state window-id))
+  nil)
+
 (defmethod dispatch-event! :camera/pan-to-world
   [game-state [_ pos]]
   (state/focus-camera-on-world! game-state pos)

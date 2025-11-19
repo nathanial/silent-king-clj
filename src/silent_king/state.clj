@@ -91,6 +91,7 @@
         :hyperlane-panel {:expanded? true}
         :viewport {:width 0.0
                    :height 0.0}
+        :windows {}
         :performance-overlay {:visible? true
                                :expanded? true}
         :dropdowns {}}
@@ -326,6 +327,47 @@
   [game-state dropdown-id]
   (when dropdown-id
     (swap! game-state assoc-in [:ui :dropdowns dropdown-id] false)))
+
+(defn- normalize-window-bounds
+  [bounds defaults]
+  (let [base (merge {:x 0.0 :y 0.0 :width 200.0 :height 200.0}
+                    (or defaults {})
+                    (or bounds {}))]
+    {:x (double (or (:x base) 0.0))
+     :y (double (or (:y base) 0.0))
+     :width (double (max 1.0 (or (:width base) 1.0)))
+     :height (double (max 1.0 (or (:height base) 1.0)))}))
+
+(defn window-bounds
+  "Return the stored bounds for the given window-id merged with defaults."
+  [game-state window-id default-bounds]
+  (let [stored (get-in @game-state [:ui :windows window-id :bounds])]
+    (normalize-window-bounds stored default-bounds)))
+
+(defn set-window-bounds!
+  "Persist bounds for a window."
+  [game-state window-id bounds]
+  (when (and window-id (map? bounds))
+    (let [normalized (normalize-window-bounds bounds nil)]
+      (swap! game-state update-in [:ui :windows window-id]
+             (fn [state]
+               (assoc (or state {})
+                      :bounds normalized))))))
+
+(defn window-minimized?
+  [game-state window-id]
+  (boolean (get-in @game-state [:ui :windows window-id :minimized?] false)))
+
+(defn toggle-window-minimized!
+  [game-state window-id]
+  (when window-id
+    (swap! game-state update-in [:ui :windows window-id :minimized?]
+           (fnil not false))))
+
+(defn set-window-minimized!
+  [game-state window-id value]
+  (when window-id
+    (swap! game-state assoc-in [:ui :windows window-id :minimized?] (boolean value))))
 
 (defn performance-overlay-visible?
   [game-state]
