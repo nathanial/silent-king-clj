@@ -39,61 +39,88 @@
    (apply str
           (map coerce-text
                (filter text-fragment? children)))))
+(defn- normalize-children
+  [children]
+  (->> children
+       (map normalize-element)
+       (remove nil?)
+       vec))
 
-(defn- normalize-label
-  "Normalize a label element so that its text always lives in :props/:text."
+(defn- leaf-normalizer
+  "Build a normalizer for elements that do not keep children."
+  ([type]
+   (leaf-normalizer type (fn [props _] props)))
+  ([type props-fn]
+   (fn [props raw-children]
+     {:type type
+      :props (props-fn (or props {}) raw-children)
+      :children []})))
+
+(defn- branch-normalizer
+  "Build a normalizer for elements that keep normalized children."
+  ([type]
+   (branch-normalizer type (fn [props _] props)))
+  ([type props-fn]
+   (fn [props raw-children]
+     {:type type
+      :props (props-fn (or props {}) raw-children)
+      :children (normalize-children raw-children)})))
+
+(defn- label-props
   [props raw-children]
   (let [text (or (:text props)
-                 (collect-text raw-children))
-        cleaned-props (-> props
-                          (assoc :text (or text "")))]
-    {:type :label
-     :props cleaned-props
-     :children []}))
+                 (collect-text raw-children)
+                 "")]
+    (assoc props :text text)))
 
-(defn- normalize-button
+(defn- button-props
   [props raw-children]
   (let [label (or (:label props)
                   (collect-text raw-children)
                   "Button")]
-    {:type :button
-     :props (-> props
-                (assoc :label label))
-     :children []}))
+    (assoc props :label label)))
 
-(defn- normalize-slider
+(defn- bar-chart-props
   [props _raw-children]
-  {:type :slider
-   :props (or props {})
-   :children []})
+  (update props :values #(vec (or % []))))
 
-(defn- normalize-dropdown
-  [props _raw-children]
-  {:type :dropdown
-   :props (or props {})
-   :children []})
+(defmulti normalize-tag
+  "Normalize a Hiccup tag keyword. Extend via `defmethod` in feature namespaces."
+  (fn [tag _props _children] tag))
 
-(defn- normalize-bar-chart
-  [props _raw-children]
-  {:type :bar-chart
-   :props (-> (or props {})
-              (update :values #(vec (or % []))))
-   :children []})
-
-(defn- normalize-window
-  [props raw-children]
-  {:type :window
+(defmethod normalize-tag :default
+  [tag props child-forms]
+  {:type tag
    :props (or props {})
-   :children (->> raw-children
-                  (map normalize-element)
-                  (remove nil?)
-                  vec)})
+   :children (normalize-children child-forms)})
 
-(defn- normalize-minimap
-  [props _raw-children]
-  {:type :minimap
-   :props (or props {})
-   :children []})
+(defmethod normalize-tag :label
+  [_ props child-forms]
+  ((leaf-normalizer :label label-props) props child-forms))
+
+(defmethod normalize-tag :button
+  [_ props child-forms]
+  ((leaf-normalizer :button button-props) props child-forms))
+
+(defmethod normalize-tag :slider
+  [_ props child-forms]
+  ((leaf-normalizer :slider) props child-forms))
+
+(defmethod normalize-tag :dropdown
+  [_ props child-forms]
+  ((leaf-normalizer :dropdown) props child-forms))
+
+(defmethod normalize-tag :bar-chart
+  [_ props child-forms]
+  ((leaf-normalizer :bar-chart bar-chart-props) props child-forms))
+
+(defmethod normalize-tag :minimap
+  [_ props child-forms]
+  ((leaf-normalizer :minimap) props child-forms))
+
+(defmethod normalize-tag :window
+  [_ props child-forms]
+  ((branch-normalizer :window) props child-forms))
 
 (defn normalize-element
   "Normalize a single Hiccup element (vector, string, or number) into the
@@ -117,20 +144,7 @@
           has-props? (map? maybe-props)
           props (if has-props? maybe-props {})
           child-forms (if has-props? remaining (cons maybe-props remaining))]
-      (case tag*
-        :label (normalize-label props child-forms)
-        :button (normalize-button props child-forms)
-        :slider (normalize-slider props child-forms)
-        :dropdown (normalize-dropdown props child-forms)
-        :bar-chart (normalize-bar-chart props child-forms)
-        :minimap (normalize-minimap props child-forms)
-        :window (normalize-window props child-forms)
-        {:type tag*
-         :props (or props {})
-         :children (->> child-forms
-                        (map normalize-element)
-                        (remove nil?)
-                        vec)}))
+      (normalize-tag tag* props child-forms))
     (text-fragment? element)
     {:type :label
      :props {:text (coerce-text element)}
