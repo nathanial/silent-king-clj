@@ -121,6 +121,11 @@
   (state/reset-performance-metrics! game-state)
   nil)
 
+(defmethod dispatch-event! :camera/pan-to-world
+  [game-state [_ pos]]
+  (state/focus-camera-on-world! game-state pos)
+  nil)
+
 (defmethod dispatch-event! :default
   [_ event]
   (println "Unhandled UI event" event)

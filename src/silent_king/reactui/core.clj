@@ -1,6 +1,7 @@
 (ns silent-king.reactui.core
   "Entry points for the Reactified immediate-mode UI layer."
-  (:require [silent-king.reactui.events :as ui-events]
+  (:require [silent-king.minimap.math :as minimap-math]
+            [silent-king.reactui.events :as ui-events]
             [silent-king.reactui.interaction :as interaction]
             [silent-king.reactui.layout :as layout]
             [silent-king.reactui.render :as render]
@@ -79,6 +80,12 @@
               (update :values #(vec (or % []))))
    :children []})
 
+(defn- normalize-minimap
+  [props _raw-children]
+  {:type :minimap
+   :props (or props {})
+   :children []})
+
 (defn normalize-element
   "Normalize a single Hiccup element (vector, string, or number) into the
    internal tree representation {:type keyword :props map :children [...]}."
@@ -107,6 +114,7 @@
         :slider (normalize-slider props child-forms)
         :dropdown (normalize-dropdown props child-forms)
         :bar-chart (normalize-bar-chart props child-forms)
+        :minimap (normalize-minimap props child-forms)
         {:type tag*
          :props (or props {})
          :children (->> child-forms
@@ -178,6 +186,13 @@
   []
   (reset! active-interaction* nil))
 
+(defn- handle-minimap-pan!
+  [node game-state x y]
+  (let [{:keys [world-bounds]} (:props node)
+        widget-bounds (layout/bounds node)
+        world-pos (minimap-math/minimap->world {:x x :y y} world-bounds widget-bounds)]
+    (ui-events/dispatch-event! game-state [:camera/pan-to-world world-pos])))
+
 (defn handle-pointer-down!
   [game-state x y]
   (let [scale (scale-factor game-state)]
@@ -203,6 +218,10 @@
                                                                               :value (:value region)})
                         :header (set-active-interaction! node :dropdown {:bounds (:bounds region)}))
                       true)
+          :minimap (do
+                     (capture-node! node)
+                     (handle-minimap-pan! node game-state (/ (double x) scale) (/ (double y) scale))
+                     true)
           false)))))
 
 (defn handle-pointer-up!
@@ -219,9 +238,14 @@
   nil)
 
 (defn handle-pointer-drag!
-  [game-state x _y]
+  [game-state x y]
   (let [scale (scale-factor game-state)]
     (when-let [node (captured-node)]
-      (when (= (:type node) :slider)
-        (interaction/slider-drag! node game-state (/ (double x) scale))
-        true))))
+      (case (:type node)
+        :slider (do
+                  (interaction/slider-drag! node game-state (/ (double x) scale))
+                  true)
+        :minimap (do
+                   (handle-minimap-pan! node game-state (/ (double x) scale) (/ (double y) scale))
+                   true)
+        false))))

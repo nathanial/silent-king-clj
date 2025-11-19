@@ -1,6 +1,7 @@
 (ns silent-king.reactui.render
   "Skija renderer for the Reactified UI tree."
-  (:require [silent-king.reactui.layout :as layout])
+  (:require [silent-king.minimap.math :as minimap-math]
+            [silent-king.reactui.layout :as layout])
   (:import [io.github.humbleui.skija Canvas Font Typeface Paint PaintMode]
            [io.github.humbleui.types Rect]))
 
@@ -357,6 +358,76 @@
     )
   )
 
+(defn- ->color-int
+  "Convert the supplied value (which may be a long ARGB literal) into a signed 32-bit int.
+  Ensures we never trigger Math/toIntExact overflow even if the high bit is set."
+  [value default]
+  (let [raw (long (or value default))
+        signed (if (> raw 0x7FFFFFFF)
+                 (- raw 0x100000000)
+                 raw)]
+    (int signed)))
+
+(defn- draw-minimap
+  [^Canvas canvas node]
+  (let [{:keys [stars world-bounds viewport-rect background-color star-color viewport-color]} (:props node)
+        {:keys [x y width height]} (layout/bounds node)
+        bg-color (->color-int background-color 0xFF000000)
+        star-color (->color-int star-color 0xFFFFFFFF)
+        viewport-color (->color-int viewport-color 0xFF00FF00)
+        widget-bounds {:x x :y y :width width :height height}]
+    ;; Background
+    (with-open [^Paint bg (doto (Paint.)
+                            (.setColor bg-color))]
+      (try
+        (.drawRect canvas (Rect/makeXYWH (float x) (float y) (float width) (float height)) bg)
+        (catch ArithmeticException _ nil)
+        (catch Exception _ nil)))
+
+    ;; Stars
+    (with-open [^Paint star-paint (doto (Paint.)
+                                    (.setColor star-color))]
+      (doseq [star stars]
+        (let [pos (minimap-math/world->minimap star world-bounds widget-bounds)]
+          (try
+            (.drawCircle canvas (float (:x pos)) (float (:y pos)) 1.5 star-paint)
+            (catch ArithmeticException _ nil)
+            (catch Exception _ nil)))))
+
+    ;; Viewport
+    (when viewport-rect
+      (let [tl (minimap-math/world->minimap {:x (:x viewport-rect)
+                                             :y (:y viewport-rect)}
+                                            world-bounds
+                                            widget-bounds)
+            br (minimap-math/world->minimap {:x (+ (:x viewport-rect) (:width viewport-rect))
+                                             :y (+ (:y viewport-rect) (:height viewport-rect))}
+                                            world-bounds
+                                            widget-bounds)
+            vx (:x tl)
+            vy (:y tl)
+            vw (- (:x br) (:x tl))
+            vh (- (:y br) (:y tl))]
+        (with-open [^Paint viewport-paint (doto (Paint.)
+                                            (.setColor viewport-color)
+                                            (.setStrokeWidth 1.0)
+                                            (.setMode PaintMode/STROKE))]
+          ;; Skija/LWJGL sometimes throws integer overflow on Rect creation if coordinates blow up
+          (try
+            (.drawRect canvas (Rect/makeXYWH (float vx) (float vy) (float vw) (float vh)) viewport-paint)
+            (catch ArithmeticException _ nil)
+            (catch Exception _ nil)))))
+
+    ;; Border
+    (with-open [^Paint border-paint (doto (Paint.)
+                                      (.setColor (->color-int nil 0xFF444444))
+                                      (.setStrokeWidth 1.0)
+                                      (.setMode PaintMode/STROKE))]
+      (try
+        (.drawRect canvas (Rect/makeXYWH (float x) (float y) (float width) (float height)) border-paint)
+        (catch ArithmeticException _ nil)
+        (catch Exception _ nil)))))
+
 (defmethod draw-node :label
   [canvas node]
   (draw-label canvas node))
@@ -384,6 +455,10 @@
 (defmethod draw-node :bar-chart
   [canvas node]
   (draw-bar-chart canvas node))
+
+(defmethod draw-node :minimap
+  [canvas node]
+  (draw-minimap canvas node))
 
 (defmethod draw-overlay :dropdown
   [^Canvas canvas {:keys [node selected options padding option-bg selected-bg text-color selected-text-color]}]

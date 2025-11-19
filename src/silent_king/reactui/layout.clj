@@ -332,6 +332,20 @@
                                :expanded? expanded?}}
            :children [])))
 
+(defmethod layout-node :minimap
+  [node context]
+  (let [bounds* (resolve-bounds node context)
+        width (double (if (pos? (:width bounds*))
+                        (:width bounds*)
+                        200.0))
+        height (double (if (pos? (:height bounds*))
+                         (:height bounds*)
+                         200.0))
+        final-bounds (assoc bounds* :width width :height height)]
+    (assoc node
+           :layout {:bounds final-bounds}
+           :children [])))
+
 (defmethod layout-node :default
   [node context]
   (throw (ex-info "Unknown primitive type" {:type (:type node)})))

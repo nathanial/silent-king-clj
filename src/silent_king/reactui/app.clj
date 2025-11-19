@@ -2,6 +2,7 @@
   "Bridges game state to the Reactified UI tree."
   (:require [silent-king.reactui.components.control-panel :as control-panel]
             [silent-king.reactui.components.hyperlane-settings :as hyperlane-settings]
+            [silent-king.reactui.components.minimap :as minimap]
             [silent-king.reactui.components.performance-overlay :as performance-overlay]
             [silent-king.reactui.components.star-inspector :as star-inspector]
             [silent-king.reactui.core :as ui-core]
@@ -79,6 +80,27 @@
      :visible? visible?
      :bounds bounds}))
 
+(defn minimap-props
+  [game-state]
+  (let [base-props (minimap/minimap-props game-state)
+        viewport (state/ui-viewport game-state)
+        scale (state/ui-scale game-state)
+        margin 24.0
+        panel-width (:width minimap/default-panel-bounds)
+        panel-height (:height minimap/default-panel-bounds)
+        physical-width (double (or (:width viewport) panel-width))
+        physical-height (double (or (:height viewport) panel-height))
+        logical-width (if (pos? scale)
+                        (/ physical-width scale)
+                        physical-width)
+        logical-height (if (pos? scale)
+                         (/ physical-height scale)
+                         physical-height)
+        x (- logical-width panel-width margin)
+        y (- logical-height panel-height margin)
+        bounds {:x x :y y :width panel-width :height panel-height}]
+    (assoc base-props :bounds bounds)))
+
 (defn root-tree
   [game-state]
   [:vstack {:key :ui-root}
@@ -86,7 +108,8 @@
    (hyperlane-settings/hyperlane-settings-panel (hyperlane-settings-props game-state))
    (performance-overlay/performance-overlay (performance-overlay-props game-state))
    ;; Render last so it stacks on the right side without overlapping other panels.
-   (star-inspector/star-inspector (star-inspector-props game-state))])
+   (star-inspector/star-inspector (star-inspector-props game-state))
+   (minimap/minimap (minimap-props game-state))])
 
 (defn logical-viewport
   [scale {:keys [x y width height]}]
