@@ -41,6 +41,11 @@
   (find-node-by tree (fn [node]
                        (= :dropdown (:type node)))))
 
+(defn- find-bar-chart
+  [tree]
+  (find-node-by tree (fn [node]
+                       (= :bar-chart (:type node)))))
+
 (deftest control-panel-props-reflect-game-state
   (let [game-state (atom (state/create-game-state))]
     (state/update-camera! game-state assoc :zoom 2.5)
@@ -170,3 +175,12 @@
         (events/dispatch-event! game-state event)))
     (is (= state/default-performance-metrics
            (get-in @game-state [:metrics :performance])))))
+
+(deftest performance-overlay-renders-fps-chart
+  (let [game-state (atom (state/create-game-state))]
+    (swap! game-state assoc-in [:metrics :performance :fps-history] [30.0 45.0 60.0])
+    (let [tree (build-layout game-state)
+          chart (find-bar-chart tree)
+          data (get-in chart [:layout :bar-chart])]
+      (is chart)
+      (is (= [30.0 45.0 60.0] (:values data))))))

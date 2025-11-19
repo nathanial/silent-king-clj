@@ -44,7 +44,7 @@
    (into [:vstack {:gap 2}] rows)])
 
 (defn- summary-content
-  [metrics]
+  [metrics fps-history]
   (let [{:keys [fps frame-time-ms visible-stars visible-hyperlanes draw-calls
                 hyperlane-count widget-count memory-mb total-stars]} metrics]
     [:vstack {:gap 8}
@@ -55,7 +55,14 @@
               (stat-row {:label "Frame Time"
                          :value frame-time-ms
                          :precision 1
-                         :suffix " ms"}))
+                         :suffix " ms"})
+              [:bar-chart {:values (or fps-history [])
+                           :min 0.0
+                           :max 120.0
+                           :bar-gap 2.0
+                           :background-color 0x33171B25
+                           :bar-color accent-color
+                           :bounds {:height 90.0}}])
      (section "Rendering"
               (stat-row {:label "Visible Stars"
                          :value visible-stars
@@ -100,7 +107,7 @@
              :text-color text-color}]])
 
 (defn performance-overlay
-  [{:keys [metrics visible? expanded? bounds]}]
+  [{:keys [metrics visible? expanded? bounds fps-history]}]
   (let [panel-bounds (or bounds default-panel-bounds)]
     (if-not visible?
       (hidden-panel panel-bounds)
@@ -125,7 +132,7 @@
                   :text-color text-color
                   :bounds {:width 60.0 :height 32.0}}]]
        (if expanded?
-         (summary-content metrics)
+         (summary-content metrics fps-history)
          (section "Summary"
                   (stat-row {:label "FPS"
                              :value (:fps metrics)
@@ -136,7 +143,14 @@
                              :suffix " ms"})
                   (stat-row {:label "Draw Calls"
                              :value (:draw-calls metrics)
-                             :precision 0})))
+                             :precision 0})
+                  [:bar-chart {:values (or fps-history [])
+                               :min 0.0
+                               :max 120.0
+                               :bar-gap 2.0
+                               :background-color 0x33171B25
+                               :bar-color accent-color
+                               :bounds {:height 80.0}}]))
        [:button {:label "Reset Metrics"
                  :on-click [:metrics/reset-performance]
                  :background-color accent-color

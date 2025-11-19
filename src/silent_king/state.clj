@@ -31,6 +31,19 @@
    :last-sample-time 0.0
    :latest {}})
 
+(def ^:const max-performance-samples 120)
+
+(defn- append-sample
+  [values sample]
+  (if (number? sample)
+    (let [values (vec (or values []))
+          next (conj values (double sample))
+          excess (- (count next) max-performance-samples)]
+      (if (pos? excess)
+        (vec (subvec next excess))
+        next))
+    (vec (or values []))))
+
 ;; =============================================================================
 ;; Game State Structure
 ;; =============================================================================
@@ -286,6 +299,22 @@
 (defn reset-performance-metrics!
   [game-state]
   (swap! game-state assoc-in [:metrics :performance] default-performance-metrics))
+
+(defn record-performance-metrics!
+  [game-state metrics]
+  (swap! game-state update :metrics
+         (fn [metrics-state]
+           (let [metrics-state (or metrics-state {})
+                 performance (merge default-performance-metrics
+                                    (:performance metrics-state))
+                 fps (:fps metrics)
+                 frame-time (:frame-time-ms metrics)
+                 updated (-> performance
+                             (assoc :latest metrics)
+                             (assoc :last-sample-time (double (or (:current-time metrics) 0.0)))
+                             (update :fps-history append-sample fps)
+                             (update :frame-time-history append-sample frame-time))]
+             (assoc metrics-state :performance updated)))))
 
 ;; =============================================================================
 ;; State Updaters

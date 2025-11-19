@@ -104,6 +104,12 @@
     (and (= :dropdown (:type active))
          (= (:node active) node))))
 
+(defn- clamp01
+  [value]
+  (-> value
+      (max 0.0)
+      (min 1.0)))
+
 (defn- selected-label
   [options value]
   (or (some (fn [opt]
@@ -300,6 +306,57 @@
                        :text-color txt-color
                        :selected-text-color selected-txt-color}))))
 
+(defn- draw-bar-chart
+  [^Canvas canvas node]
+  (let [{:keys [x y width height]} (layout/bounds node)
+        {:keys [values min max bar-gap]} (get-in node [:layout :bar-chart])
+        {:keys [background-color bar-color grid-color baseline-value]} (:props node)
+        background-color (unchecked-int (or background-color 0x3310131C))
+        bar-color (unchecked-int (or bar-color 0xFF9CDCFE))
+        grid-color (unchecked-int (or grid-color 0x33FFFFFF))
+        bars (vec values)
+        count (count bars)
+        safe-width (double (clojure.core/max width 0.0))
+        gap (double (or bar-gap 2.0))
+        total-gap (* gap (clojure.core/max 0 (dec count)))
+        bar-width (if (pos? count)
+                    (clojure.core/max 1.0 (/ (clojure.core/max 0.0 (- safe-width total-gap)) (double count)))
+                    safe-width)
+        min-value min
+        max-value max
+        span (clojure.core/max (- max-value min-value) 1e-6)
+        baseline (double (or baseline-value min-value))
+        baseline-ratio (clamp01 (/ (- baseline min-value) span))
+        baseline-y (+ y (* (- 1.0 baseline-ratio) height))]
+    (with-open [^Paint bg (doto (Paint.)
+                             (.setColor background-color))]
+      (let [rect (Rect/makeXYWH (float x) (float y) (float width) (float height))]
+        (.drawRect canvas rect bg)))
+    (when grid-color
+      (with-open [^Paint grid (doto (Paint.)
+                                (.setColor grid-color)
+                                (.setStrokeWidth 1.0))]
+        (.drawLine canvas (float x)
+                    (float baseline-y)
+                    (float (+ x width))
+                    (float baseline-y)
+                    grid)))
+    (when (pos? count)
+      (with-open [^Paint paint (doto (Paint.)
+                                  (.setColor bar-color))]
+        (doseq [[idx value] (map-indexed vector bars)]
+          (let [ratio (clamp01 (/ (- (double value) min-value) span))
+                bar-height (* ratio height)
+                bar-x (+ x (* idx (+ bar-width gap)))
+                bar-y (+ y (- height bar-height))
+                rect (Rect/makeXYWH (float bar-x)
+                                    (float bar-y)
+                                    (float bar-width)
+                                    (float bar-height))]
+            (.drawRect canvas rect paint)))))
+    )
+  )
+
 (defmethod draw-node :label
   [canvas node]
   (draw-label canvas node))
@@ -323,6 +380,10 @@
 (defmethod draw-node :dropdown
   [canvas node]
   (draw-dropdown canvas node))
+
+(defmethod draw-node :bar-chart
+  [canvas node]
+  (draw-bar-chart canvas node))
 
 (defmethod draw-overlay :dropdown
   [^Canvas canvas {:keys [node selected options padding option-bg selected-bg text-color selected-text-color]}]

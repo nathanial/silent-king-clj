@@ -359,8 +359,8 @@
                    :memory-mb memory-mb
                    :current-time current-time}]
 
-      ;; Store latest metrics for potential external inspection
-      (swap! game-state assoc-in [:metrics :performance :latest] metrics))
+      ;; Store latest metrics and append to history for overlay/chart usage
+      (state/record-performance-metrics! game-state metrics))
 
     ;; Reactified UI overlay
     (react-app/render! canvas {:x 0.0

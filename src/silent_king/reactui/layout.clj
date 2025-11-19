@@ -175,6 +175,42 @@
                              :value snapped-value}}
            :children [])))
 
+(defmethod layout-node :bar-chart
+  [node context]
+  (let [props (:props node)
+        bounds* (resolve-bounds node context)
+        width (double (if (pos? (:width bounds*))
+                        (:width bounds*)
+                        (:width (:bounds context))))
+        height (double (if (pos? (:height bounds*))
+                         (:height bounds*)
+                         80.0))
+        values (mapv (fn [v]
+                       (if (number? v)
+                         (double v)
+                         0.0))
+                     (or (:values props) []))
+        explicit-min (:min props)
+        explicit-max (:max props)
+        auto-min (when (seq values) (apply min values))
+        auto-max (when (seq values) (apply max values))
+        min-value (double (or explicit-min auto-min 0.0))
+        raw-max (double (or explicit-max auto-max min-value))
+        max-value (if (= min-value raw-max)
+                    (+ min-value 1.0)
+                    raw-max)
+        bar-gap (double (max 0.0 (or (:bar-gap props) 2.0)))
+        final-bounds (-> bounds*
+                         (assoc :width width)
+                         (assoc :height height))]
+    (assoc node
+           :layout {:bounds final-bounds
+                    :bar-chart {:values values
+                                :min min-value
+                                :max max-value
+                                :bar-gap bar-gap}}
+           :children [])))
+
 (defmethod layout-node :vstack
   [node context]
   (let [props (:props node)

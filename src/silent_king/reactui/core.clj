@@ -72,6 +72,13 @@
    :props (or props {})
    :children []})
 
+(defn- normalize-bar-chart
+  [props _raw-children]
+  {:type :bar-chart
+   :props (-> (or props {})
+              (update :values #(vec (or % []))))
+   :children []})
+
 (defn normalize-element
   "Normalize a single Hiccup element (vector, string, or number) into the
    internal tree representation {:type keyword :props map :children [...]}."
@@ -99,6 +106,7 @@
         :button (normalize-button props child-forms)
         :slider (normalize-slider props child-forms)
         :dropdown (normalize-dropdown props child-forms)
+        :bar-chart (normalize-bar-chart props child-forms)
         {:type tag*
          :props (or props {})
          :children (->> child-forms

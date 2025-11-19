@@ -101,3 +101,16 @@
       (let [first-option-bounds (:bounds (first options))]
         (is (> (:y first-option-bounds)
                (+ (:y header-bounds) (:height header-bounds))))))))
+
+(deftest bar-chart-layout-derives-range
+  (let [tree (reactui/normalize-tree
+              [:bar-chart {:bounds {:x 8 :y 12 :width 300 :height 120}
+                           :values [10 20 30]}])
+        laid-out (layout/compute-layout tree {:x 0 :y 0 :width 400 :height 300})
+        bounds (layout/bounds laid-out)
+        chart-data (get-in laid-out [:layout :bar-chart])]
+    (is (= 300.0 (:width bounds)))
+    (is (= 120.0 (:height bounds)))
+    (is (= [10.0 20.0 30.0] (:values chart-data)))
+    (is (= 10.0 (:min chart-data)))
+    (is (= 30.0 (:max chart-data)))))

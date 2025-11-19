@@ -28,7 +28,9 @@
 
 (defn performance-overlay-props
   [game-state]
-  (let [metrics (or (get-in @game-state [:metrics :performance :latest]) {})
+  (let [metrics-state (get-in @game-state [:metrics :performance])
+        metrics (or (:latest metrics-state) {})
+        fps-history (vec (or (:fps-history metrics-state) []))
         viewport (state/ui-viewport game-state)
         margin 24.0
         panel-width (double (or (:width performance-overlay/default-panel-bounds) 320.0))
@@ -42,6 +44,7 @@
                    (assoc :x x
                           :y margin))]
     {:metrics metrics
+     :fps-history fps-history
      :bounds bounds
      :visible? (state/performance-overlay-visible? game-state)
      :expanded? (state/performance-overlay-expanded? game-state)}))
