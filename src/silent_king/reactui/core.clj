@@ -387,85 +387,140 @@
         :window-resize true
         false))))
 
+(defmulti pointer-down!
+  "Handle pointer-down per node type. Coordinates are already in logical UI space."
+  (fn [node _game-state _x _y] (:type node)))
+
+(defmethod pointer-down! :slider
+  [node game-state x _y]
+  (capture-node! node)
+  (set-active-interaction! node :slider)
+  (interaction/slider-drag! node game-state x)
+  true)
+
+(defmethod pointer-down! :button
+  [node _game-state _x _y]
+  (capture-node! node)
+  (set-active-interaction! node :button)
+  true)
+
+(defmethod pointer-down! :dropdown
+  [node _game-state x y]
+  (when-let [region (interaction/dropdown-region node x y)]
+    (capture-node! node)
+    (case (:type region)
+      :option (set-active-interaction! node :dropdown-option {:bounds (:bounds region)
+                                                             :value (:value region)})
+      :header (set-active-interaction! node :dropdown {:bounds (:bounds region)}))
+    true))
+
+(defmethod pointer-down! :minimap
+  [node game-state x y]
+  (let [interaction (assoc (minimap-interaction-value node x y)
+                           :start-pointer {:x x :y y})]
+    (capture-node! node)
+    (set-active-interaction! node :minimap {:value interaction})
+    (when (= :viewport-drag (:mode interaction))
+      (handle-minimap-pan! node game-state x y interaction))
+    true))
+
+(defmethod pointer-down! :window
+  [node game-state x y]
+  (handle-window-pointer-down! node game-state x y))
+
+(defmethod pointer-down! :default
+  [_ _ _ _]
+  false)
+
+(defmulti pointer-up!
+  "Handle pointer-up for a captured node type. Coordinates are in logical UI space."
+  (fn [node _game-state _x _y] (:type node)))
+
+(defmethod pointer-up! :button
+  [node game-state x y]
+  (interaction/activate-button! node game-state x y))
+
+(defmethod pointer-up! :slider
+  [node game-state x _y]
+  (interaction/slider-drag! node game-state x))
+
+(defmethod pointer-up! :dropdown
+  [node game-state x y]
+  (interaction/dropdown-click! node game-state x y))
+
+(defmethod pointer-up! :minimap
+  [node game-state x y]
+  (let [interaction (some-> (active-interaction) :value)]
+    (when (= :click (:mode interaction))
+      (handle-minimap-pan! node game-state x y interaction))
+    true))
+
+(defmethod pointer-up! :window
+  [node game-state x y]
+  (handle-window-pointer-up! node game-state x y))
+
+(defmethod pointer-up! :default
+  [_ _ _ _]
+  nil)
+
+(defmulti pointer-drag!
+  "Handle pointer-drag for a captured node type. Coordinates are in logical UI space."
+  (fn [node _game-state _x _y] (:type node)))
+
+(defmethod pointer-drag! :slider
+  [node game-state x _y]
+  (interaction/slider-drag! node game-state x)
+  true)
+
+(defmethod pointer-drag! :minimap
+  [node game-state x y]
+  (let [interaction (some-> (active-interaction) :value)
+        {:keys [mode start-pointer]} interaction]
+    (case mode
+      :viewport-drag (do
+                       (handle-minimap-pan! node game-state x y interaction)
+                       true)
+      :click (do
+               (when (and start-pointer
+                          (>= (pointer-distance start-pointer {:x x :y y})
+                              minimap-window-drag-threshold))
+                 (delegate-minimap-drag-to-window! node x y))
+               true)
+      true)))
+
+(defmethod pointer-drag! :window
+  [node game-state x y]
+  (handle-window-pointer-drag! node game-state x y))
+
+(defmethod pointer-drag! :default
+  [_ _ _ _]
+  false)
+
 (defn handle-pointer-down!
   [game-state x y]
-  (let [scale (scale-factor game-state)]
+  (let [scale (scale-factor game-state)
+        logical-x (/ (double x) scale)
+        logical-y (/ (double y) scale)]
     (clear-active-interaction!)
     (when-let [layout-tree (current-layout)]
-      (when-let [node (interaction/node-at layout-tree
-                                           (/ (double x) scale)
-                                           (/ (double y) scale))]
-        (case (:type node)
-          :slider (do
-                    (capture-node! node)
-                    (set-active-interaction! node :slider)
-                    (interaction/slider-drag! node game-state (/ (double x) scale))
-                    true)
-          :button (do
-                    (capture-node! node)
-                    (set-active-interaction! node :button)
-                    true)
-          :dropdown (when-let [region (interaction/dropdown-region node (/ (double x) scale) (/ (double y) scale))]
-                      (capture-node! node)
-                      (case (:type region)
-                        :option (set-active-interaction! node :dropdown-option {:bounds (:bounds region)
-                                                                              :value (:value region)})
-                        :header (set-active-interaction! node :dropdown {:bounds (:bounds region)}))
-                      true)
-          :minimap (let [logical-x (/ (double x) scale)
-                         logical-y (/ (double y) scale)
-                         interaction (assoc (minimap-interaction-value node logical-x logical-y)
-                                            :start-pointer {:x logical-x :y logical-y})]
-                     (capture-node! node)
-                     (set-active-interaction! node :minimap {:value interaction})
-                     (when (= :viewport-drag (:mode interaction))
-                       (handle-minimap-pan! node game-state logical-x logical-y interaction))
-                     true)
-          :window (handle-window-pointer-down! node game-state (/ (double x) scale) (/ (double y) scale))
-          false)))))
+      (when-let [node (interaction/node-at layout-tree logical-x logical-y)]
+        (pointer-down! node game-state logical-x logical-y)))))
 
 (defn handle-pointer-up!
   [game-state x y]
-  (let [scale (scale-factor game-state)]
+  (let [scale (scale-factor game-state)
+        logical-x (/ (double x) scale)
+        logical-y (/ (double y) scale)]
     (when-let [node (captured-node)]
-      (case (:type node)
-        :button (interaction/activate-button! node game-state (/ (double x) scale) (/ (double y) scale))
-        :slider (interaction/slider-drag! node game-state (/ (double x) scale))
-        :dropdown (interaction/dropdown-click! node game-state (/ (double x) scale) (/ (double y) scale))
-        :minimap (let [logical-x (/ (double x) scale)
-                        logical-y (/ (double y) scale)
-                        interaction (some-> (active-interaction) :value)]
-                    (when (= :click (:mode interaction))
-                      (handle-minimap-pan! node game-state logical-x logical-y interaction))
-                    true)
-        :window (handle-window-pointer-up! node game-state (/ (double x) scale) (/ (double y) scale))
-        nil)))
+      (pointer-up! node game-state logical-x logical-y)))
   (release-capture!)
   (clear-active-interaction!)
   nil)
 
 (defn handle-pointer-drag!
   [game-state x y]
-  (let [scale (scale-factor game-state)]
+  (let [scale (scale-factor game-state)
+        logical-x (/ (double x) scale)
+        logical-y (/ (double y) scale)]
     (when-let [node (captured-node)]
-      (case (:type node)
-        :slider (do
-                  (interaction/slider-drag! node game-state (/ (double x) scale))
-                  true)
-        :minimap (let [logical-x (/ (double x) scale)
-                        logical-y (/ (double y) scale)
-                        interaction (some-> (active-interaction) :value)
-                        {:keys [mode start-pointer]} interaction]
-                    (case mode
-                      :viewport-drag (do
-                                       (handle-minimap-pan! node game-state logical-x logical-y interaction)
-                                       true)
-                      :click (do
-                               (when (and start-pointer
-                                          (>= (pointer-distance start-pointer {:x logical-x :y logical-y})
-                                              minimap-window-drag-threshold))
-                                 (delegate-minimap-drag-to-window! node logical-x logical-y))
-                               true)
-                      true))
-        :window (handle-window-pointer-drag! node game-state (/ (double x) scale) (/ (double y) scale))
-        false))))
+      (pointer-drag! node game-state logical-x logical-y))))
