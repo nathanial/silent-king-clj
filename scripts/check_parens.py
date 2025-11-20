@@ -38,6 +38,20 @@ class ParenEntry:
     form: str
 
 
+def _safe_line(lines: Sequence[str], line: int) -> Optional[str]:
+    """Return the given 1-based line from `lines`, or None if out of range."""
+    if 1 <= line <= len(lines):
+        return lines[line - 1].rstrip("\n")
+    return None
+
+
+def _pointer(col: int) -> str:
+    """Return a caret line pointing at `col` (1-based)."""
+    if col < 1:
+        col = 1
+    return " " * (col - 1) + "^"
+
+
 def gather_files(paths: Sequence[str]) -> Tuple[List[Path], List[str]]:
     files: List[Path] = []
     missing: List[str] = []
@@ -112,6 +126,7 @@ def check_file(path: Path) -> List[str]:
     except OSError as exc:
         return [f"{path}: unable to read file ({exc})"]
 
+    lines = text.splitlines()
     stack: List[ParenEntry] = []
     errors: List[str] = []
     line = 1
@@ -167,17 +182,54 @@ def check_file(path: Path) -> List[str]:
         if ch in CLOSING:
             if not stack:
                 errors.append(
-                    f"{path}:{line}:{col} unexpected '{ch}' (outside any open form)"
+                    "\n".join(
+                        [
+                            f"{path}:{line}:{col}: unexpected closing '{ch}' with no matching opening delimiter.",
+                            *(  # show a small code snippet if possible
+                                []
+                                if (snippet_line := _safe_line(lines, line)) is None
+                                else [
+                                    f"      {snippet_line}",
+                                    f"      {_pointer(col)}",
+                                ]
+                            ),
+                            f"      Hint: remove this '{ch}' or add the matching '{CLOSING[ch]}' earlier in the same form.",
+                        ]
+                    )
                 )
                 idx += 1
                 continue
 
             entry = stack.pop()
             expected_open = CLOSING[ch]
+            expected_close_for_entry = OPENING[entry.char]
+            close_snippet = _safe_line(lines, line)
+            open_snippet = _safe_line(lines, entry.line)
             if entry.char != expected_open:
-                errors.append(
-                    f"{path}:{line}:{col} closing '{ch}' expected to match '{expected_open}' but last open was '{entry.char}' from {entry.form} (line {entry.line}, col {entry.col})"
+                snippet_lines: List[str] = [
+                    f"{path}:{line}:{col}: mismatched closing '{ch}'.",
+                    f"      Expected to close '{entry.char}' opened in {entry.form} at line {entry.line}, col {entry.col}.",
+                ]
+                if close_snippet is not None:
+                    snippet_lines.extend(
+                        [
+                            "      At close:",
+                            f"        {close_snippet}",
+                            f"        {_pointer(col)}",
+                        ]
+                    )
+                if open_snippet is not None:
+                    snippet_lines.extend(
+                        [
+                            "      At open :",
+                            f"        {open_snippet}",
+                            f"        {_pointer(entry.col)}",
+                        ]
+                    )
+                snippet_lines.append(
+                    f"      Hint: use '{expected_close_for_entry}' to close '{entry.char}', or adjust delimiters so they pair correctly."
                 )
+                errors.append("\n".join(snippet_lines))
             idx += 1
             if not stack:
                 current_form = "top-level"
@@ -188,7 +240,20 @@ def check_file(path: Path) -> List[str]:
     if stack:
         for entry in reversed(stack):
             errors.append(
-                f"{path}:{entry.line}:{entry.col} open '{entry.char}' was never closed (inside {entry.form})"
+                "\n".join(
+                    [
+                        f"{path}:{entry.line}:{entry.col}: unclosed '{entry.char}' (inside {entry.form}).",
+                        *(  # show a small code snippet if possible
+                            []
+                            if (snippet_line := _safe_line(lines, entry.line)) is None
+                            else [
+                                f"      {snippet_line}",
+                                f"      {_pointer(entry.col)}",
+                            ]
+                        ),
+                        f"      Hint: add a matching '{OPENING[entry.char]}' after this point, or remove the opening '{entry.char}'.",
+                    ]
+                )
             )
 
     return errors

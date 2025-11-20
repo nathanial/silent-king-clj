@@ -43,23 +43,23 @@
     (.dispose g)
     scaled))
 
-(defn process-star-image [^File file tile-size]
-  "Load, remove black background, and downscale a star image"
+(defn process-image [^File file tile-size]
+  "Load, remove black background, and downscale an image"
   (let [^BufferedImage original (ImageIO/read file)
         ^BufferedImage no-bg (remove-black-background original)
         ^BufferedImage scaled (downscale-image no-bg tile-size)]
     {:name (.getName file)
      :image scaled}))
 
-(defn create-atlas [star-images tile-size atlas-size]
-  "Pack star images into a single atlas texture"
+(defn create-atlas [images tile-size atlas-size]
+  "Pack images into a single atlas texture"
   (let [tiles-per-row (/ atlas-size tile-size)
         ^BufferedImage atlas (BufferedImage. atlas-size atlas-size BufferedImage/TYPE_INT_ARGB)
         ^Graphics2D g (.createGraphics atlas)
         metadata (atom [])]
 
     ;; Draw each star into the atlas grid
-    (doseq [[idx {:keys [name ^BufferedImage image]}] (map-indexed vector star-images)]
+    (doseq [[idx {:keys [name ^BufferedImage image]}] (map-indexed vector images)]
       (let [row (quot idx tiles-per-row)
             col (rem idx tiles-per-row)
             x (* col tile-size)
@@ -99,41 +99,49 @@
                     (Integer/parseInt (first args))
                     256)
         output-image-path (if (>= (count args) 2)
-                           (nth args 1)
-                           "assets/star-atlas.png")
+                            (nth args 1)
+                            "assets/star-atlas.png")
         output-json-path (if (>= (count args) 3)
-                          (nth args 2)
-                          "assets/star-atlas.json")
+                           (nth args 2)
+                           "assets/star-atlas.json")
         atlas-size (if (>= (count args) 4)
                      (Integer/parseInt (nth args 3))
                      4096)
+        input-dir-path (if (>= (count args) 5)
+                         (nth args 4)
+                         "assets/stars")
         tiles-per-row (/ atlas-size tile-size)]
 
-    (println "Star Atlas Generator")
-    (println "====================")
+    (println "Texture Atlas Generator")
+    (println "=======================")
     (println (format "Tile size: %dx%d" tile-size tile-size))
     (println (format "Output image: %s" output-image-path))
     (println (format "Output metadata: %s" output-json-path))
+    (println (format "Input directory: %s" input-dir-path))
 
-    ;; Load all star images
-    (println "\nLoading star images from assets/stars/...")
-    (let [star-files (sort (.listFiles (File. "assets/stars")))
-          png-files (filter #(.endsWith (.getName ^File %) ".png") star-files)]
+    ;; Load all PNG images from input directory
+    (println (format "\nLoading images from %s..." input-dir-path))
+    (let [input-dir (File. input-dir-path)
+          image-files (sort (.listFiles input-dir))
+          png-files (filter (fn [^File f]
+                              (let [name (.toLowerCase (.getName f))]
+                                (.endsWith name ".png")))
+                            image-files)]
 
-      (println (format "Found %d star images" (count png-files)))
+      (println (format "Found %d PNG images" (count png-files)))
 
       ;; Process images
       (println "\nProcessing images (removing backgrounds and downscaling)...")
-      (let [processed-stars (vec (map-indexed
-                                   (fn [idx file]
-                                     (when (zero? (mod idx 10))
-                                       (println (format "  Processing %d/%d..." (inc idx) (count png-files))))
-                                     (process-star-image file tile-size))
-                                   png-files))]
+      (let [processed-images (vec (map-indexed
+                                    (fn [idx file]
+                                      (when (zero? (mod idx 10))
+                                        (println (format "  Processing %d/%d..." (inc idx) (count png-files))))
+                                      (process-image file tile-size))
+                                    png-files))]
 
         ;; Create atlas
         (println "\nCreating texture atlas...")
-        (let [{:keys [atlas metadata]} (create-atlas processed-stars tile-size atlas-size)]
+        (let [{:keys [atlas metadata]} (create-atlas processed-images tile-size atlas-size)]
 
           ;; Save atlas image
           (println (format "Saving atlas to %s..." output-image-path))
@@ -143,8 +151,8 @@
           (println (format "Saving metadata to %s..." output-json-path))
           (save-metadata metadata output-json-path)
 
-          (println (format "\nDone! Created %dx%d atlas with %d stars"
-                          atlas-size atlas-size (count metadata)))
+          (println (format "\nDone! Created %dx%d atlas with %d sprites"
+                           atlas-size atlas-size (count metadata)))
           (println (format "Atlas can hold up to %d images" (* tiles-per-row tiles-per-row))))))))
 
 (apply -main *command-line-args*)
