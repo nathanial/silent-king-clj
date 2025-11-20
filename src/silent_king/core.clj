@@ -8,6 +8,7 @@
             [silent-king.galaxy :as galaxy]
             [silent-king.hyperlanes :as hyperlanes]
             [silent-king.voronoi :as voronoi]
+            [silent-king.regions :as regions]
             [nrepl.server :as nrepl]
             [cider.nrepl :refer [cider-nrepl-handler]])
   (:import [org.lwjgl.glfw GLFW GLFWErrorCallback GLFWCursorPosCallbackI GLFWMouseButtonCallbackI GLFWScrollCallbackI GLFWKeyCallbackI]
@@ -432,6 +433,10 @@
         (swap! game-state assoc-in [:debug :voronoi-rendered] voronoi-rendered))
       (swap! game-state assoc-in [:debug :voronoi-rendered] 0))
 
+    ;; Draw Region names
+    (when (seq (state/regions game-state))
+      (regions/draw-regions canvas zoom pan-x pan-y game-state))
+
     ;; Draw orbit rings then planets (planets on top of rings)
     (when render-planets?
       (doseq [{:keys [screen-radius star-screen-x star-screen-y ring-visible?]} visible-planets]
@@ -622,6 +627,9 @@
 
         ;; Generate hyperlane connections using Delaunay triangulation
         (hyperlanes/generate-hyperlanes! game-state)
+
+        ;; Generate regions using "Void Carver" on hyperlanes
+        (regions/generate-regions! game-state)
 
         ;; Generate Voronoi cells overlay from the same star set
         (voronoi/generate-voronoi! game-state))

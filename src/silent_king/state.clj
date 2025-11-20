@@ -53,9 +53,9 @@
 
 (def default-voronoi-settings
   {:enabled? true
-   :opacity 0.8
+   :opacity 0.5
    :line-width 2.0
-   :color-scheme :monochrome
+   :color-scheme :by-region
    :show-centroids? false
    :hide-border-cells? false
    :relax-iterations 0
@@ -97,6 +97,7 @@
    :planets {}
    :hyperlanes []
    :voronoi-cells {}
+   :regions {}
    :neighbors-by-star-id {}
    :next-star-id 0
    :next-planet-id 0
@@ -208,6 +209,11 @@
   [game-state]
   (:voronoi-cells @game-state))
 
+(defn regions
+  "Return the map of regions keyed by region id."
+  [game-state]
+  (:regions @game-state))
+
 (defn neighbors-by-star-id
   "Return adjacency map of star id -> neighbors."
   [game-state]
@@ -233,6 +239,11 @@
   [game-state cells]
   (swap! game-state assoc :voronoi-cells (or cells {})))
 
+(defn set-regions!
+  "Replace regions map on game-state."
+  [game-state regions]
+  (swap! game-state assoc :regions (or regions {})))
+
 (defn set-neighbors!
   "Replace neighbors-by-star-id map on game-state."
   [game-state neighbors]
@@ -248,6 +259,7 @@
                (assoc :planets (or planets {}))
                (assoc :hyperlanes (vec (or hyperlanes [])))
                (assoc :voronoi-cells (or voronoi-cells {}))
+               (assoc :regions {})
                (assoc :voronoi-generated? (boolean voronoi-generated?))
                (assoc :neighbors-by-star-id (or neighbors-by-star-id {}))
                (assoc :next-star-id (long (or next-star-id 0)))

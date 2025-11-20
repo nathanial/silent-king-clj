@@ -42,7 +42,8 @@
                {:stroke 0xFF7CC86B :fill 0x337CC86B}
                {:stroke 0xFF5BC0EB :fill 0x335BC0EB}
                {:stroke 0xFF9A7FFB :fill 0x339A7FFB}
-               {:stroke 0xFFD86FFF :fill 0x33D86FFF}]})
+               {:stroke 0xFFD86FFF :fill 0x33D86FFF}]
+   :by-region []}) ;; Empty vector acts as a flag for region-based coloring
 
 (defn- clamp
   [value min-value max-value]
@@ -310,6 +311,16 @@
                {:x (camera/transform-position (double x) zoom pan-x)
                 :y (camera/transform-position (double y) zoom pan-y)}))))
 
+(defn- get-region-color
+  [game-state star-id]
+  (let [regions (state/regions game-state)]
+    (or (some (fn [[_ {:keys [color star-ids]}]]
+                (when (contains? star-ids star-id)
+                  color))
+              regions)
+        ;; Default color for unregioned space (dark grey)
+        0xFF303030)))
+
 (defn draw-voronoi-cells
   "Draw Voronoi overlay with LOD and culling. Returns count of rendered cells."
   [^Canvas canvas width height zoom pan-x pan-y game-state current-time]
@@ -321,17 +332,27 @@
         show-centroids? (boolean (:show-centroids? settings))
         hide-border? (boolean (:hide-border-cells? settings))
         palette (palette-for-settings settings)
+        color-scheme (:color-scheme settings)
+        
         neighbors (state/neighbors-by-star-id game-state)
         ;; Greedy graph coloring so adjacent cells use different palette entries.
-        cell-colors (reduce (fn [acc star-id]
-                              (let [neighbor-ids (map :neighbor-id (get neighbors star-id))
-                                    neighbor-colors (->> neighbor-ids (keep acc) set)
-                                    chosen (or (some (fn [c] (when-not (neighbor-colors c) c)) palette)
-                                               (first palette))]
-                                (assoc acc star-id chosen)))
-                            {}
-                            (sort (keys cells)))
-        centroid-color (apply-opacity (:stroke (first palette)) 1.0)
+        cell-colors (if (= :by-region color-scheme)
+                      ;; Region coloring mode
+                      (into {} (map (fn [star-id]
+                                      [star-id {:fill (get-region-color game-state star-id)
+                                                :stroke (get-region-color game-state star-id)}])
+                                    (keys cells)))
+                      ;; Standard palette coloring
+                      (reduce (fn [acc star-id]
+                                (let [neighbor-ids (map :neighbor-id (get neighbors star-id))
+                                      neighbor-colors (->> neighbor-ids (keep acc) set)
+                                      chosen (or (some (fn [c] (when-not (neighbor-colors c) c)) palette)
+                                                 (first palette))]
+                                  (assoc acc star-id chosen)))
+                              {}
+                              (sort (keys cells))))
+        
+        centroid-color (apply-opacity (:stroke (get cell-colors (first (keys cells)) (first palette))) 1.0)
         stroke-paint (doto (Paint.)
                        (.setMode PaintMode/STROKE)
                        (.setStrokeCap PaintStrokeCap/ROUND)
