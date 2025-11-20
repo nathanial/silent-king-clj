@@ -13,12 +13,25 @@
 (def ^:const ^double epsilon 1.0e-6)
 
 (def ^:private color-schemes
-  {:monochrome {:stroke 0xFF7FA5FF   ;; soft blue outline for contrast
-                :fill 0x55FFFFFF}    ;; lighter fill to reveal borders
-   :by-density {:stroke 0xFF66FFCC
-                :fill 0x5566FFCC}
-   :by-degree {:stroke 0xFFFFC36F
-               :fill 0x55FFC36F}})
+  ;; Palettes are vectors so we can graph-color neighboring cells differently.
+  {:monochrome [{:stroke 0xFF7FA5FF :fill 0x33FFFFFF}
+                {:stroke 0xFF5FD7FF :fill 0x33E9FBFF}
+                {:stroke 0xFF7FE5B5 :fill 0x33E4FFE1}
+                {:stroke 0xFFDBA7FF :fill 0x33F4E1FF}
+                {:stroke 0xFFFFC36F :fill 0x33FFE7C0}
+                {:stroke 0xFFFF8A7A :fill 0x33FFD7CF}]
+   :by-density [{:stroke 0xFF3ED8A2 :fill 0x333ED8A2}
+                {:stroke 0xFF21A6F3 :fill 0x3321A6F3}
+                {:stroke 0xFF7A6BFF :fill 0x337A6BFF}
+                {:stroke 0xFFF27CC2 :fill 0x33F27CC2}
+                {:stroke 0xFFFFB347 :fill 0x33FFB347}
+                {:stroke 0xFF4BD6C0 :fill 0x334BD6C0}]
+   :by-degree [{:stroke 0xFFE86F4F :fill 0x33E86F4F}
+               {:stroke 0xFFF2B14C :fill 0x33F2B14C}
+               {:stroke 0xFF7CC86B :fill 0x337CC86B}
+               {:stroke 0xFF5BC0EB :fill 0x335BC0EB}
+               {:stroke 0xFF9A7FFB :fill 0x339A7FFB}
+               {:stroke 0xFFD86FFF :fill 0x33D86FFF}]})
 
 (defn- clamp
   [value min-value max-value]
@@ -35,6 +48,11 @@
         out-alpha (int (Math/round (* 255.0 base-frac (clamp opacity 0.0 1.0))))
         rgb (bit-and color 0x00FFFFFF)]
     (unchecked-int (bit-or (bit-shift-left out-alpha 24) rgb))))
+
+(defn- palette-for-settings
+  [{:keys [color-scheme]}]
+  (let [scheme (get color-schemes color-scheme (:monochrome color-schemes))]
+    (if (sequential? scheme) (vec scheme) [scheme])))
 
 (defn- coord->map
   [^Coordinate coord]
@@ -235,17 +253,23 @@
         opacity (clamp (:opacity settings 0.35) 0.05 1.0)
         line-width (clamp (:line-width settings 1.4) 0.5 4.0)
         show-centroids? (boolean (:show-centroids? settings))
-        palette (get color-schemes (:color-scheme settings) (:monochrome color-schemes))
-        stroke-color (apply-opacity (:stroke palette) (max 0.8 opacity))
-        fill-color (apply-opacity (:fill palette) 1.0)
-        centroid-color (apply-opacity (:stroke palette) 1.0)
+        palette (palette-for-settings settings)
+        neighbors (state/neighbors-by-star-id game-state)
+        ;; Greedy graph coloring so adjacent cells use different palette entries.
+        cell-colors (reduce (fn [acc star-id]
+                              (let [neighbor-ids (map :neighbor-id (get neighbors star-id))
+                                    neighbor-colors (->> neighbor-ids (keep acc) set)
+                                    chosen (or (some (fn [c] (when-not (neighbor-colors c) c)) palette)
+                                               (first palette))]
+                                (assoc acc star-id chosen)))
+                            {}
+                            (sort (keys cells)))
+        centroid-color (apply-opacity (:stroke (first palette)) 1.0)
         stroke-paint (doto (Paint.)
-                       (.setColor (int stroke-color))
                        (.setMode PaintMode/STROKE)
                        (.setStrokeCap PaintStrokeCap/ROUND)
                        (.setAntiAlias true))
         fill-paint (doto (Paint.)
-                     (.setColor (int fill-color))
                      (.setMode PaintMode/FILL)
                      (.setAntiAlias true))
         centroid-paint (doto (Paint.)
@@ -257,17 +281,18 @@
                               (max 1.5 (camera/transform-size line-width zoom)))]
     (try
       (if (and canvas (seq cells))
-        (let [visible-cells (keep (fn [[_ {:keys [vertices centroid]}]]
+        (let [visible-cells (keep (fn [[star-id {:keys [vertices centroid]}]]
                                     (when (seq vertices)
                                       (let [screen-verts (->> (transform-vertices vertices zoom pan-x pan-y)
                                                               (filter valid-vertex?)
                                                               vec)]
                                         {:screen-verts screen-verts
+                                         :color (get cell-colors star-id (first palette))
                                          :centroid centroid})))
                                   cells)]
 
           ;; Pass 1: fills
-          (doseq [{:keys [screen-verts centroid]} visible-cells]
+          (doseq [{:keys [screen-verts centroid color]} visible-cells]
             (let [n (count screen-verts)]
               (cond
                 (>= n 3)
@@ -277,6 +302,7 @@
                     (doseq [{:keys [x y]} (rest screen-verts)]
                       (.lineTo path (float x) (float y)))
                     (.closePath path)
+                    (.setColor fill-paint (int (apply-opacity (:fill color) opacity)))
                     (.drawPath canvas path fill-paint)
                     (.close path)
                     (swap! rendered inc)))
@@ -293,14 +319,16 @@
                   (let [{cx :x cy :y} centroid
                         sx (camera/transform-position (double cx) zoom pan-x)
                         sy (camera/transform-position (double cy) zoom pan-y)]
+                    (.setColor fill-paint (int (apply-opacity (:fill color) opacity)))
                     (.drawCircle canvas (float sx) (float sy) 6.0 fill-paint)
                     (swap! rendered inc))))))
 
           ;; Pass 2: strokes (after fills so borders stay visible)
-          (doseq [{:keys [screen-verts centroid]} visible-cells]
+          (doseq [{:keys [screen-verts centroid color]} visible-cells]
             (let [lw (stroke-width-screen)
                   n (count screen-verts)]
               (.setStrokeWidth stroke-paint (float lw))
+              (.setColor stroke-paint (int (apply-opacity (:stroke color) (max 0.7 opacity))))
               (cond
                 (>= n 3)
                 (when-let [{:keys [x y]} (first screen-verts)]
