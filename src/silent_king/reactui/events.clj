@@ -160,6 +160,12 @@
   (state/set-voronoi-setting! game-state :show-centroids? (boolean value))
   nil)
 
+(defmethod dispatch-event! :voronoi/set-hide-border-cells?
+  [game-state [_ value]]
+  (state/set-voronoi-setting! game-state :hide-border-cells? (boolean value))
+  (voronoi/generate-voronoi! game-state)
+  nil)
+
 (defmethod dispatch-event! :voronoi/reset
   [game-state _]
   (state/reset-voronoi-settings! game-state)

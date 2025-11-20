@@ -13,6 +13,7 @@
 (def ^:const ^double epsilon 1.0e-6)
 (def ^:const ^long relax-iterations-max 5)
 (def ^:const ^double relax-convergence-epsilon 1.0e-3)
+(def ^:const ^double border-epsilon 1.0e-3)
 
 (def ^:private default-relax-config
   {:iterations 0
@@ -128,6 +129,25 @@
               valid)
       {:min-x 0.0 :min-y 0.0 :max-x 0.0 :max-y 0.0})))
 
+(defn- on-envelope?
+  "Return true if any vertex (or centroid fallback) lies on the clip envelope edge within tolerance."
+  [{:keys [vertices centroid]} ^Envelope env]
+  (when (and env (not (.isNull env)))
+    (let [min-x (.getMinX env)
+          max-x (.getMaxX env)
+          min-y (.getMinY env)
+          max-y (.getMaxY env)
+          touches? (fn [{:keys [x y]}]
+                     (let [x (double (or x 0.0))
+                           y (double (or y 0.0))]
+                       (or (<= (Math/abs (- x min-x)) border-epsilon)
+                           (<= (Math/abs (- x max-x)) border-epsilon)
+                           (<= (Math/abs (- y min-y)) border-epsilon)
+                           (<= (Math/abs (- y max-y)) border-epsilon))))]
+      (boolean
+       (or (some touches? vertices)
+           (when centroid (touches? centroid)))))))
+
 (defn- expand-envelope
   [^Envelope env]
   (when (and env (not (.isNull env)))
@@ -225,7 +245,9 @@
 
                           :else
                           (nearest-site sites centroid-map))
-                   cell (when site (polygon->cell poly site))
+                   cell (when site
+                          (let [cell (polygon->cell poly site)]
+                            (assoc cell :on-envelope? (on-envelope? cell env))))
                    acc* (if (and cell (:star-id cell))
                           (assoc acc (:star-id cell) cell)
                           acc)]
@@ -297,6 +319,7 @@
         opacity (clamp (:opacity settings 0.35) 0.05 1.0)
         line-width (clamp (:line-width settings 1.4) 0.5 4.0)
         show-centroids? (boolean (:show-centroids? settings))
+        hide-border? (boolean (:hide-border-cells? settings))
         palette (palette-for-settings settings)
         neighbors (state/neighbors-by-star-id game-state)
         ;; Greedy graph coloring so adjacent cells use different palette entries.
@@ -325,8 +348,9 @@
                               (max 1.5 (camera/transform-size line-width zoom)))]
     (try
       (if (and canvas (seq cells))
-        (let [visible-cells (keep (fn [[star-id {:keys [vertices centroid]}]]
-                                    (when (seq vertices)
+        (let [visible-cells (keep (fn [[star-id {:keys [vertices centroid on-envelope?]}]]
+                                    (when (and (seq vertices)
+                                               (not (and hide-border? on-envelope?)))
                                       (let [screen-verts (->> (transform-vertices vertices zoom pan-x pan-y)
                                                               (filter valid-vertex?)
                                                               vec)]

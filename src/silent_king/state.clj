@@ -57,6 +57,7 @@
    :line-width 2.0
    :color-scheme :monochrome
    :show-centroids? false
+   :hide-border-cells? false
    :relax-iterations 0
    :relax-step 1.0
    :relax-max-displacement 250.0

@@ -82,7 +82,8 @@
 
 (defn- settings-content
   [{:keys [enabled? opacity line-width color-scheme show-centroids?
-           relax-iterations relax-step relax-max-displacement relax-clip-to-envelope?]}
+           relax-iterations relax-step relax-max-displacement relax-clip-to-envelope?
+           hide-border-cells?]}
    {:keys [color-dropdown-expanded?]}]
   [:vstack {:gap 10}
    [:label {:text "Visibility"
@@ -110,6 +111,11 @@
    (toggle-button (if show-centroids? "Hide Centroids" "Show Centroids")
                   [:voronoi/set-show-centroids? (not show-centroids?)]
                   show-centroids?)
+   (toggle-button (if hide-border-cells?
+                    "Show Border Cells"
+                    "Hide Border Cells")
+                  [:voronoi/set-hide-border-cells? (not hide-border-cells?)]
+                  hide-border-cells?)
    [:label {:text "Relaxation (Lloyd)"
             :color muted-color
             :padding {:top 4}}]

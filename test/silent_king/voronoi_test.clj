@@ -39,6 +39,15 @@
     (state/reset-voronoi-settings! game-state)
     (is (= state/default-voronoi-settings (:voronoi-settings @game-state)))))
 
+(deftest voronoi-cells-flag-envelope
+  (let [stars [{:id 1 :x 0.0 :y 0.0}
+               {:id 2 :x 200.0 :y 0.0}
+               {:id 3 :x 100.0 :y 150.0}]
+        {:keys [voronoi-cells]} (voronoi/generate-voronoi stars)]
+    (is (seq voronoi-cells))
+    (doseq [[_ cell] voronoi-cells]
+      (is (contains? cell :on-envelope?)))))
+
 (deftest relax-sites-once-moves-toward-centroid
   (let [stars [{:id 1 :x 0.0 :y 0.0}
                {:id 2 :x 150.0 :y 20.0}

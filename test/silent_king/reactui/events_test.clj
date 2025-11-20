@@ -70,6 +70,8 @@
     (is (= :by-degree (:color-scheme (state/voronoi-settings game-state))))
     (events/dispatch-event! game-state [:voronoi/set-show-centroids? true])
     (is (true? (:show-centroids? (state/voronoi-settings game-state))))
+    (events/dispatch-event! game-state [:voronoi/set-hide-border-cells? true])
+    (is (true? (:hide-border-cells? (state/voronoi-settings game-state))))
     (events/dispatch-event! game-state [:voronoi/set-relax-iterations 10])
     (is (= state/relax-iterations-limit (:relax-iterations (state/voronoi-settings game-state))))
     (events/dispatch-event! game-state [:voronoi/set-relax-step -1.0])
