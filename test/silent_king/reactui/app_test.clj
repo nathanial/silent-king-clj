@@ -43,6 +43,12 @@
   (find-node-by tree (fn [node]
                        (= :dropdown (:type node)))))
 
+(defn- find-dropdown-by-id
+  [tree dropdown-id]
+  (find-node-by tree (fn [node]
+                       (and (= :dropdown (:type node))
+                            (= dropdown-id (get-in node [:props :id]))))))
+
 (defn- find-bar-chart
   [tree]
   (find-node-by tree (fn [node]
@@ -65,9 +71,11 @@
     (swap! game-state assoc-in [:metrics :performance :latest]
            {:fps 55.5 :visible-stars 123 :draw-calls 900})
     (state/toggle-hyperlanes! game-state)
+    (state/set-voronoi-setting! game-state :enabled? true)
     (let [props (app/control-panel-props game-state)]
       (is (= 2.5 (:zoom props)))
       (is (false? (:hyperlanes-enabled? props)))
+      (is (true? (:voronoi-enabled? props)))
       (is (= 55.5 (get-in props [:metrics :fps])))
       (is (= 123 (get-in props [:metrics :visible-stars])))
       (is (= 2.0 (:ui-scale props))))))
@@ -83,6 +91,14 @@
     (doseq [event button-events]
       (events/dispatch-event! game-state event))
     (is (false? (state/hyperlanes-enabled? game-state)))
+    (let [voronoi-button (find-button-with-event tree [:ui/toggle-voronoi])
+          voronoi-bounds (layout/bounds voronoi-button)
+          vx (+ (:x voronoi-bounds) (/ (:width voronoi-bounds) 2.0))
+          vy (+ (:y voronoi-bounds) (/ (:height voronoi-bounds) 2.0))
+          voronoi-events (interaction/click->events tree vx vy)]
+      (doseq [event voronoi-events]
+        (events/dispatch-event! game-state event)))
+    (is (false? (state/voronoi-enabled? game-state)))
     (let [zoom-slider (find-slider-with-event tree [:ui/set-zoom])
           scale-slider (find-slider-with-event tree [:ui/set-scale])
           zoom-track (get-in zoom-slider [:layout :slider :track])
@@ -112,10 +128,22 @@
       (events/dispatch-event! game-state event))
     (is (= 1.0 (:opacity (state/hyperlane-settings game-state))))))
 
+(deftest voronoi-settings-slider-updates-state
+  (let [game-state (atom (state/create-game-state))
+        tree (build-layout game-state)
+        opacity-slider (find-slider-with-event tree [:voronoi/set-opacity])
+        track (get-in opacity-slider [:layout :slider :track])
+        click-x (+ (:x track) (:width track))
+        click-y (+ (:y track) (/ (:height track) 2.0))
+        events (interaction/click->events tree click-x click-y)]
+    (doseq [event events]
+      (events/dispatch-event! game-state event))
+    (is (= 1.0 (:opacity (state/voronoi-settings game-state))))))
+
 (deftest hyperlane-color-dropdown-selects-scheme
   (let [game-state (atom (state/create-game-state))
         initial-tree (build-layout game-state)
-        dropdown (find-dropdown initial-tree)
+        dropdown (find-dropdown-by-id initial-tree :hyperlane-color)
         header (get-in dropdown [:layout :dropdown :header])
         toggle-events (interaction/click->events initial-tree
                                                  (+ (:x header) 4)
@@ -123,18 +151,42 @@
     (doseq [event toggle-events]
       (events/dispatch-event! game-state event))
     (let [expanded-tree (build-layout game-state)
-          dropdown* (find-dropdown expanded-tree)
+          dropdown* (find-dropdown-by-id expanded-tree :hyperlane-color)
           red-option (some #(when (= :red (:value %)) %)
                            (get-in dropdown* [:layout :dropdown :options]))]
       (is red-option)
-      (let [option-bounds (:bounds red-option)
-            option-events (interaction/click->events expanded-tree
+          (let [option-bounds (:bounds red-option)
+                option-events (interaction/click->events expanded-tree
                                                      (+ (:x option-bounds) 4)
                                                      (+ (:y option-bounds) 4))]
         (doseq [event option-events]
           (events/dispatch-event! game-state event))
         (is (= :red (:color-scheme (state/hyperlane-settings game-state))))
         (is (false? (state/dropdown-open? game-state :hyperlane-color)))))))
+
+(deftest voronoi-color-dropdown-selects-scheme
+  (let [game-state (atom (state/create-game-state))
+        initial-tree (build-layout game-state)
+        dropdown (find-dropdown-by-id initial-tree :voronoi-color)
+        header (get-in dropdown [:layout :dropdown :header])
+        toggle-events (interaction/click->events initial-tree
+                                                 (+ (:x header) 4)
+                                                 (+ (:y header) 4))]
+    (doseq [event toggle-events]
+      (events/dispatch-event! game-state event))
+    (let [expanded-tree (build-layout game-state)
+          dropdown* (find-dropdown-by-id expanded-tree :voronoi-color)
+          degree-option (some #(when (= :by-degree (:value %)) %)
+                               (get-in dropdown* [:layout :dropdown :options]))]
+      (is degree-option)
+      (let [option-bounds (:bounds degree-option)
+            option-events (interaction/click->events expanded-tree
+                                                     (+ (:x option-bounds) 4)
+                                                     (+ (:y option-bounds) 4))]
+        (doseq [event option-events]
+          (events/dispatch-event! game-state event))
+        (is (= :by-degree (:color-scheme (state/voronoi-settings game-state))))
+        (is (false? (state/dropdown-open? game-state :voronoi-color)))))))
 
 (deftest performance-overlay-visibility-and-expanded-toggle
   (let [game-state (atom (state/create-game-state))

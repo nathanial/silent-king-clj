@@ -6,6 +6,8 @@
   [game-state]
   (state/set-world! game-state {:stars {}
                                 :hyperlanes []
+                                :voronoi-cells {}
+                                :voronoi-generated? false
                                 :neighbors-by-star-id {}
                                 :next-star-id 0
                                 :next-hyperlane-id 0}))

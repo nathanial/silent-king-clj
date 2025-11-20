@@ -45,6 +45,13 @@
    :animation-speed 1.0
    :line-width 1.0})
 
+(def default-voronoi-settings
+  {:enabled? true
+   :opacity 0.8
+   :line-width 2.0
+   :color-scheme :monochrome
+   :show-centroids? false})
+
 (def default-performance-metrics
   {:fps-history []
    :frame-time-history []
@@ -78,6 +85,7 @@
   {:stars {}
    :planets {}
    :hyperlanes []
+   :voronoi-cells {}
    :neighbors-by-star-id {}
    :next-star-id 0
    :next-planet-id 0
@@ -118,6 +126,7 @@
         :star-inspector {:visible? false
                          :pinned? false}
         :hyperlane-panel {:expanded? true}
+        :voronoi-panel {:expanded? true}
         :viewport {:width 0.0
                    :height 0.0}
         :windows {}
@@ -125,8 +134,11 @@
                                :expanded? true}
         :dropdowns {}}
    :features {:hyperlanes? true
+              :voronoi? (:enabled? default-voronoi-settings)
               :minimap? true}
    :hyperlane-settings default-hyperlane-settings
+   :voronoi-settings default-voronoi-settings
+   :voronoi-generated? false
    :metrics {:performance default-performance-metrics}})
 
 (defn create-render-state []
@@ -179,6 +191,11 @@
   [game-state]
   (:hyperlanes @game-state))
 
+(defn voronoi-cells
+  "Return the map of voronoi cells keyed by star id."
+  [game-state]
+  (:voronoi-cells @game-state))
+
 (defn neighbors-by-star-id
   "Return adjacency map of star id -> neighbors."
   [game-state]
@@ -199,6 +216,11 @@
   [game-state hyperlanes-vector]
   (swap! game-state assoc :hyperlanes (vec (or hyperlanes-vector []))))
 
+(defn set-voronoi-cells!
+  "Replace voronoi cells map on game-state."
+  [game-state cells]
+  (swap! game-state assoc :voronoi-cells (or cells {})))
+
 (defn set-neighbors!
   "Replace neighbors-by-star-id map on game-state."
   [game-state neighbors]
@@ -206,13 +228,15 @@
 
 (defn set-world!
   "Replace world data on game-state with supplied values."
-  [game-state {:keys [stars planets hyperlanes neighbors-by-star-id next-star-id next-planet-id next-hyperlane-id]}]
+  [game-state {:keys [stars planets hyperlanes voronoi-cells neighbors-by-star-id next-star-id next-planet-id next-hyperlane-id voronoi-generated?]}]
   (swap! game-state
          (fn [state]
            (-> state
                (assoc :stars (or stars {}))
                (assoc :planets (or planets {}))
                (assoc :hyperlanes (vec (or hyperlanes [])))
+               (assoc :voronoi-cells (or voronoi-cells {}))
+               (assoc :voronoi-generated? (boolean voronoi-generated?))
                (assoc :neighbors-by-star-id (or neighbors-by-star-id {}))
                (assoc :next-star-id (long (or next-star-id 0)))
                (assoc :next-planet-id (long (or next-planet-id 0)))
@@ -300,6 +324,12 @@
   (merge default-hyperlane-settings
          (:hyperlane-settings @game-state)))
 
+(defn voronoi-settings
+  "Return merged voronoi settings."
+  [game-state]
+  (merge default-voronoi-settings
+         (:voronoi-settings @game-state)))
+
 (defn set-hyperlane-setting!
   "Set a single hyperlane setting (e.g., :opacity, :line-width)."
   [game-state key value]
@@ -315,10 +345,30 @@
   (swap! game-state assoc :hyperlane-settings default-hyperlane-settings)
   (swap! game-state assoc-in [:features :hyperlanes?] (:enabled? default-hyperlane-settings)))
 
+(defn set-voronoi-setting!
+  "Set a single voronoi setting (e.g., :opacity, :line-width)."
+  [game-state key value]
+  (swap! game-state update :voronoi-settings
+         (fn [settings]
+           (assoc (merge default-voronoi-settings settings) key value)))
+  (when (= key :enabled?)
+    (swap! game-state assoc-in [:features :voronoi?] (boolean value))))
+
+(defn reset-voronoi-settings!
+  "Reset voronoi settings to defaults."
+  [game-state]
+  (swap! game-state assoc :voronoi-settings default-voronoi-settings)
+  (swap! game-state assoc-in [:features :voronoi?] (:enabled? default-voronoi-settings)))
+
 (defn hyperlanes-enabled?
   "Return true if hyperlanes should be rendered"
   [game-state]
   (get (hyperlane-settings game-state) :enabled? true))
+
+(defn voronoi-enabled?
+  "Return true if the voronoi overlay should be rendered"
+  [game-state]
+  (get (voronoi-settings game-state) :enabled? false))
 
 (defn minimap-visible?
   "Return true if minimap should be rendered"
@@ -367,6 +417,15 @@
 (defn toggle-hyperlane-panel!
   [game-state]
   (swap! game-state update-in [:ui :hyperlane-panel :expanded?]
+         (fnil not true)))
+
+(defn voronoi-panel-expanded?
+  [game-state]
+  (boolean (get-in @game-state [:ui :voronoi-panel :expanded?] true)))
+
+(defn toggle-voronoi-panel!
+  [game-state]
+  (swap! game-state update-in [:ui :voronoi-panel :expanded?]
          (fnil not true)))
 
 (defn dropdown-open?
@@ -535,6 +594,12 @@
   [game-state]
   (let [current (hyperlanes-enabled? game-state)]
     (set-hyperlane-setting! game-state :enabled? (not current))))
+
+(defn toggle-voronoi!
+  "Toggle voronoi overlay visibility flag"
+  [game-state]
+  (let [current (voronoi-enabled? game-state)]
+    (set-voronoi-setting! game-state :enabled? (not current))))
 
 (defn toggle-minimap!
   "Toggle minimap visibility flag"

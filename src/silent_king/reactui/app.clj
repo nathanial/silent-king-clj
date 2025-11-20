@@ -2,6 +2,7 @@
   "Bridges game state to the Reactified UI tree."
   (:require [silent-king.reactui.components.control-panel :as control-panel]
             [silent-king.reactui.components.hyperlane-settings :as hyperlane-settings]
+            [silent-king.reactui.components.voronoi-settings :as voronoi-settings]
             [silent-king.reactui.components.minimap :as minimap]
             [silent-king.reactui.components.performance-overlay :as performance-overlay]
             [silent-king.reactui.components.star-inspector :as star-inspector]
@@ -17,6 +18,7 @@
 
 (def ^:private control-panel-window-id :ui/control-panel)
 (def ^:private hyperlane-window-id :ui/hyperlane-settings)
+(def ^:private voronoi-window-id :ui/voronoi-settings)
 (def ^:private performance-window-id :ui/performance-overlay)
 (def ^:private star-inspector-window-id :ui/star-inspector)
 (def ^:private minimap-window-id :ui/minimap)
@@ -27,6 +29,7 @@
         metrics (get-in @game-state [:metrics :performance :latest])]
     {:zoom (double (or (:zoom camera) 1.0))
      :hyperlanes-enabled? (state/hyperlanes-enabled? game-state)
+     :voronoi-enabled? (state/voronoi-enabled? game-state)
      :ui-scale (state/ui-scale game-state)
      :metrics {:fps (double (or (:fps metrics) 0.0))
                :visible-stars (long (or (:visible-stars metrics) 0))
@@ -37,6 +40,12 @@
   {:settings (state/hyperlane-settings game-state)
    :expanded? (state/hyperlane-panel-expanded? game-state)
    :color-dropdown-expanded? (state/dropdown-open? game-state :hyperlane-color)})
+
+(defn voronoi-settings-props
+  [game-state]
+  {:settings (state/voronoi-settings game-state)
+   :expanded? (state/voronoi-panel-expanded? game-state)
+   :color-dropdown-expanded? (state/dropdown-open? game-state :voronoi-color)})
 
 (defn performance-overlay-props
   [game-state]
@@ -120,6 +129,16 @@
      :width (:width hyperlane-settings/default-panel-bounds)
      :height (:height hyperlane-settings/default-panel-bounds)}))
 
+(defn- voronoi-default-bounds
+  []
+  (let [margin 24.0
+        control-width (:width control-panel/default-panel-bounds)
+        hyperlane-height (:height hyperlane-settings/default-panel-bounds)]
+    {:x (+ margin control-width margin)
+     :y (+ margin hyperlane-height 12.0)
+     :width (:width voronoi-settings/default-panel-bounds)
+     :height (:height voronoi-settings/default-panel-bounds)}))
+
 (defn control-panel-window
   [game-state]
   (let [props (control-panel-props game-state)
@@ -157,6 +176,26 @@
              :min-height (:height hyperlane-settings/default-panel-bounds)
              :on-change-bounds [:ui.window/set-bounds hyperlane-window-id]
              :on-toggle-minimized [:ui.window/toggle-minimized hyperlane-window-id]}
+     :children (cond-> []
+                 content (conj content))}))
+
+(defn voronoi-settings-window
+  [game-state]
+  (let [props (voronoi-settings-props game-state)
+        default-bounds (voronoi-default-bounds)
+        bounds (state/window-bounds game-state voronoi-window-id default-bounds)
+        minimized? (state/window-minimized? game-state voronoi-window-id)
+        content (when-not minimized?
+                  (voronoi-settings/voronoi-settings-panel props))]
+    {:type :window
+     :props {:title "Voronoi Settings"
+             :bounds bounds
+             :minimized? minimized?
+             :resizable? true
+             :min-width (:width voronoi-settings/default-panel-bounds)
+             :min-height (:height voronoi-settings/default-panel-bounds)
+             :on-change-bounds [:ui.window/set-bounds voronoi-window-id]
+             :on-toggle-minimized [:ui.window/toggle-minimized voronoi-window-id]}
      :children (cond-> []
                  content (conj content))}))
 
@@ -228,9 +267,10 @@
   [:vstack {:key :ui-root}
    (control-panel-window game-state)
    (hyperlane-settings-window game-state)
-   (performance-overlay-window game-state)
-   ;; Render last so it stacks on the right side without overlapping other panels.
-   (when-let [window (star-inspector-window game-state)]
+    (voronoi-settings-window game-state)
+    (performance-overlay-window game-state)
+    ;; Render last so it stacks on the right side without overlapping other panels.
+    (when-let [window (star-inspector-window game-state)]
      window)
    (when-let [window (minimap-window game-state)]
      window)])

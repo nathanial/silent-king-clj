@@ -18,6 +18,9 @@
 (def ^:private color-schemes
   #{:blue :red :green :rainbow})
 
+(def ^:private voronoi-color-schemes
+  #{:monochrome :by-density :by-degree})
+
 (defmulti dispatch-event!
   (fn [_game-state event]
     (first event)))
@@ -25,6 +28,11 @@
 (defmethod dispatch-event! :ui/toggle-hyperlanes
   [game-state _]
   (state/toggle-hyperlanes! game-state)
+  nil)
+
+(defmethod dispatch-event! :ui/toggle-voronoi
+  [game-state _]
+  (state/toggle-voronoi! game-state)
   nil)
 
 (defmethod dispatch-event! :ui/set-zoom
@@ -42,6 +50,11 @@
 (defmethod dispatch-event! :ui/toggle-hyperlane-panel
   [game-state _]
   (state/toggle-hyperlane-panel! game-state)
+  nil)
+
+(defmethod dispatch-event! :ui/toggle-voronoi-panel
+  [game-state _]
+  (state/toggle-voronoi-panel! game-state)
   nil)
 
 (defmethod dispatch-event! :hyperlanes/set-enabled?
@@ -82,6 +95,40 @@
 (defmethod dispatch-event! :hyperlanes/reset
   [game-state _]
   (state/reset-hyperlane-settings! game-state)
+  nil)
+
+(defmethod dispatch-event! :voronoi/set-enabled?
+  [game-state [_ value]]
+  (state/set-voronoi-setting! game-state :enabled? (boolean value))
+  nil)
+
+(defmethod dispatch-event! :voronoi/set-opacity
+  [game-state [_ value]]
+  (when (number? value)
+    (state/set-voronoi-setting! game-state :opacity (clamp-range value 0.05 1.0)))
+  nil)
+
+(defmethod dispatch-event! :voronoi/set-line-width
+  [game-state [_ value]]
+  (when (number? value)
+    (state/set-voronoi-setting! game-state :line-width (clamp-range value 0.5 4.0)))
+  nil)
+
+(defmethod dispatch-event! :voronoi/set-color-scheme
+  [game-state [_ value]]
+  (when (and (keyword? value)
+             (voronoi-color-schemes value))
+    (state/set-voronoi-setting! game-state :color-scheme value))
+  nil)
+
+(defmethod dispatch-event! :voronoi/set-show-centroids?
+  [game-state [_ value]]
+  (state/set-voronoi-setting! game-state :show-centroids? (boolean value))
+  nil)
+
+(defmethod dispatch-event! :voronoi/reset
+  [game-state _]
+  (state/reset-voronoi-settings! game-state)
   nil)
 
 (defmethod dispatch-event! :ui.dropdown/toggle

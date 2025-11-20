@@ -4,7 +4,7 @@
 (set! *warn-on-reflection* true)
 
 (def ^:const default-panel-bounds {:width 320.0
-                                   :height 340.0})
+                                   :height 380.0})
 
 (def ^:const accent-color 0xFF9CDCFE)
 (def ^:const text-color 0xFFCBCBCB)
@@ -21,10 +21,13 @@
            :font-size 14.0}])
 
 (defn control-panel
-  [{:keys [zoom hyperlanes-enabled? metrics ui-scale]}]
-  (let [button-label (if hyperlanes-enabled?
-                       "Disable Hyperlanes"
-                       "Enable Hyperlanes")]
+  [{:keys [zoom hyperlanes-enabled? voronoi-enabled? metrics ui-scale]}]
+  (let [hyperlane-label (if hyperlanes-enabled?
+                          "Disable Hyperlanes"
+                          "Enable Hyperlanes")
+        voronoi-label (if voronoi-enabled?
+                         "Disable Voronoi"
+                         "Enable Voronoi")]
     [:vstack {:key :control-panel
               :padding {:all 12}
               :gap 8
@@ -32,9 +35,13 @@
      [:label {:text "Controls"
               :color accent-color
               :font-size 16.0}]
-     [:button {:label button-label
+     [:button {:label hyperlane-label
                :on-click [:ui/toggle-hyperlanes]
                :background-color 0xFF2D2F38
+               :text-color text-color}]
+     [:button {:label voronoi-label
+               :on-click [:ui/toggle-voronoi]
+               :background-color 0xFF242734
                :text-color text-color}]
      [:label {:text (format-zoom zoom)
               :color text-color}]

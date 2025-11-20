@@ -11,6 +11,12 @@
     (events/dispatch-event! game-state [:ui/toggle-hyperlanes])
     (is (false? (state/hyperlanes-enabled? game-state)))))
 
+(deftest dispatch-toggle-voronoi
+  (let [game-state (atom (state/create-game-state))]
+    (is (true? (state/voronoi-enabled? game-state)))
+    (events/dispatch-event! game-state [:ui/toggle-voronoi])
+    (is (false? (state/voronoi-enabled? game-state)))))
+
 (deftest dispatch-set-zoom
   (let [game-state (atom (state/create-game-state))]
     (events/dispatch-event! game-state [:ui/set-zoom 2.5])
@@ -51,6 +57,22 @@
     (swap! game-state assoc-in [:hyperlane-settings :opacity] 0.8)
     (events/dispatch-event! game-state [:hyperlanes/reset])
     (is (= state/default-hyperlane-settings (:hyperlane-settings @game-state)))))
+
+(deftest dispatch-voronoi-setting-events
+  (let [game-state (atom (state/create-game-state))]
+    (events/dispatch-event! game-state [:voronoi/set-enabled? true])
+    (is (true? (state/voronoi-enabled? game-state)))
+    (events/dispatch-event! game-state [:voronoi/set-opacity 2.0])
+    (is (= 1.0 (:opacity (state/voronoi-settings game-state))))
+    (events/dispatch-event! game-state [:voronoi/set-line-width 5.0])
+    (is (= 4.0 (:line-width (state/voronoi-settings game-state))))
+    (events/dispatch-event! game-state [:voronoi/set-color-scheme :by-degree])
+    (is (= :by-degree (:color-scheme (state/voronoi-settings game-state))))
+    (events/dispatch-event! game-state [:voronoi/set-show-centroids? true])
+    (is (true? (:show-centroids? (state/voronoi-settings game-state))))
+    (swap! game-state assoc-in [:voronoi-settings :opacity] 0.2)
+    (events/dispatch-event! game-state [:voronoi/reset])
+    (is (= state/default-voronoi-settings (:voronoi-settings @game-state)))))
 
 (deftest dispatch-dropdown-events
   (let [game-state (atom (state/create-game-state))]

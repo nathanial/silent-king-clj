@@ -6,7 +6,8 @@
             [silent-king.reactui.interaction-test]
             [silent-king.reactui.layout-test]
             [silent-king.planet-test]
-            [silent-king.selection-test]))
+            [silent-king.selection-test]
+            [silent-king.voronoi-test]))
 
 (defn -main
   "Run all Reactified UI unit tests."
@@ -17,7 +18,8 @@
                                     silent-king.reactui.interaction-test
                                     silent-king.reactui.layout-test
                                     silent-king.planet-test
-                                    silent-king.selection-test])
+                                    silent-king.selection-test
+                                    silent-king.voronoi-test])
         failures (+ (:fail result 0) (:error result 0))]
     (when (pos? failures)
       (System/exit 1))))

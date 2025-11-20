@@ -7,6 +7,7 @@
             [silent-king.selection :as selection]
             [silent-king.galaxy :as galaxy]
             [silent-king.hyperlanes :as hyperlanes]
+            [silent-king.voronoi :as voronoi]
             [nrepl.server :as nrepl]
             [cider.nrepl :refer [cider-nrepl-handler]])
   (:import [org.lwjgl.glfw GLFW GLFWErrorCallback GLFWCursorPosCallbackI GLFWMouseButtonCallbackI GLFWScrollCallbackI GLFWKeyCallbackI]
@@ -318,6 +319,7 @@
         pan-x (:pan-x camera)
         pan-y (:pan-y camera)
         hyperlanes-enabled (state/hyperlanes-enabled? game-state)
+        voronoi-enabled (state/voronoi-enabled? game-state)
         selected-star-id (state/selected-star-id game-state)
 
         ;; 4-Level LOD system
@@ -418,6 +420,12 @@
           ;; Draw from texture atlas
           (draw-star-from-atlas canvas atlas-image atlas-metadata sprite-path screen-x screen-y screen-size rotation atlas-size))))
 
+    ;; Draw Voronoi overlay ON TOP of stars so it is always visible
+    (if (and voronoi-enabled (seq (state/voronoi-cells game-state)))
+      (let [voronoi-rendered (voronoi/draw-voronoi-cells canvas width height zoom pan-x pan-y game-state time)]
+        (swap! game-state assoc-in [:debug :voronoi-rendered] voronoi-rendered))
+      (swap! game-state assoc-in [:debug :voronoi-rendered] 0))
+
     ;; Draw orbit rings then planets (planets on top of rings)
     (when render-planets?
       (doseq [{:keys [screen-radius star-screen-x star-screen-y ring-visible?]} visible-planets]
@@ -445,6 +453,8 @@
           fps (if (pos? current-time) (/ frame-count current-time) 0.0)
           hyperlanes-count (get-in @game-state [:debug :hyperlanes-rendered] 0)
           hyperlane-count (count (state/hyperlanes game-state))
+          voronoi-count (get-in @game-state [:debug :voronoi-rendered] 0)
+          total-voronoi (count (state/voronoi-cells game-state))
 
           ;; Approximate frame time from FPS
           frame-time-ms (/ 1000.0 (max fps 0.0001))
@@ -463,8 +473,10 @@
                    :visible-planets visible-planet-count
                    :hyperlane-count hyperlane-count
                    :visible-hyperlanes (if hyperlanes-enabled hyperlanes-count 0)
-                   :draw-calls (+ visible-star-count visible-planet-count hyperlanes-count)
+                   :draw-calls (+ visible-star-count visible-planet-count hyperlanes-count voronoi-count)
                    :memory-mb memory-mb
+                   :voronoi-cells total-voronoi
+                   :visible-voronoi voronoi-count
                    :current-time current-time}]
 
       ;; Store latest metrics and append to history for overlay/chart usage
@@ -603,7 +615,10 @@
         (galaxy/generate-galaxy! game-state star-images planet-sprites 1000)
 
         ;; Generate hyperlane connections using Delaunay triangulation
-        (hyperlanes/generate-hyperlanes! game-state))
+        (hyperlanes/generate-hyperlanes! game-state)
+
+        ;; Generate Voronoi cells overlay from the same star set
+        (voronoi/generate-voronoi! game-state))
 
       ;; Run render loop
       (render-loop game-state render-state))
