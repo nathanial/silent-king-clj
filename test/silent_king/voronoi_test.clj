@@ -3,6 +3,11 @@
             [silent-king.state :as state]
             [silent-king.voronoi :as voronoi]))
 
+(defn- distance
+  [{x1 :x y1 :y} {x2 :x y2 :y}]
+  (Math/sqrt (+ (Math/pow (- (double x1) (double x2)) 2.0)
+                (Math/pow (- (double y1) (double y2)) 2.0))))
+
 (deftest generate-voronoi-basic
   (let [stars [{:id 1 :x 0.0 :y 0.0}
                {:id 2 :x 120.0 :y 0.0}
@@ -33,3 +38,50 @@
     (is (true? (state/voronoi-enabled? game-state)))
     (state/reset-voronoi-settings! game-state)
     (is (= state/default-voronoi-settings (:voronoi-settings @game-state)))))
+
+(deftest relax-sites-once-moves-toward-centroid
+  (let [stars [{:id 1 :x 0.0 :y 0.0}
+               {:id 2 :x 150.0 :y 20.0}
+               {:id 3 :x 70.0 :y 140.0}]
+        {:keys [stars-relaxed voronoi-cells stats]} (voronoi/relax-sites-once stars {:step-factor 1.0})
+        by-id (into {} (map (juxt :id identity) stars))
+        relaxed-by-id (into {} (map (juxt :id identity) stars-relaxed))]
+    (is (= (set (keys by-id)) (set (keys relaxed-by-id))))
+    (doseq [[sid relaxed] relaxed-by-id]
+      (let [original (get by-id sid)
+            centroid (get-in voronoi-cells [sid :centroid])]
+        (is centroid)
+        (is (< (distance relaxed centroid) (distance original centroid)))))
+    (is (pos? (:max-displacement stats)))))
+
+(deftest relax-sites-once-respects-max-displacement
+  (let [stars [{:id 1 :x -800.0 :y -800.0}
+               {:id 2 :x 800.0 :y -800.0}
+               {:id 3 :x -800.0 :y 800.0}
+               {:id 4 :x 800.0 :y 800.0}
+               {:id 5 :x 0.0 :y 0.0}]
+        unclamped (voronoi/relax-sites-once stars {:step-factor 1.0})
+        unclamped-max (get-in unclamped [:stats :max-displacement])
+        max-d 25.0
+        clamped (voronoi/relax-sites-once stars {:step-factor 1.0
+                                                 :max-displacement max-d})
+        clamped-max (get-in clamped [:stats :max-displacement])
+        moves (map (fn [[before after]] (distance before after))
+                   (map vector stars (:stars-relaxed clamped)))]
+    (is (<= clamped-max (+ max-d 1.0e-6)))
+    (is (every? #(<= % (+ max-d 1.0e-6)) moves))
+    (when (> unclamped-max max-d)
+      (is (< clamped-max unclamped-max)))))
+
+(deftest generate-relaxed-voronoi-zero-iteration-matches-base
+  (let [stars [{:id 10 :x -50.0 :y -20.0}
+               {:id 11 :x 60.0 :y -10.0}
+               {:id 12 :x 10.0 :y 90.0}
+               {:id 13 :x -40.0 :y 120.0}]
+        base (voronoi/generate-voronoi stars)
+        relaxed (voronoi/generate-relaxed-voronoi stars {:iterations 0})
+        relaxed-nil (voronoi/generate-relaxed-voronoi stars nil)]
+    (is (= (:voronoi-cells base) (:voronoi-cells relaxed)))
+    (is (= (:voronoi-cells base) (:voronoi-cells relaxed-nil)))
+    (is (= 0 (get-in relaxed [:relax-meta :iterations-used])))
+    (is (= 0 (get-in relaxed-nil [:relax-meta :iterations-used])))))

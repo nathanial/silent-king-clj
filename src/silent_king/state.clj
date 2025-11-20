@@ -4,6 +4,12 @@
 
 (set! *warn-on-reflection* true)
 
+(def ^:const ^long relax-iterations-limit 5)
+
+(defn- clamp
+  [value min-value max-value]
+  (-> value double (max min-value) (min max-value)))
+
 ;; =============================================================================
 ;; World ID Generation
 ;; =============================================================================
@@ -50,7 +56,11 @@
    :opacity 0.8
    :line-width 2.0
    :color-scheme :monochrome
-   :show-centroids? false})
+   :show-centroids? false
+   :relax-iterations 0
+   :relax-step 1.0
+   :relax-max-displacement 250.0
+   :relax-clip-to-envelope? true})
 
 (def default-performance-metrics
   {:fps-history []
@@ -330,6 +340,24 @@
   [game-state]
   (merge default-voronoi-settings
          (:voronoi-settings @game-state)))
+
+(defn voronoi-relax-config
+  "Return a sanitized relaxation config map for voronoi generation."
+  [game-state]
+  (let [settings (voronoi-settings game-state)
+        iterations (-> (long (or (:relax-iterations settings) 0))
+                       (max 0)
+                       (min relax-iterations-limit))
+        step (clamp (:relax-step settings 1.0) 0.0 1.0)
+        max-d (when (number? (:relax-max-displacement settings))
+                (Math/abs ^double (:relax-max-displacement settings)))
+        clip? (if (contains? settings :relax-clip-to-envelope?)
+                (boolean (:relax-clip-to-envelope? settings))
+                true)]
+    {:iterations iterations
+     :step-factor step
+     :max-displacement max-d
+     :clip-to-envelope? clip?}))
 
 (defn set-hyperlane-setting!
   "Set a single hyperlane setting (e.g., :opacity, :line-width)."

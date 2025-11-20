@@ -140,6 +140,14 @@
       (events/dispatch-event! game-state event))
     (is (= 1.0 (:opacity (state/voronoi-settings game-state))))))
 
+(deftest voronoi-relax-iterations-slider-updates-state
+  (let [game-state (atom (state/create-game-state))
+        tree (build-layout game-state)
+        iter-slider (find-slider-with-event tree [:voronoi/set-relax-iterations])]
+    (is iter-slider)
+    (events/dispatch-event! game-state [:voronoi/set-relax-iterations state/relax-iterations-limit])
+    (is (= state/relax-iterations-limit (:relax-iterations (state/voronoi-settings game-state)))))) 
+
 (deftest hyperlane-color-dropdown-selects-scheme
   (let [game-state (atom (state/create-game-state))
         initial-tree (build-layout game-state)

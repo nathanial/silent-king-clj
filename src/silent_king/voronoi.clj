@@ -11,6 +11,16 @@
 (def ^:const ^double clip-padding-min 200.0)
 (def ^:const ^double clip-padding-scale 0.18)
 (def ^:const ^double epsilon 1.0e-6)
+(def ^:const ^long relax-iterations-max 5)
+(def ^:const ^double relax-convergence-epsilon 1.0e-3)
+
+(def ^:private default-relax-config
+  {:iterations 0
+   :step-factor 1.0
+   :max-displacement nil
+   :clip-to-envelope? true})
+
+(declare generate-relaxed-voronoi)
 
 (def ^:private color-schemes
   ;; Palettes are vectors so we can graph-color neighboring cells differently.
@@ -36,6 +46,25 @@
 (defn- clamp
   [value min-value max-value]
   (-> value double (max min-value) (min max-value)))
+
+(defn- normalize-relax-config
+  [config]
+  (let [cfg (merge default-relax-config (or config {}))
+        iterations (-> (:iterations cfg 0)
+                       long
+                       (max 0)
+                       (min relax-iterations-max))
+        step (clamp (:step-factor cfg 1.0) 0.0 1.0)
+        max-d (when (number? (:max-displacement cfg))
+                (Math/abs (double (:max-displacement cfg))))
+        clip? (if (contains? cfg :clip-to-envelope?)
+                (boolean (:clip-to-envelope? cfg))
+                true)]
+    {:iterations iterations
+     :step-factor step
+     :max-displacement max-d
+     :clip-to-envelope? clip?
+     :envelope (:envelope cfg)}))
 
 (defn- valid-vertex?
   [{:keys [x y]}]
@@ -156,56 +185,71 @@
 
 (defn generate-voronoi
   "Pure Voronoi generator. Accepts a sequence of star maps with :id/:x/:y and
-  returns {:voronoi-cells {id cell} :elapsed-ms n}."
-  [stars]
-  (let [start (System/currentTimeMillis)
-        sites (mapv (fn [{:keys [id x y] :as star}]
-                      {:id id
-                       :coord (Coordinate. (double x) (double y))
-                       :star star})
-                    stars)
-        site-count (count sites)]
-    (if (< site-count 2)
-      {:voronoi-cells {}
-       :elapsed-ms (- (System/currentTimeMillis) start)}
-      (let [envelope (-> (star-envelope stars)
-                         (expand-envelope))
-            builder (VoronoiDiagramBuilder.)
-            _ (.setSites builder ^java.util.Collection (mapv :coord sites))
-            _ (when envelope
-                (.setClipEnvelope builder envelope))
-            diagram (.getDiagram builder (GeometryFactory.))
-            num-polys (.getNumGeometries diagram)]
-        (loop [i 0
-               acc {}]
-          (if (= i num-polys)
-            {:voronoi-cells acc
-             :elapsed-ms (- (System/currentTimeMillis) start)}
-            (let [^Polygon poly (.getGeometryN diagram i)
-                  centroid (.getCentroid poly)
-                  centroid-map {:x (.getX centroid)
-                                :y (.getY centroid)}
-                  user-data (.getUserData poly)
-                  site (cond
-                         (instance? Coordinate user-data)
-                         (nearest-site sites (coord->map ^Coordinate user-data))
+  returns {:voronoi-cells {id cell} :elapsed-ms n :envelope env}."
+  ([stars]
+   (generate-voronoi stars nil))
+  ([stars {:keys [envelope]}]
+   (let [start (System/currentTimeMillis)
+         sites (mapv (fn [{:keys [id x y] :as star}]
+                       {:id id
+                        :coord (Coordinate. (double x) (double y))
+                        :star star})
+                     stars)
+         site-count (count sites)
+         env (or envelope (-> (star-envelope stars)
+                              (expand-envelope)))]
+     (if (< site-count 2)
+       {:voronoi-cells {}
+        :elapsed-ms (- (System/currentTimeMillis) start)
+        :envelope env}
+       (let [builder (VoronoiDiagramBuilder.)
+             _ (.setSites builder ^java.util.Collection (mapv :coord sites))
+             _ (when env
+                 (.setClipEnvelope builder env))
+             diagram (.getDiagram builder (GeometryFactory.))
+             num-polys (.getNumGeometries diagram)]
+         (loop [i 0
+                acc {}]
+           (if (= i num-polys)
+             {:voronoi-cells acc
+              :elapsed-ms (- (System/currentTimeMillis) start)
+              :envelope env}
+             (let [^Polygon poly (.getGeometryN diagram i)
+                   centroid (.getCentroid poly)
+                   centroid-map {:x (.getX centroid)
+                                 :y (.getY centroid)}
+                   user-data (.getUserData poly)
+                   site (cond
+                          (instance? Coordinate user-data)
+                          (nearest-site sites (coord->map ^Coordinate user-data))
 
-                         :else
-                         (nearest-site sites centroid-map))
-                  cell (when site (polygon->cell poly site))
-                  acc* (if (and cell (:star-id cell))
-                         (assoc acc (:star-id cell) cell)
-                         acc)]
-              (recur (inc i) acc*))))))))
+                          :else
+                          (nearest-site sites centroid-map))
+                   cell (when site (polygon->cell poly site))
+                   acc* (if (and cell (:star-id cell))
+                          (assoc acc (:star-id cell) cell)
+                          acc)]
+               (recur (inc i) acc*)))))))))
 
 (defn generate-voronoi!
   "Generate Voronoi cells from the current world's stars and persist them."
   [game-state]
   (let [stars (state/star-seq game-state)
-        {:keys [voronoi-cells elapsed-ms] :as result} (generate-voronoi stars)]
+        relax-config (state/voronoi-relax-config game-state)
+        {:keys [voronoi-cells elapsed-ms relax-meta] :as result} (generate-relaxed-voronoi stars relax-config)
+        iterations-used (long (or (some-> relax-meta :iterations-used) 0))
+        avg-move (double (or (some-> relax-meta :iteration-stats last :avg-displacement) 0.0))
+        base-msg (format "Generated %d Voronoi cells in %d ms"
+                         (count voronoi-cells)
+                         (long (or elapsed-ms 0)))
+        suffix (when (pos? iterations-used)
+                 (format " (relaxed %d iter%s, avg move %.3f)"
+                         iterations-used
+                         (if (= 1 iterations-used) "" "s")
+                         avg-move))]
     (state/set-voronoi-cells! game-state voronoi-cells)
     (swap! game-state assoc :voronoi-generated? true)
-    (println "Generated" (count voronoi-cells) "Voronoi cells in" (or elapsed-ms 0) "ms")
+    (println (str base-msg (or suffix "")))
     result))
 
 (defn world-viewport
@@ -367,3 +411,125 @@
         (.close fill-paint)
         (.close centroid-paint)))
     @rendered))
+
+(defn relax-sites-once
+  "Run a single Lloyd-style relaxation step over the supplied stars.
+   Returns {:stars-relaxed [...] :voronoi-cells {...} :envelope env
+            :stats {:max-displacement d :avg-displacement d} :elapsed-ms n}."
+  [stars config]
+  (let [{:keys [step-factor max-displacement clip-to-envelope? envelope]} (normalize-relax-config config)
+        start (System/currentTimeMillis)
+        {:keys [voronoi-cells envelope] :as voronoi} (generate-voronoi stars {:envelope envelope})
+        ^Envelope env (or envelope (:envelope voronoi))
+        relaxed (mapv (fn [{:keys [id x y] :as star}]
+                        (let [{:keys [centroid]} (get voronoi-cells id)
+                              cx (:x centroid)
+                              cy (:y centroid)]
+                          (if (and centroid (number? cx) (number? cy))
+                            (let [dx (- (double cx) (double x))
+                                  dy (- (double cy) (double y))
+                                  step-dx (* step-factor dx)
+                                  step-dy (* step-factor dy)
+                                  len (Math/sqrt (+ (* step-dx step-dx) (* step-dy step-dy)))
+                                  [step-dx step-dy] (if (and max-displacement (pos? max-displacement) (> len max-displacement))
+                                                      (let [scale (/ max-displacement len)]
+                                                        [(* step-dx scale) (* step-dy scale)])
+                                                      [step-dx step-dy])
+                                  nx (+ (double x) step-dx)
+                                  ny (+ (double y) step-dy)
+                                  nx* (if (and clip-to-envelope? env)
+                                        (clamp nx (.getMinX env) (.getMaxX env))
+                                        nx)
+                                  ny* (if (and clip-to-envelope? env)
+                                        (clamp ny (.getMinY env) (.getMaxY env))
+                                        ny)]
+                              (assoc star :x nx* :y ny*))
+                            star)))
+                      stars)
+        {:keys [total count mx]} (reduce (fn [{:keys [total count mx]} [before after]]
+                                           (let [dx (- (double (:x after)) (double (:x before)))
+                                                 dy (- (double (:y after)) (double (:y before)))
+                                                 dist (Math/sqrt (+ (* dx dx) (* dy dy)))]
+                                             {:total (+ total dist)
+                                              :count (inc count)
+                                              :mx (max mx dist)}))
+                                         {:total 0.0 :count 0 :mx 0.0}
+                                         (map vector stars relaxed))
+        avg (if (pos? count) (/ total (double count)) 0.0)
+        elapsed (- (System/currentTimeMillis) start)]
+    {:stars-relaxed relaxed
+     :voronoi-cells voronoi-cells
+     :envelope env
+     :stats {:max-displacement mx
+             :avg-displacement avg}
+     :elapsed-ms elapsed}))
+
+(defn relax-sites
+  "Run N iterations of Lloyd relaxation, returning relaxed stars and stats."
+  [stars config]
+  (let [{:keys [iterations] :as cfg} (normalize-relax-config config)]
+    (if (zero? iterations)
+      {:stars-relaxed stars
+       :iterations-used 0
+       :iteration-stats []
+       :envelope (:envelope cfg)
+       :elapsed-ms 0}
+      (loop [i 0
+             current-stars stars
+             env (:envelope cfg)
+             iteration-stats []
+             elapsed 0]
+        (if (>= i iterations)
+          {:stars-relaxed current-stars
+           :iterations-used i
+           :iteration-stats iteration-stats
+           :envelope env
+           :elapsed-ms elapsed}
+          (let [step-result (relax-sites-once current-stars (assoc cfg :envelope env))
+                {:keys [stars-relaxed envelope elapsed-ms]} step-result
+                step-stats (or (:stats step-result) {:max-displacement 0.0
+                                                     :avg-displacement 0.0})
+                iteration (inc i)
+                stat (assoc step-stats :iteration iteration)
+                max-step (double (or (:max-displacement step-stats) 0.0))
+                converged? (<= max-step relax-convergence-epsilon)
+                elapsed* (+ elapsed (long (or elapsed-ms 0)))]
+            (if converged?
+              {:stars-relaxed stars-relaxed
+               :iterations-used iteration
+               :iteration-stats (conj iteration-stats stat)
+               :envelope envelope
+               :elapsed-ms elapsed*}
+              (recur iteration stars-relaxed envelope (conj iteration-stats stat) elapsed*))))))))
+
+(defn generate-relaxed-voronoi
+  "Generate Voronoi cells, optionally applying Lloyd relaxation to star sites."
+  [stars relax-config]
+  (let [{:keys [iterations] :as cfg} (normalize-relax-config relax-config)
+        start (System/currentTimeMillis)]
+    (if (zero? iterations)
+      (let [base (generate-voronoi stars {:envelope (:envelope cfg)})]
+        (assoc base :relax-meta {:iterations-requested iterations
+                                 :iterations-used 0
+                                 :iteration-stats []
+                                 :relax-elapsed-ms 0}))
+      (let [{:keys [stars-relaxed iterations-used iteration-stats envelope elapsed-ms]} (relax-sites stars cfg)
+            relaxed-by-id (into {} (map (juxt :id identity) stars-relaxed))
+            relaxed-envelope envelope
+            {:keys [voronoi-cells envelope]} (generate-voronoi stars-relaxed {:envelope relaxed-envelope})
+            cells (into {}
+                        (map (fn [[sid cell]]
+                               (if-let [relaxed (get relaxed-by-id sid)]
+                                 [sid (assoc cell
+                                             :relaxed? true
+                                             :relaxed-site (select-keys relaxed [:x :y]))]
+                                 [sid cell])))
+                        voronoi-cells)
+            total (- (System/currentTimeMillis) start)]
+        {:voronoi-cells cells
+         :elapsed-ms total
+         :envelope envelope
+         :relax-meta {:iterations-requested iterations
+                      :iterations-used iterations-used
+                      :iteration-stats iteration-stats
+                      :relax-elapsed-ms elapsed-ms}}))))

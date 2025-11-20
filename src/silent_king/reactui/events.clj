@@ -1,6 +1,7 @@
 (ns silent-king.reactui.events
   "Dispatch helpers that translate UI event vectors into game-state updates."
-  (:require [silent-king.state :as state]))
+  (:require [silent-king.state :as state]
+            [silent-king.voronoi :as voronoi]))
 
 (set! *warn-on-reflection* true)
 
@@ -117,6 +118,34 @@
   [game-state [_ value]]
   (when (number? value)
     (state/set-voronoi-setting! game-state :line-width (clamp-range value 0.5 4.0)))
+  nil)
+
+(defmethod dispatch-event! :voronoi/set-relax-iterations
+  [game-state [_ value]]
+  (when (number? value)
+    (state/set-voronoi-setting! game-state :relax-iterations
+                                (long (clamp-range value 0 state/relax-iterations-limit))))
+  (voronoi/generate-voronoi! game-state)
+  nil)
+
+(defmethod dispatch-event! :voronoi/set-relax-step
+  [game-state [_ value]]
+  (when (number? value)
+    (state/set-voronoi-setting! game-state :relax-step (clamp-range value 0.0 1.0)))
+  (voronoi/generate-voronoi! game-state)
+  nil)
+
+(defmethod dispatch-event! :voronoi/set-relax-max-displacement
+  [game-state [_ value]]
+  (when (number? value)
+    (state/set-voronoi-setting! game-state :relax-max-displacement (clamp-range value 0.0 500.0)))
+  (voronoi/generate-voronoi! game-state)
+  nil)
+
+(defmethod dispatch-event! :voronoi/set-relax-clip?
+  [game-state [_ value]]
+  (state/set-voronoi-setting! game-state :relax-clip-to-envelope? (boolean value))
+  (voronoi/generate-voronoi! game-state)
   nil)
 
 (defmethod dispatch-event! :voronoi/set-color-scheme

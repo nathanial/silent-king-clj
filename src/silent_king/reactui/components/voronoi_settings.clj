@@ -4,7 +4,7 @@
 (set! *warn-on-reflection* true)
 
 (def ^:const default-panel-bounds {:width 340.0
-                                   :height 360.0})
+                                   :height 460.0})
 
 (def ^:const accent-color 0xFF9CDCFE)
 (def ^:const text-color 0xFFCBCBCB)
@@ -81,7 +81,8 @@
                :on-close [:ui.dropdown/close color-dropdown-id]}]])
 
 (defn- settings-content
-  [{:keys [enabled? opacity line-width color-scheme show-centroids?]}
+  [{:keys [enabled? opacity line-width color-scheme show-centroids?
+           relax-iterations relax-step relax-max-displacement relax-clip-to-envelope?]}
    {:keys [color-dropdown-expanded?]}]
   [:vstack {:gap 10}
    [:label {:text "Visibility"
@@ -109,6 +110,38 @@
    (toggle-button (if show-centroids? "Hide Centroids" "Show Centroids")
                   [:voronoi/set-show-centroids? (not show-centroids?)]
                   show-centroids?)
+   [:label {:text "Relaxation (Lloyd)"
+            :color muted-color
+            :padding {:top 4}}]
+   (slider-row {:label "Iterations"
+                :value relax-iterations
+                :min 0
+                :max 5
+                :step 1
+                :event [:voronoi/set-relax-iterations]
+                :formatter (fn [v] (format "%d" (int (Math/round (double v)))))})
+   (slider-row {:label "Step Factor"
+                :value relax-step
+                :min 0.0
+                :max 1.0
+                :step 0.05
+                :event [:voronoi/set-relax-step]
+                :formatter (fn [v] (format "%.2f" (double v)))})
+   (slider-row {:label "Max Displacement"
+                :value relax-max-displacement
+                :min 0.0
+                :max 500.0
+                :step 10.0
+                :event [:voronoi/set-relax-max-displacement]
+                :formatter (fn [v]
+                             (if (<= (double v) 0.0)
+                               "Unlimited"
+                               (format "%.0f" (double v))))})
+   (toggle-button (if relax-clip-to-envelope?
+                    "Clip to Envelope"
+                    "Do Not Clip")
+                  [:voronoi/set-relax-clip? (not relax-clip-to-envelope?)]
+                  relax-clip-to-envelope?)
    [:button {:label "Reset to Defaults"
              :on-click [:voronoi/reset]
              :background-color accent-color
