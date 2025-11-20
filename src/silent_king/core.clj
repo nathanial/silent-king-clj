@@ -618,7 +618,7 @@
         (state/set-assets! game-state loaded-assets)
 
         ;; Generate world data with noise-based clustering
-        (galaxy/generate-galaxy! game-state star-images planet-sprites 10000)
+        (galaxy/generate-galaxy! game-state star-images planet-sprites 2000)
 
         ;; Generate hyperlane connections using Delaunay triangulation
         (hyperlanes/generate-hyperlanes! game-state)
