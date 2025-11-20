@@ -35,6 +35,11 @@
   (state/toggle-voronoi! game-state)
   nil)
 
+(defmethod dispatch-event! :ui/toggle-stars-and-planets
+  [game-state _]
+  (state/toggle-stars-and-planets! game-state)
+  nil)
+
 (defmethod dispatch-event! :ui/set-zoom
   [game-state [_ value]]
   (when (number? value)

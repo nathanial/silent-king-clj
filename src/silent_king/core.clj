@@ -320,6 +320,7 @@
         pan-y (:pan-y camera)
         hyperlanes-enabled (state/hyperlanes-enabled? game-state)
         voronoi-enabled (state/voronoi-enabled? game-state)
+        stars-and-planets-enabled (state/stars-and-planets-enabled? game-state)
         selected-star-id (state/selected-star-id game-state)
 
         ;; 4-Level LOD system
@@ -358,13 +359,18 @@
         planets (state/planet-seq game-state)
 
         ;; Frustum culling: filter visible stars using non-linear transform
-        visible-stars (filter (fn [{:keys [x y size]}]
-                                (star-visible? x y size pan-x pan-y width height zoom))
-                              stars)
-        visible-star-count (count visible-stars)
+        visible-stars (if stars-and-planets-enabled
+                        (filter (fn [{:keys [x y size]}]
+                                  (star-visible? x y size pan-x pan-y width height zoom))
+                                stars)
+                        [])
+        visible-star-count (if stars-and-planets-enabled
+                              (count visible-stars)
+                              0)
         total-star-count (count stars)
 
-        render-planets? (and (>= zoom planet-visibility-zoom)
+        render-planets? (and stars-and-planets-enabled
+                             (>= zoom planet-visibility-zoom)
                              planet-atlas-image
                              (seq planet-atlas-metadata))
         visible-planets (when render-planets?
@@ -612,7 +618,7 @@
         (state/set-assets! game-state loaded-assets)
 
         ;; Generate world data with noise-based clustering
-        (galaxy/generate-galaxy! game-state star-images planet-sprites 1000)
+        (galaxy/generate-galaxy! game-state star-images planet-sprites 10000)
 
         ;; Generate hyperlane connections using Delaunay triangulation
         (hyperlanes/generate-hyperlanes! game-state)

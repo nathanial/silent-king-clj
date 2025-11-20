@@ -30,6 +30,7 @@
     {:zoom (double (or (:zoom camera) 1.0))
      :hyperlanes-enabled? (state/hyperlanes-enabled? game-state)
      :voronoi-enabled? (state/voronoi-enabled? game-state)
+     :stars-and-planets-enabled? (state/stars-and-planets-enabled? game-state)
      :ui-scale (state/ui-scale game-state)
      :metrics {:fps (double (or (:fps metrics) 0.0))
                :visible-stars (long (or (:visible-stars metrics) 0))

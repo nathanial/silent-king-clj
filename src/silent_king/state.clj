@@ -133,7 +133,8 @@
         :performance-overlay {:visible? true
                                :expanded? true}
         :dropdowns {}}
-   :features {:hyperlanes? true
+   :features {:stars-and-planets? true
+              :hyperlanes? true
               :voronoi? (:enabled? default-voronoi-settings)
               :minimap? true}
    :hyperlane-settings default-hyperlane-settings
@@ -370,6 +371,11 @@
   [game-state]
   (get (voronoi-settings game-state) :enabled? false))
 
+(defn stars-and-planets-enabled?
+  "Return true if stars and planets should be rendered"
+  [game-state]
+  (boolean (get-in @game-state [:features :stars-and-planets?] true)))
+
 (defn minimap-visible?
   "Return true if minimap should be rendered"
   [game-state]
@@ -600,6 +606,11 @@
   [game-state]
   (let [current (voronoi-enabled? game-state)]
     (set-voronoi-setting! game-state :enabled? (not current))))
+
+(defn toggle-stars-and-planets!
+  "Toggle rendering of both stars and planets"
+  [game-state]
+  (swap! game-state update-in [:features :stars-and-planets?] not))
 
 (defn toggle-minimap!
   "Toggle minimap visibility flag"
