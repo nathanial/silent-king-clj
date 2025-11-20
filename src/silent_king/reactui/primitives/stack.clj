@@ -97,7 +97,7 @@
         {:keys [x y width height]} (layout/bounds node)]
     (when background-color
       (with-open [^Paint paint (doto (Paint.)
-                                  (.setColor (unchecked-int background-color)))]
+                                 (.setColor (unchecked-int background-color)))]
         (.drawRect canvas
                    (Rect/makeXYWH (float x) (float y) (float width) (float height))
                    paint)))

@@ -176,7 +176,6 @@
   []
   (:active-interaction *render-context*))
 
-
 (defmethod draw-node :default
   [_ _]
   nil)

@@ -124,7 +124,7 @@
   (let [star-set (set star-ids)
         star-count (count star-ids)
         sector-count (max 1 (min 6 (long (Math/ceil (/ star-count 20.0)))))
-        
+
         ;; Build adjacency for flood fill, restricted to valid edges within this region
         adjacency (reduce (fn [acc {:keys [from-id to-id]}]
                             (if (and (contains? star-set from-id)
@@ -135,15 +135,15 @@
                               acc))
                           {}
                           valid-edges)
-        
+
         ;; Pick random capitals
         capitals (take sector-count (shuffle star-ids))
-        
+
         ;; Initialize BFS
         ;; Queue contains [star-id sector-idx]
         initial-queue (map-indexed (fn [i capital] [capital i]) capitals)
         initial-assignments (into {} (map-indexed (fn [i capital] [capital i]) capitals))]
-    
+
     (loop [queue (into clojure.lang.PersistentQueue/EMPTY initial-queue)
            assignments initial-assignments]
       (if (empty? queue)
@@ -165,7 +165,7 @@
                                      :capital-id (nth capitals sector-idx)})))
                   {}
                   groups))
-        
+
         (let [[current-id sector-idx] (peek queue)
               rem-queue (pop queue)
               neighbors (get adjacency current-id)
@@ -254,10 +254,10 @@
                 text-size (max 12.0 (min 48.0 (* 14.0 (Math/sqrt zoom))))]
             (.setSize font (float text-size))
             (.setColor text-paint (unchecked-int color))
-            
+
             (.drawString canvas name (float (+ screen-x 2)) (float (+ screen-y 2)) font shadow-paint)
             (.drawString canvas name (float screen-x) (float screen-y) font text-paint)
-            
+
             ;; Draw sector names if zoomed in enough
             (when (> zoom 0.8)
               (doseq [{s-name :name s-center :center} (vals sectors)]

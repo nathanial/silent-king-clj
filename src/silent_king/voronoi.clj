@@ -185,8 +185,8 @@
   [^Polygon polygon {:keys [coord star] :as site}]
   (let [raw-ring (strip-duplicate-last (vec (.getCoordinates (.getExteriorRing polygon))))
         center (or (some-> site :coord coord->map)
-                    (let [centroid (.getCentroid polygon)]
-                      {:x (.getX centroid) :y (.getY centroid)}))
+                   (let [centroid (.getCentroid polygon)]
+                     {:x (.getX centroid) :y (.getY centroid)}))
         vertex-maps (->> raw-ring
                          (keep (fn [^Coordinate c]
                                  (when c
@@ -271,7 +271,7 @@
                           stars-with-orig)
 
         relax-config (state/voronoi-relax-config game-state)
-        {:keys [voronoi-cells elapsed-ms relax-meta stars-relaxed] :as result} 
+        {:keys [voronoi-cells elapsed-ms relax-meta stars-relaxed] :as result}
         (generate-relaxed-voronoi input-stars relax-config)
 
         ;; 3. Merge relaxed positions back
@@ -296,7 +296,7 @@
                          iterations-used
                          (if (= 1 iterations-used) "" "s")
                          avg-move))]
-    
+
     (state/set-stars! game-state final-stars-map)
     (state/set-voronoi-cells! game-state voronoi-cells)
     (swap! game-state assoc :voronoi-generated? true)
@@ -367,7 +367,7 @@
         hide-border? (boolean (:hide-border-cells? settings))
         palette (palette-for-settings settings)
         color-scheme (:color-scheme settings)
-        
+
         neighbors (state/neighbors-by-star-id game-state)
         ;; Greedy graph coloring so adjacent cells use different palette entries.
         cell-colors (if (= :by-region color-scheme)
@@ -385,7 +385,7 @@
                                   (assoc acc star-id chosen)))
                               {}
                               (sort (keys cells))))
-        
+
         centroid-color (apply-opacity (:stroke (get cell-colors (first (keys cells)) (first palette))) 1.0)
         stroke-paint (doto (Paint.)
                        (.setMode PaintMode/STROKE)

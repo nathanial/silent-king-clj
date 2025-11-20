@@ -1,6 +1,9 @@
 {:paths ["src" "classes"]
  :java-source-paths ["src/java"]
 
+ :mvn/repos
+ {"clojars" {:url "https://repo.clojars.org/"}}
+
  :deps
  {org.clojure/clojure {:mvn/version "1.11.1"}
   org.clojure/data.json {:mvn/version "2.4.0"}
@@ -49,4 +52,12 @@
 
   :test
   {:extra-paths ["test"]
-   :main-opts ["-m" "silent-king.test-runner"]}}}
+   :main-opts ["-m" "silent-king.test-runner"]}
+
+  :lint
+  {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2023.09.07"}}
+   :main-opts ["-m" "clj-kondo.main"]}
+
+  :format
+  {:extra-deps {dev.weavejester/cljfmt {:mvn/version "0.15.5"}}
+   :main-opts ["-m" "cljfmt.main"]}}}

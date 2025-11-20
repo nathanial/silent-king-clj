@@ -110,7 +110,6 @@
   (or (normalize-element element)
       (throw (ex-info "UI tree cannot be nil" {}))))
 
-
 (defn render-ui-tree
   "Normalize, lay out, and render a Hiccup tree.
 

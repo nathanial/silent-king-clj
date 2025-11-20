@@ -69,9 +69,9 @@
                  paint))
     (when border-color
       (with-open [^Paint border (doto (Paint.)
-                                   (.setColor (unchecked-int border-color))
-                                   (.setStrokeWidth 1.0)
-                                   (.setMode PaintMode/STROKE))]
+                                  (.setColor (unchecked-int border-color))
+                                  (.setStrokeWidth 1.0)
+                                  (.setMode PaintMode/STROKE))]
         (.drawRect canvas
                    (Rect/makeXYWH (float x) (float y) (float width) (float height))
                    border)))

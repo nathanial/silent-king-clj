@@ -75,7 +75,7 @@
         baseline-ratio (render/clamp01 (/ (- baseline min-value) span))
         baseline-y (+ y (* (- 1.0 baseline-ratio) height))]
     (with-open [^Paint bg (doto (Paint.)
-                             (.setColor background-color))]
+                            (.setColor background-color))]
       (let [rect (Rect/makeXYWH (float x) (float y) (float width) (float height))]
         (.drawRect canvas rect bg)))
     (when grid-color
@@ -87,10 +87,10 @@
                    (float (+ x width))
                    (float baseline-y)
                    grid))
-    (when (pos? count)
-      (with-open [^Paint paint (doto (Paint.)
-                                  (.setColor bar-color))]
-        (doseq [[idx value] (map-indexed vector bars)]
+      (when (pos? count)
+        (with-open [^Paint paint (doto (Paint.)
+                                   (.setColor bar-color))]
+          (doseq [[idx value] (map-indexed vector bars)]
             (let [ratio (render/clamp01 (/ (- (double value) min-value) span))
                   bar-height (* ratio height)
                   bar-x (+ x (* idx (+ bar-width gap)))
@@ -99,9 +99,7 @@
                                       (float bar-y)
                                       (float bar-width)
                                       (float bar-height))]
-            (.drawRect canvas rect paint))))))
-    ))
-
+              (.drawRect canvas rect paint))))))))
 
 (defmethod render/draw-node :bar-chart
   [canvas node]

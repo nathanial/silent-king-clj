@@ -268,10 +268,10 @@
   [:vstack {:key :ui-root}
    (control-panel-window game-state)
    (hyperlane-settings-window game-state)
-    (voronoi-settings-window game-state)
-    (performance-overlay-window game-state)
+   (voronoi-settings-window game-state)
+   (performance-overlay-window game-state)
     ;; Render last so it stacks on the right side without overlapping other panels.
-    (when-let [window (star-inspector-window game-state)]
+   (when-let [window (star-inspector-window game-state)]
      window)
    (when-let [window (minimap-window game-state)]
      window)])

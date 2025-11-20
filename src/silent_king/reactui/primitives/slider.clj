@@ -83,7 +83,7 @@
                            :else h-color)]
     (when background-color
       (with-open [^Paint bg (doto (Paint.)
-                               (.setColor (unchecked-int bg-color)))]
+                              (.setColor (unchecked-int bg-color)))]
         (.drawRect canvas
                    (Rect/makeXYWH (float x) (float y) (float width) (float height))
                    bg)))
@@ -97,7 +97,7 @@
                                   (float (:height track)))
                    track-paint))
       (with-open [^Paint handle-paint (doto (Paint.)
-                                         (.setColor (unchecked-int handle-color)))]
+                                        (.setColor (unchecked-int handle-color)))]
         (.drawCircle canvas
                      (float (:x handle))
                      (float (:y handle))

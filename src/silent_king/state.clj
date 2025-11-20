@@ -143,7 +143,7 @@
                    :height 0.0}
         :windows {}
         :performance-overlay {:visible? true
-                               :expanded? true}
+                              :expanded? true}
         :dropdowns {}}
    :features {:stars-and-planets? true
               :hyperlanes? true

@@ -1,8 +1,7 @@
 (ns silent-king.assets
   (:require [clojure.data.json :as json])
   (:import [io.github.humbleui.skija Image Data]
-           [java.io File]
-           ))
+           [java.io File]))
 
 (set! *warn-on-reflection* true)
 

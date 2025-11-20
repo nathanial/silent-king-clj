@@ -141,7 +141,6 @@
     ;; If mixed, line partially visible (we accept this case)
     (not (pos? (bit-and outcode0 outcode1)))))
 
-
 (defn draw-all-hyperlanes
   "Draw all hyperlanes with LOD based on zoom level.
   Renders hyperlanes BEFORE stars so they appear as background connections."

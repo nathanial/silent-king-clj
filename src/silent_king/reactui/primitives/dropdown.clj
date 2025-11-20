@@ -60,7 +60,7 @@
                                    next-y (+ cursor-y option-height option-gap)]
                                (recur (rest remaining)
                                       (conj acc (assoc opt :bounds bounds))
-                                      next-y))))) ]
+                                      next-y)))))]
     (assoc node
            :layout {:bounds header-bounds
                     :dropdown {:header header-bounds
@@ -128,8 +128,8 @@
                            header-hovered? (render/adjust-color header-bg 1.1)
                            :else header-bg)
         header-border (cond header-active? (render/adjust-color header-bg 0.8)
-                             header-hovered? (render/adjust-color header-bg 1.2)
-                             :else border-color)
+                            header-hovered? (render/adjust-color header-bg 1.2)
+                            :else border-color)
         header-text-color (if header-active?
                             (render/adjust-color txt-color 0.95)
                             txt-color)]
@@ -138,12 +138,12 @@
       (.drawRect canvas header-rect header-paint))
     (when header-border
       (with-open [^Paint border-paint (doto (Paint.)
-                                         (.setColor (unchecked-int header-border))
-                                         (.setStrokeWidth 1.0)
-                                         (.setMode PaintMode/STROKE))]
+                                        (.setColor (unchecked-int header-border))
+                                        (.setStrokeWidth 1.0)
+                                        (.setMode PaintMode/STROKE))]
         (.drawRect canvas header-rect border-paint)))
     (with-open [^Paint text-paint (doto (Paint.)
-                                     (.setColor (unchecked-int header-text-color)))]
+                                    (.setColor (unchecked-int header-text-color)))]
       (with-open [^Font font (render/make-font font-size)]
         (.drawString canvas label
                      (float text-x)
@@ -189,14 +189,14 @@
                               selected-text-color
                               text-color)
           rect (Rect/makeXYWH (float (:x bounds))
-                               (float (:y bounds))
-                               (float (:width bounds))
-                               (float (:height bounds)))]
+                              (float (:y bounds))
+                              (float (:width bounds))
+                              (float (:height bounds)))]
       (with-open [^Paint option-paint (doto (Paint.)
                                         (.setColor (unchecked-int bg)))]
         (.drawRect canvas rect option-paint))
       (with-open [^Paint text-paint (doto (Paint.)
-                                       (.setColor (unchecked-int option-text-color)))]
+                                      (.setColor (unchecked-int option-text-color)))]
         (with-open [^Font font (render/make-font 15.0)]
           (.drawString canvas (:label option)
                        (float (+ (:x bounds) padding))
@@ -210,7 +210,7 @@
     (core/capture-node! node)
     (case (:type region)
       :option (core/set-active-interaction! node :dropdown-option {:bounds (:bounds region)
-                                                                  :value (:value region)})
+                                                                   :value (:value region)})
       :header (core/set-active-interaction! node :dropdown {:bounds (:bounds region)}))
     true))
 

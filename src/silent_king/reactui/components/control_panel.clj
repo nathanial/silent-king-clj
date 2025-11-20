@@ -26,8 +26,8 @@
                           "Disable Hyperlanes"
                           "Enable Hyperlanes")
         voronoi-label (if voronoi-enabled?
-                         "Disable Voronoi"
-                         "Enable Voronoi")
+                        "Disable Voronoi"
+                        "Enable Voronoi")
         stars-label (if stars-and-planets-enabled?
                       "Disable Stars & Planets"
                       "Enable Stars & Planets")]

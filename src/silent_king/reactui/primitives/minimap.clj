@@ -122,8 +122,8 @@
                       (catch Exception _ nil))))))))))
 
     (when-let [{:keys [x y width height]} (minimap-math/viewport->minimap-rect viewport-rect
-                                                                                world-bounds
-                                                                                widget-bounds)]
+                                                                               world-bounds
+                                                                               widget-bounds)]
       (with-open [^Paint viewport-paint (doto (Paint.)
                                           (.setColor viewport-color)
                                           (.setStrokeWidth 1.0)

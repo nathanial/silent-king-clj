@@ -106,39 +106,39 @@
                                          (update :pan-x #(+ % dx))
                                          (update :pan-y #(+ % dy)))))))
          (state/update-input! game-state assoc
-                               :mouse-x fb-xpos
-                               :mouse-y fb-ypos
-                               :mouse-initialized? true)))))
+                              :mouse-x fb-xpos
+                              :mouse-y fb-ypos
+                              :mouse-initialized? true)))))
 
   (GLFW/glfwSetMouseButtonCallback
    window
    (reify GLFWMouseButtonCallbackI
      (invoke [_ win button action mods]
        (when (= button GLFW/GLFW_MOUSE_BUTTON_LEFT)
-        (let [input (state/get-input game-state)
-              x (:mouse-x input)
-              y (:mouse-y input)
-              pressed? (= action GLFW/GLFW_PRESS)]
-          (if pressed?
-            (let [handled? (reactui/handle-pointer-down! game-state x y)]
-              (state/update-input! game-state assoc
-                                   :dragging (not handled?)
-                                   :ui-active? (boolean handled?)
-                                   :mouse-down-x x
-                                   :mouse-down-y y))
-            (do
-              (reactui/handle-pointer-up! game-state x y)
-              (let [ui-active? (boolean (:ui-active? input))
-                    dx (- (double x) (double (:mouse-down-x input)))
-                    dy (- (double y) (double (:mouse-down-y input)))
-                    movement (Math/sqrt (+ (* dx dx) (* dy dy)))
-                    click? (and (not ui-active?)
-                                (<= movement world-click-threshold))]
-                (when click?
-                  (selection/handle-screen-click! game-state x y)))
-              (state/update-input! game-state assoc
-                                   :dragging false
-                                   :ui-active? false))))))))
+         (let [input (state/get-input game-state)
+               x (:mouse-x input)
+               y (:mouse-y input)
+               pressed? (= action GLFW/GLFW_PRESS)]
+           (if pressed?
+             (let [handled? (reactui/handle-pointer-down! game-state x y)]
+               (state/update-input! game-state assoc
+                                    :dragging (not handled?)
+                                    :ui-active? (boolean handled?)
+                                    :mouse-down-x x
+                                    :mouse-down-y y))
+             (do
+               (reactui/handle-pointer-up! game-state x y)
+               (let [ui-active? (boolean (:ui-active? input))
+                     dx (- (double x) (double (:mouse-down-x input)))
+                     dy (- (double y) (double (:mouse-down-y input)))
+                     movement (Math/sqrt (+ (* dx dx) (* dy dy)))
+                     click? (and (not ui-active?)
+                                 (<= movement world-click-threshold))]
+                 (when click?
+                   (selection/handle-screen-click! game-state x y)))
+               (state/update-input! game-state assoc
+                                    :dragging false
+                                    :ui-active? false))))))))
 
   (GLFW/glfwSetScrollCallback
    window
@@ -366,8 +366,8 @@
                                 stars)
                         [])
         visible-star-count (if stars-and-planets-enabled
-                              (count visible-stars)
-                              0)
+                             (count visible-stars)
+                             0)
         total-star-count (count stars)
 
         render-planets? (and stars-and-planets-enabled
@@ -519,8 +519,8 @@
 
           ;; Update time in game state
           (state/update-time! game-state assoc
-                             :current-time current-time
-                             :frame-count (inc (:frame-count time)))
+                              :current-time current-time
+                              :frame-count (inc (:frame-count time)))
 
           ;; Update surface if needed
           (when (or (nil? current-surface)

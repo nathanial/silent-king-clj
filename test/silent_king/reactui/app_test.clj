@@ -146,7 +146,7 @@
         iter-slider (find-slider-with-event tree [:voronoi/set-relax-iterations])]
     (is iter-slider)
     (events/dispatch-event! game-state [:voronoi/set-relax-iterations state/relax-iterations-limit])
-    (is (= state/relax-iterations-limit (:relax-iterations (state/voronoi-settings game-state)))))) 
+    (is (= state/relax-iterations-limit (:relax-iterations (state/voronoi-settings game-state))))))
 
 (deftest hyperlane-color-dropdown-selects-scheme
   (let [game-state (atom (state/create-game-state))
@@ -163,8 +163,8 @@
           red-option (some #(when (= :red (:value %)) %)
                            (get-in dropdown* [:layout :dropdown :options]))]
       (is red-option)
-          (let [option-bounds (:bounds red-option)
-                option-events (interaction/click->events expanded-tree
+      (let [option-bounds (:bounds red-option)
+            option-events (interaction/click->events expanded-tree
                                                      (+ (:x option-bounds) 4)
                                                      (+ (:y option-bounds) 4))]
         (doseq [event option-events]
@@ -185,7 +185,7 @@
     (let [expanded-tree (build-layout game-state)
           dropdown* (find-dropdown-by-id expanded-tree :voronoi-color)
           degree-option (some #(when (= :by-degree (:value %)) %)
-                               (get-in dropdown* [:layout :dropdown :options]))]
+                              (get-in dropdown* [:layout :dropdown :options]))]
       (is degree-option)
       (let [option-bounds (:bounds degree-option)
             option-events (interaction/click->events expanded-tree

@@ -134,7 +134,7 @@
                                      (float (:width resize))
                                      (float (:height resize))))]
     (with-open [^Paint body (doto (Paint.)
-                               (.setColor body-color))]
+                              (.setColor body-color))]
       (.drawRect canvas bounds-rect body))
     (when header-rect
       (with-open [^Paint header-paint (doto (Paint.)
@@ -142,11 +142,11 @@
         (.drawRect canvas header-rect header-paint)))
     (when (and content-rect (not minimized?))
       (with-open [^Paint content-paint (doto (Paint.)
-                                          (.setColor content-color))]
+                                         (.setColor content-color))]
         (.drawRect canvas content-rect content-paint)))
     (when minimize-rect
       (with-open [^Paint btn (doto (Paint.)
-                                (.setColor minimize-fill))]
+                               (.setColor minimize-fill))]
         (.drawRect canvas minimize-rect btn))
       (let [padding 4.0
             mx (float (+ (:x minimize) padding))
@@ -155,8 +155,8 @@
             mh (- (:height minimize) (* 2.0 padding))
             line-y (+ my (float (* mh 0.65)))]
         (with-open [^Paint icon (doto (Paint.)
-                                   (.setColor icon-color)
-                                   (.setStrokeWidth 2.0))]
+                                  (.setColor icon-color)
+                                  (.setStrokeWidth 2.0))]
           (if minimized?
             (.drawRect canvas
                        (Rect/makeXYWH mx my (float mw) (float mh))
@@ -169,13 +169,13 @@
                        icon)))))
     (when (pos? (:width bounds))
       (with-open [^Paint border (doto (Paint.)
-                                   (.setColor border-color)
-                                   (.setStrokeWidth 1.0)
-                                   (.setMode PaintMode/STROKE))]
+                                  (.setColor border-color)
+                                  (.setStrokeWidth 1.0)
+                                  (.setMode PaintMode/STROKE))]
         (.drawRect canvas bounds-rect border)))
     (when header-rect
       (with-open [^Paint text-paint (doto (Paint.)
-                                       (.setColor text-color))]
+                                      (.setColor text-color))]
         (with-open [^Font font (render/make-font 16.0)]
           (let [label (or title "Window")
                 text-x (+ (:x header) 12.0)
@@ -187,8 +187,8 @@
                          text-paint)))))
     (when (and resizable? resize-rect (not minimized?))
       (with-open [^Paint handle (doto (Paint.)
-                                   (.setColor resize-color)
-                                   (.setStrokeWidth 1.5))]
+                                  (.setColor resize-color)
+                                  (.setStrokeWidth 1.5))]
         (let [rx (+ (:x resize) (:width resize))
               ry (+ (:y resize) (:height resize))]
           (.drawLine canvas
@@ -246,8 +246,8 @@
         enriched-bounds (assoc bounds :stored-height stored-height)]
     (core/capture-node! node)
     (core/set-active-interaction! node :window-move
-                             {:value {:start-pointer {:x px :y py}
-                                      :start-bounds enriched-bounds}})
+                                  {:value {:start-pointer {:x px :y py}
+                                           :start-bounds enriched-bounds}})
     true))
 
 (defn delegate-minimap-drag-to-window!
@@ -280,14 +280,14 @@
         :resize (do
                   (core/capture-node! node)
                   (core/set-active-interaction! node :window-resize
-                                           {:value {:start-pointer {:x px :y py}
-                                                    :start-bounds enriched-bounds
-                                                    :constraints constraints}})
+                                                {:value {:start-pointer {:x px :y py}
+                                                         :start-bounds enriched-bounds
+                                                         :constraints constraints}})
                   true)
         :minimize (do
                     (core/capture-node! node)
                     (core/set-active-interaction! node :window-minimize
-                                             {:value {:button-bounds (:bounds region)}})
+                                                  {:value {:button-bounds (:bounds region)}})
                     true)
         false))))
 
