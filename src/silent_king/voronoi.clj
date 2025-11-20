@@ -342,9 +342,15 @@
 (defn- get-region-color
   [game-state star-id]
   (let [regions (state/regions game-state)]
-    (or (some (fn [[_ {:keys [color star-ids]}]]
-                (when (contains? star-ids star-id)
-                  color))
+    (or (some (fn [[_ {:keys [color star-ids sectors]}]]
+                (if (contains? star-ids star-id)
+                  ;; Check if star belongs to a sector
+                  (or (some (fn [[_ {:keys [star-ids color]}]]
+                              (when (contains? star-ids star-id)
+                                color))
+                            sectors)
+                      color)
+                  nil))
               regions)
         ;; Default color for unregioned space (dark grey)
         0xFF303030)))
