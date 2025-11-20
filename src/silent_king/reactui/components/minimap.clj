@@ -11,13 +11,10 @@
 
 (defn- get-stars
   [game-state]
-  (->> (state/filter-entities-with game-state [:position])
-       (map second)
-       (map (fn [e]
-              (let [pos (state/get-component e :position)]
-                {:x (double (:x pos))
-                 :y (double (:y pos))
-                 :color (state/get-component e :color)})))))
+  (->> (state/star-seq game-state)
+       (map (fn [{:keys [x y]}]
+              {:x (double (or x 0.0))
+               :y (double (or y 0.0))}))))
 
 (defn minimap-props
   [game-state]
@@ -38,4 +35,3 @@
     {:type :minimap
      :props props
      :children []}))
-

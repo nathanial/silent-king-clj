@@ -47,7 +47,7 @@
 (defn- summary-content
   [metrics fps-history]
   (let [{:keys [fps frame-time-ms visible-stars visible-hyperlanes draw-calls
-                hyperlane-count widget-count memory-mb total-stars]} metrics]
+                hyperlane-count memory-mb total-stars]} metrics]
     [:vstack {:gap 8}
      (section "Performance"
               (stat-row {:label "FPS"
@@ -80,9 +80,6 @@
                          :precision 0})
               (stat-row {:label "Hyperlane Entities"
                          :value hyperlane-count
-                         :precision 0})
-              (stat-row {:label "Widgets"
-                         :value widget-count
                          :precision 0})
               (stat-row {:label "Memory"
                          :value memory-mb

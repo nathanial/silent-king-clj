@@ -2,6 +2,8 @@
 
 This is a **first‑pass design** for a new React‑style, unidirectional‑dataflow UI layer that will **replace** the previous entity‑based widget system. The legacy widget/UI implementation has already been removed from the codebase; what remains are Markdown reference documents that describe what the old components did so we can recreate them cleanly in the new system.
 
+> Status (November 20, 2025): the galaxy now lives as **pure data** on `game-state` (`:stars`, `:hyperlanes`, `:neighbors-by-star-id`, plus ID counters). ECS helpers and the `:entities` map have been removed. References to ECS below remain for historical context; new UI and gameplay code should consume the pure world model directly.
+
 The goal is to let us write Clojure components that return **pure data trees**, and to have a **separate renderer** that turns those trees into draw calls (likely via multimethods). The new layer should integrate with the existing game ECS (stars, hyperlanes, camera) but does **not** need to coexist with the old `silent-king.widgets` implementation beyond using its behavior as a design reference.
 
 ---
@@ -10,8 +12,12 @@ The goal is to let us write Clojure components that return **pure data trees**, 
 
 ### 1.1 Runtime situation
 
-- The game still uses an ECS for **stars, hyperlanes, camera, and core state** (`silent-king.state`, `silent-king.galaxy`, `silent-king.hyperlanes`, etc.).
-- The **old widget/UI implementation has been removed**:
+- The galaxy/world uses **pure data collections** on `game-state`, not ECS entities:
+  - `:stars {id {:id ... :x ... :y ... :size ... :density ... :sprite-path ... :rotation-speed ...}}`
+  - `:hyperlanes [{:id ... :from-id ... :to-id ... :base-width ... :color-start ... :color-end ... :glow-color ... :animation-offset ...} ...]`
+  - `:neighbors-by-star-id {star-id [{:neighbor-id ... :hyperlane hyperlane-map} ...]}`
+  - Monotonic counters `:next-star-id`, `:next-hyperlane-id` keep IDs deterministic for runtime and tests.
+- The **old widget/UI implementation remains removed**:
   - `src/silent_king/ui/*.clj` (controls, star inspector, hyperlane settings, performance dashboard, specs, theme) are gone.
   - `src/silent_king/widgets/*.clj` (core, layout, render, interaction, draw_order, animation, minimap, config) are gone.
 - Only the **rendering of stars and hyperlanes** remains hooked up to the main loop; there is currently no in-game UI overlay.

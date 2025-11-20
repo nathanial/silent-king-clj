@@ -6,7 +6,8 @@
             [silent-king.reactui.events :as events]
             [silent-king.reactui.interaction :as interaction]
             [silent-king.reactui.layout :as layout]
-            [silent-king.state :as state]))
+            [silent-king.state :as state]
+            [silent-king.test-fixtures :as fixtures]))
 
 (def ^:const test-viewport {:x 0 :y 0 :width 2560 :height 1440})
 
@@ -197,15 +198,6 @@
       (is chart)
       (is (= [30.0 45.0 60.0] (:values data))))))
 
-(defn- create-test-star
-  [x y]
-  (state/create-entity
-   :position {:x x :y y}
-   :renderable {:path "stars/bright.png"}
-   :transform {:size 40.0}
-   :physics {:rotation-speed 1.0}
-   :star {:density 0.5}))
-
 (deftest star-inspector-hidden-when-no-selection
   (let [game-state (atom (state/create-game-state))
         tree (build-layout game-state)
@@ -214,7 +206,8 @@
 
 (deftest star-inspector-active-with-selection
   (let [game-state (atom (state/create-game-state))
-        star-id (state/add-entity! game-state (create-test-star 200.0 300.0))]
+        _ (state/reset-world-ids! game-state)
+        star-id (fixtures/add-test-star! game-state 200.0 300.0)]
     (state/set-selection! game-state {:star-id star-id})
     (let [tree (build-layout game-state)
           window (find-window-with-title tree "Star Inspector")

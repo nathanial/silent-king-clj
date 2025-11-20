@@ -2,7 +2,8 @@
   (:require [clojure.test :refer [deftest is testing]]
             [silent-king.camera :as camera]
             [silent-king.reactui.events :as events]
-            [silent-king.state :as state]))
+            [silent-king.state :as state]
+            [silent-king.test-fixtures :as fixtures]))
 
 (deftest dispatch-toggle-hyperlanes
   (let [game-state (atom (state/create-game-state))]
@@ -58,14 +59,9 @@
     (events/dispatch-event! game-state [:ui.dropdown/close :colors])
     (is (false? (state/dropdown-open? game-state :colors)))))
 
-(defn- star-entity
-  [x y]
-  (state/create-entity
-   :position {:x x :y y}
-   :renderable {:path "stars/bright.png"}
-   :transform {:size 40.0}
-   :physics {:rotation-speed 1.0}
-   :star {:density 0.5}))
+(defn- add-test-star!
+  [game-state x y]
+  (fixtures/add-test-star! game-state x y))
 
 (deftest dispatch-clear-selection
   (let [game-state (atom (state/create-game-state))]
@@ -77,7 +73,8 @@
 
 (deftest dispatch-zoom-to-selected-star
   (let [game-state (atom (state/create-game-state))
-        star-id (state/add-entity! game-state (star-entity 120.0 80.0))]
+        _ (state/reset-world-ids! game-state)
+        star-id (add-test-star! game-state 120.0 80.0)]
     (state/set-selection! game-state {:star-id star-id})
     (state/set-ui-viewport! game-state {:width 800.0 :height 600.0})
     (events/dispatch-event! game-state [:ui/zoom-to-selected-star {:zoom 3.0}])

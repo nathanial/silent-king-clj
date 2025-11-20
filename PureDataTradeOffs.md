@@ -8,47 +8,27 @@ This document summarizes the tradeoffs of:
 
 The goal is not to mandate a decision, but to make the tradeoffs explicit so future refactors are deliberate rather than piecemeal.
 
+> Status (November 20, 2025): Option 3 has been implemented. The ECS layer and `:entities` map are gone; stars and hyperlanes now live as pure data on `game-state` (`:stars`, `:hyperlanes`, `:neighbors-by-star-id`) with monotonic ID counters. The rest of this document remains for historical context and for evaluating future refactors.
+
 ---
 
 ## 1. Where We Are Today
 
-### 1.1 World representation
+### 1.1 World representation (current)
 
-- `silent-king.state/create-game-state` returns a single `game-state` map wrapped in an atom:
-  - Core pieces of state:
-    - `:entities {id entity}` – stars and hyperlanes live here.
-    - `:camera` – zoom, pan, used by all world rendering and selection.
-    - `:input`, `:time`, `:assets`, `:selection`, `:ui`, `:features`, `:hyperlane-settings`, `:metrics`, `:debug`.
-- ECS helpers in `silent-king.state`:
-  - Entity management: `create-entity`, `add-entity!`, `get-entity`, `update-entity!`, `remove-entity!`, `get-all-entities`.
-  - Components are just keys inside `:components`:
-    - `add-component`, `remove-component`, `get-component`.
-  - Queries: `filter-entities-with`, `find-entities-with-all` (linear scan over `:entities`).
+- `silent-king.state/create-game-state` returns a single `game-state` map wrapped in an atom with **domain keys**, not ECS entities:
+  - `:stars {id {:id ... :x ... :y ... :size ... :density ... :sprite-path ... :rotation-speed ...}}`
+  - `:hyperlanes [{:id ... :from-id ... :to-id ... :base-width ... :color-start ... :color-end ... :glow-color ... :animation-offset ...} ...]`
+  - `:neighbors-by-star-id {star-id [{:neighbor-id ... :hyperlane hyperlane-map} ...]}`
+  - Monotonic counters `:next-star-id` / `:next-hyperlane-id` for deterministic IDs.
+  - Existing UI/camera/metrics keys remain unchanged (`:camera`, `:input`, `:time`, `:assets`, `:selection`, `:ui`, `:features`, `:hyperlane-settings`, `:metrics`, `:debug`).
+- World helpers in `silent-king.state` are thin accessors/mutators: `stars`, `hyperlanes`, `star-by-id`, `set-world!`, `add-star!`, `add-hyperlane!`, `reset-world-ids!`, etc.
 - Stars (in `silent-king.galaxy`):
-  - `generate-galaxy-entities!` samples spiral arms + noise and, for each star, calls:
-    ```clj
-    (state/create-entity
-      :position   {:x x :y y}
-      :renderable {:path (:path base-image)}
-      :transform  {:size size :rotation 0.0}
-      :physics    {:rotation-speed rotation-speed}
-      :star       {:density density})
-    ```
-  - Then `state/add-entity!` inserts each entity into `[:entities id]`.
+  - `generate-galaxy` is pure: returns `{ :stars {...} :next-star-id n }` built from spiral arm + noise sampling.
+  - `generate-galaxy!` writes these stars into `:stars`, clears hyperlanes, and resets hyperlane IDs.
 - Hyperlanes (in `silent-king.hyperlanes`):
-  - `generate-delaunay-hyperlanes!`:
-    - Uses `state/filter-entities-with game-state [:position]` to get star positions.
-    - Runs JTS Delaunay triangulation.
-    - For each edge, creates a hyperlane entity with components:
-      ```clj
-      :hyperlane {:from-id from-id :to-id to-id}
-      :visual    {:base-width ...
-                  :color-start ...
-                  :color-end ...
-                  :glow-color ...
-                  :animation-offset ...}
-      ```
-    - Adds each via `state/add-entity!`.
+  - `generate-hyperlanes` takes `(vals (:stars ...))`, runs JTS Delaunay, and returns `{ :hyperlanes [...] :neighbors-by-star-id {...} :next-hyperlane-id n }`.
+  - `generate-hyperlanes!` persists the vector and adjacency map to `game-state`.
 
 ### 1.2 Rendering and interaction
 
@@ -427,4 +407,3 @@ In short:
 
 - **Bringing stars + hyperlanes into ReactUI as a primitive is a good idea** for architectural cleanliness and consistency, as long as we keep the primitive coarse-grained.
 - **Deleting ECS in favor of a pure data galaxy model is more about clarity than performance** and should follow, not precede, that rendering unification. Doing it in stages will minimize risk and keep tests meaningful throughout. 
-

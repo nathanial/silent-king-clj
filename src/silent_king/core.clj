@@ -280,8 +280,8 @@
         atlas-image (case lod-level
                       :xs (:atlas-image-xs assets)
                       :small (:atlas-image-small assets)
-                      :medium (:atlas-image-medium assets)
-                      :full nil)
+                     :medium (:atlas-image-medium assets)
+                     :full nil)
         atlas-metadata (case lod-level
                          :xs (:atlas-metadata-xs assets)
                          :small (:atlas-metadata-small assets)
@@ -296,18 +296,15 @@
         ;; Get star images for full-res rendering
         star-images (:star-images assets)
 
-        ;; Get all star entities (those with position, renderable, and transform components)
-        star-entities (state/filter-entities-with game-state [:position :renderable :transform :physics])
+        ;; Stars stored as pure data
+        stars (state/star-seq game-state)
 
         ;; Frustum culling: filter visible stars using non-linear transform
-        visible-stars (filter (fn [[_ entity]]
-                                (let [pos (state/get-component entity :position)
-                                      transform (state/get-component entity :transform)]
-                                  (star-visible? (:x pos) (:y pos) (:size transform)
-                                               pan-x pan-y width height zoom)))
-                             star-entities)
+        visible-stars (filter (fn [{:keys [x y size]}]
+                                (star-visible? x y size pan-x pan-y width height zoom))
+                              stars)
         visible-count (count visible-stars)
-        total-count (count star-entities)]
+        total-count (count stars)]
 
     ;; Note: No canvas transform needed - we calculate screen positions per-star with non-linear scaling
 
@@ -319,28 +316,22 @@
       (swap! game-state assoc-in [:debug :hyperlanes-rendered] 0))
 
     ;; Draw visible stars using 4-level LOD
-    (doseq [[entity-id entity] visible-stars]
-      (let [pos (state/get-component entity :position)
-            renderable (state/get-component entity :renderable)
-            transform (state/get-component entity :transform)
-            physics (state/get-component entity :physics)
-            path (:path renderable)
-            world-x (:x pos)
-            world-y (:y pos)
-            base-size (:size transform)
+    (doseq [{:keys [id x y size rotation-speed sprite-path]} visible-stars]
+      (let [world-x x
+            world-y y
+            base-size size
             ;; Transform to screen coordinates with non-linear scaling
             screen-x (transform-position world-x zoom pan-x)
             screen-y (transform-position world-y zoom pan-y)
             screen-size (transform-size base-size zoom)
-            rotation-speed (:rotation-speed physics)
-            rotation (* time 30 rotation-speed)]
-        (when (= entity-id selected-star-id)
+            rotation (* time 30 (double (or rotation-speed 0.0)))]
+        (when (= id selected-star-id)
           (draw-selection-highlight canvas screen-x screen-y screen-size time))
         (if (= lod-level :full)
           ;; Draw from full-resolution image
-          (draw-full-res-star canvas star-images path screen-x screen-y screen-size rotation)
+          (draw-full-res-star canvas star-images sprite-path screen-x screen-y screen-size rotation)
           ;; Draw from texture atlas
-          (draw-star-from-atlas canvas atlas-image atlas-metadata path screen-x screen-y screen-size rotation atlas-size))))
+          (draw-star-from-atlas canvas atlas-image atlas-metadata sprite-path screen-x screen-y screen-size rotation atlas-size))))
 
     ;; Calculate FPS and metrics
     (let [time-state (state/get-time game-state)
@@ -348,12 +339,7 @@
           current-time (:current-time time-state)
           fps (if (pos? current-time) (/ frame-count current-time) 0.0)
           hyperlanes-count (get-in @game-state [:debug :hyperlanes-rendered] 0)
-
-          ;; Count entities for performance metrics (computed once per frame)
-          hyperlane-entities (state/filter-entities-with game-state [:hyperlane])
-          hyperlane-count (count hyperlane-entities)
-          widget-entities (state/filter-entities-with game-state [:widget])
-          widget-count (count widget-entities)
+          hyperlane-count (count (state/hyperlanes game-state))
 
           ;; Approximate frame time from FPS
           frame-time-ms (/ 1000.0 (max fps 0.0001))
@@ -370,8 +356,7 @@
                    :visible-stars visible-count
                    :hyperlane-count hyperlane-count
                    :visible-hyperlanes (if hyperlanes-enabled hyperlanes-count 0)
-                   :widget-count widget-count
-                   :draw-calls (+ visible-count hyperlanes-count widget-count)
+                   :draw-calls (+ visible-count hyperlanes-count)
                    :memory-mb memory-mb
                    :current-time current-time}]
 
@@ -500,11 +485,11 @@
         (println "Loaded" (count star-images) "star images")
         (state/set-assets! game-state loaded-assets)
 
-        ;; Generate star entities with noise-based clustering
-        (galaxy/generate-galaxy-entities! game-state star-images 1000)
+        ;; Generate world data with noise-based clustering
+        (galaxy/generate-galaxy! game-state star-images 1000)
 
         ;; Generate hyperlane connections using Delaunay triangulation
-        (hyperlanes/generate-delaunay-hyperlanes! game-state))
+        (hyperlanes/generate-hyperlanes! game-state))
 
       ;; Run render loop
       (render-loop game-state render-state))

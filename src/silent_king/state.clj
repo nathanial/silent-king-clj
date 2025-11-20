@@ -1,22 +1,33 @@
 (ns silent-king.state
-  "Game state management with entity-component system"
+  "Game state management and world data helpers"
   (:require [silent-king.camera :as camera]))
 
 (set! *warn-on-reflection* true)
 
 ;; =============================================================================
-;; Entity ID Generation
+;; World ID Generation
 ;; =============================================================================
 
-(def ^:private entity-id-counter (atom 0))
+(defn next-star-id!
+  "Generate and store the next star id. Starts at 1."
+  [game-state]
+  (let [next-id (inc (long (get @game-state :next-star-id 0)))]
+    (swap! game-state assoc :next-star-id next-id)
+    next-id))
 
-(defn next-entity-id []
-  "Generate a unique entity ID"
-  (swap! entity-id-counter inc))
+(defn next-hyperlane-id!
+  "Generate and store the next hyperlane id. Starts at 1."
+  [game-state]
+  (let [next-id (inc (long (get @game-state :next-hyperlane-id 0)))]
+    (swap! game-state assoc :next-hyperlane-id next-id)
+    next-id))
 
-(defn reset-entity-ids! []
-  "Reset entity ID counter (useful for testing)"
-  (reset! entity-id-counter 0))
+(defn reset-world-ids!
+  "Reset star and hyperlane id counters (testing convenience)."
+  [game-state]
+  (swap! game-state assoc
+         :next-star-id 0
+         :next-hyperlane-id 0))
 
 (def default-hyperlane-settings
   {:enabled? true
@@ -56,7 +67,11 @@
 
 (defn create-game-state []
   "Create initial game state structure"
-  {:entities {}
+  {:stars {}
+   :hyperlanes []
+   :neighbors-by-star-id {}
+   :next-star-id 0
+   :next-hyperlane-id 0
    :camera {:zoom 1.0
             :pan-x 0.0
             :pan-y 0.0}
@@ -78,11 +93,12 @@
             :atlas-metadata-small {}
             :atlas-size-small 4096
             :atlas-image-medium nil
-           :atlas-metadata-medium {}
-           :atlas-size-medium 4096
-           :atlas-image-lg nil
-           :atlas-metadata-lg {}
-           :atlas-size-lg 8192}
+            :atlas-metadata-medium {}
+            :atlas-size-medium 4096
+            :atlas-image-lg nil
+            :atlas-metadata-lg {}
+            :atlas-size-lg 8192
+            :star-images []}
    :widgets {:layout-dirty #{}}
    :selection default-selection
    :ui {:scale 2.0
@@ -107,86 +123,78 @@
    :surface nil})
 
 ;; =============================================================================
-;; Entity Management
+;; World Accessors & Mutators
 ;; =============================================================================
 
-(defn create-entity
-  "Create a new entity with given components"
-  [& {:as components}]
-  {:components components})
+(defn stars
+  "Return the map of stars keyed by id."
+  [game-state]
+  (:stars @game-state))
 
-(defn add-entity!
-  "Add an entity to the game state and return the entity ID"
-  [game-state entity]
-  (let [id (next-entity-id)]
-    (swap! game-state assoc-in [:entities id] entity)
+(defn star-seq
+  "Return a sequence of star maps."
+  [game-state]
+  (vals (stars game-state)))
+
+(defn star-by-id
+  "Lookup a star by id."
+  [game-state star-id]
+  (get (:stars @game-state) star-id))
+
+(defn hyperlanes
+  "Return the vector of hyperlanes."
+  [game-state]
+  (:hyperlanes @game-state))
+
+(defn neighbors-by-star-id
+  "Return adjacency map of star id -> neighbors."
+  [game-state]
+  (:neighbors-by-star-id @game-state))
+
+(defn set-stars!
+  "Replace stars map on game-state."
+  [game-state stars-map]
+  (swap! game-state assoc :stars (or stars-map {})))
+
+(defn set-hyperlanes!
+  "Replace hyperlanes vector on game-state."
+  [game-state hyperlanes-vector]
+  (swap! game-state assoc :hyperlanes (vec (or hyperlanes-vector []))))
+
+(defn set-neighbors!
+  "Replace neighbors-by-star-id map on game-state."
+  [game-state neighbors]
+  (swap! game-state assoc :neighbors-by-star-id (or neighbors {})))
+
+(defn set-world!
+  "Replace world data on game-state with supplied values."
+  [game-state {:keys [stars hyperlanes neighbors-by-star-id next-star-id next-hyperlane-id]}]
+  (swap! game-state
+         (fn [state]
+           (-> state
+               (assoc :stars (or stars {}))
+               (assoc :hyperlanes (vec (or hyperlanes [])))
+               (assoc :neighbors-by-star-id (or neighbors-by-star-id {}))
+               (assoc :next-star-id (long (or next-star-id 0)))
+               (assoc :next-hyperlane-id (long (or next-hyperlane-id 0)))))))
+
+(defn add-star!
+  "Insert a star map, assigning an id if missing. Returns id."
+  [game-state star]
+  (let [id (or (:id star) (next-star-id! game-state))
+        star* (assoc star :id id)]
+    (swap! game-state assoc-in [:stars id] star*)
     id))
 
-(defn get-entity
-  "Get an entity by ID"
-  [game-state entity-id]
-  (get-in @game-state [:entities entity-id]))
-
-(defn update-entity!
-  "Update an entity by ID using function f"
-  [game-state entity-id f & args]
-  (swap! game-state update-in [:entities entity-id] #(apply f % args)))
-
-(defn remove-entity!
-  "Remove an entity by ID"
-  [game-state entity-id]
-  (swap! game-state update :entities dissoc entity-id))
-
-(defn get-all-entities
-  "Get all entities as a map of {id entity}"
-  [game-state]
-  (:entities @game-state))
-
-;; =============================================================================
-;; Component Management
-;; =============================================================================
-
-(defn add-component
-  "Add a component to an entity (pure function, returns updated entity)"
-  [entity component-key component-data]
-  (assoc-in entity [:components component-key] component-data))
-
-(defn remove-component
-  "Remove a component from an entity (pure function, returns updated entity)"
-  [entity component-key]
-   (update entity :components dissoc component-key))
-
-(defn get-component
-  "Get a component from an entity"
-  [entity component-key]
-  (get-in entity [:components component-key]))
-
-(defn has-component?
-  "Check if an entity has a component"
-  [entity component-key]
-  (contains? (:components entity) component-key))
-
-(defn has-all-components?
-  "Check if an entity has all specified components"
-  [entity component-keys]
-  (every? #(has-component? entity %) component-keys))
-
-;; =============================================================================
-;; Entity Queries
-;; =============================================================================
-
-(defn filter-entities-with
-  "Filter entities that have all specified components.
-   Returns a sequence of [entity-id entity] pairs."
-  [game-state component-keys]
-  (filter (fn [[_ entity]]
-            (has-all-components? entity component-keys))
-          (get-all-entities game-state)))
-
-(defn find-entities-with-all
-  "Find all entity IDs that have all specified components"
-  [game-state component-keys]
-  (map first (filter-entities-with game-state component-keys)))
+(defn add-hyperlane!
+  "Insert a hyperlane map, assigning an id if missing. Returns id."
+  [game-state hyperlane]
+  (let [id (or (:id hyperlane) (next-hyperlane-id! game-state))
+        hyperlane* (assoc hyperlane :id id)]
+    (swap! game-state update :hyperlanes
+           (fnil conj [])
+           hyperlane*)
+    id))
 
 ;; =============================================================================
 ;; State Accessors
@@ -439,18 +447,17 @@
   ([game-state star-id]
    (zoom-to-star! game-state star-id {}))
   ([game-state star-id {:keys [zoom]}]
-   (when-let [star (get-entity game-state star-id)]
-     (when-let [pos (get-component star :position)]
-       (let [camera (get-camera game-state)
-             requested (if (number? zoom)
-                         (double zoom)
-                         (max 2.0 (double (or (:zoom camera) 1.0))))
-             clamped (-> requested
-                         (max 0.4)
-                         (min 10.0))]
-         (focus-camera-on-world! game-state pos {:zoom clamped})
-         (update-camera! game-state assoc :zoom clamped)
-         clamped)))))
+   (when-let [star (star-by-id game-state star-id)]
+     (let [camera (get-camera game-state)
+           requested (if (number? zoom)
+                       (double zoom)
+                       (max 2.0 (double (or (:zoom camera) 1.0))))
+           clamped (-> requested
+                       (max 0.4)
+                       (min 10.0))]
+       (focus-camera-on-world! game-state {:x (:x star) :y (:y star)} {:zoom clamped})
+       (update-camera! game-state assoc :zoom clamped)
+       clamped))))
 
 (defn zoom-to-selection!
   "Zoom and pan the camera to the currently selected star."

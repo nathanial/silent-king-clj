@@ -209,31 +209,52 @@
         index (int (* brightness-bias num-images))]
     (nth base-images (min index (dec num-images)))))
 
-(defn generate-galaxy-entities!
-  "Generate star entities using spiral arm distribution blended with noise for texture."
-  [game-state base-images num-stars]
-  (println "Generating" num-stars "star entities with spiral arm distribution...")
+(defn- star-map
+  [id {:keys [path]} {:keys [x y density]}]
+  (let [size (density->size density)
+        rotation-speed (density->rotation-speed density)]
+    {:id id
+     :x (double x)
+     :y (double y)
+     :size size
+     :density density
+     :sprite-path path
+     :rotation-speed rotation-speed}))
+
+(defn generate-galaxy
+  "Pure galaxy generator. Returns {:stars {...} :next-star-id n}."
+  [star-images num-stars]
   (let [noise-gen (create-noise-generator)
         {:keys [core-star-probability]} galaxy-config
-        core-prob (clamp (or core-star-probability 0.0) 0.0 1.0)
-        start-time (System/currentTimeMillis)]
-    (dotimes [_ num-stars]
-      (let [{:keys [x y density]}
-            (if (< (rand) core-prob)
-              (sample-core-star noise-gen)
-              (sample-spiral-star noise-gen))
-            base-image (density->star-image base-images density)
-            size (density->size density)
-            rotation-speed (density->rotation-speed density)
-            entity (state/create-entity
-                    :position {:x x :y y}
-                    :renderable {:path (:path base-image)}
-                    :transform {:size size
-                               :rotation 0.0}
-                    :physics {:rotation-speed rotation-speed}
-                    :star {:density density})]
-        (state/add-entity! game-state entity)))
+        core-prob (clamp (or core-star-probability 0.0) 0.0 1.0)]
+    (loop [i 0
+           last-id 0
+           stars {}]
+      (if (= i num-stars)
+        {:stars stars
+         :next-star-id last-id}
+        (let [{:keys [x y density] :as sample}
+              (if (< (rand) core-prob)
+                (sample-core-star noise-gen)
+                (sample-spiral-star noise-gen))
+              base-image (density->star-image star-images density)
+              id (inc last-id)
+              star (star-map id base-image sample)]
+          (recur (inc i)
+                 id
+                 (assoc stars id star)))))))
 
-    (let [elapsed (- (System/currentTimeMillis) start-time)]
-      (println "Generated" (count (state/get-all-entities game-state))
-               "stars in" elapsed "ms"))))
+(defn generate-galaxy!
+  "Generate stars and write them into the world model on game-state."
+  [game-state star-images num-stars]
+  (println "Generating" num-stars "stars with spiral arm distribution...")
+  (let [start-time (System/currentTimeMillis)
+        {:keys [stars next-star-id] :as result} (generate-galaxy star-images num-stars)
+        elapsed (- (System/currentTimeMillis) start-time)]
+    (state/set-world! game-state {:stars stars
+                                  :hyperlanes []
+                                  :neighbors-by-star-id {}
+                                  :next-star-id next-star-id
+                                  :next-hyperlane-id 0})
+    (println "Generated" (count stars) "stars in" elapsed "ms")
+    result))

@@ -38,6 +38,81 @@
         rgb (bit-and color 0x00FFFFFF)]
     (unchecked-int (bit-or (bit-shift-left alpha 24) rgb))))
 
+(defn- build-neighbors
+  "Compute adjacency map {:star-id [{:neighbor-id .. :hyperlane h} ...]}."
+  [hyperlanes]
+  (reduce (fn [acc {:keys [from-id to-id] :as hyperlane}]
+            (-> acc
+                (update from-id (fnil conj []) {:neighbor-id to-id
+                                                :hyperlane hyperlane})
+                (update to-id (fnil conj []) {:neighbor-id from-id
+                                              :hyperlane hyperlane})))
+          {}
+          hyperlanes))
+
+(defn generate-hyperlanes
+  "Pure hyperlane generator using Delaunay triangulation.
+  Accepts a sequence of star maps with :id/:x/:y.
+  Returns {:hyperlanes [...] :neighbors-by-star-id {...} :next-hyperlane-id n}."
+  [stars]
+  (let [start-time (System/currentTimeMillis)
+        coords (mapv (fn [{:keys [id x y]}]
+                       [id (Coordinate. (double x) (double y))])
+                     stars)
+        builder (DelaunayTriangulationBuilder.)
+        _ (.setSites builder ^java.util.Collection (mapv second coords))
+        triangulation (.getEdges builder (GeometryFactory.))
+        num-edges (.getNumGeometries triangulation)
+        epsilon 0.1
+        find-id (fn [cx cy]
+                  (some (fn [[id ^Coordinate coord]]
+                          (when (and (< (Math/abs (double (- (.x coord) cx))) epsilon)
+                                     (< (Math/abs (double (- (.y coord) cy))) epsilon))
+                            id))
+                        coords))]
+    (loop [i 0
+           next-id 0
+           acc []]
+      (if (= i num-edges)
+        (let [neighbors (build-neighbors acc)
+              elapsed (- (System/currentTimeMillis) start-time)]
+          {:hyperlanes acc
+           :neighbors-by-star-id neighbors
+           :next-hyperlane-id next-id
+           :elapsed-ms elapsed})
+        (let [^LineString edge (.getGeometryN triangulation i)
+              ^Coordinate from-coord (.getCoordinateN edge 0)
+              ^Coordinate to-coord (.getCoordinateN edge 1)
+              from-id (find-id (.x from-coord) (.y from-coord))
+              to-id (find-id (.x to-coord) (.y to-coord))]
+          (if (and from-id to-id (not= from-id to-id))
+            (let [width-variation (+ 0.8 (* (rand) 0.4))
+                  color-variation (int (* (rand) 40))
+                  base-color (:color-start hyperlane-config)
+                  varied-color (bit-xor base-color (bit-shift-left color-variation 8))
+                  hyperlane {:id (inc next-id)
+                             :from-id from-id
+                             :to-id to-id
+                             :base-width (* (:base-width hyperlane-config) width-variation)
+                             :color-start varied-color
+                             :color-end (:color-end hyperlane-config)
+                             :glow-color (:glow-color hyperlane-config)
+                             :animation-offset (* (rand) Math/PI 2)}]
+              (recur (inc i) (inc next-id) (conj acc hyperlane)))
+            (recur (inc i) next-id acc)))))))
+
+(defn generate-hyperlanes!
+  "Generate hyperlanes from the current world's stars and persist them."
+  [game-state]
+  (let [stars (state/star-seq game-state)
+        {:keys [hyperlanes neighbors-by-star-id next-hyperlane-id elapsed-ms] :as result}
+        (generate-hyperlanes stars)]
+    (state/set-hyperlanes! game-state hyperlanes)
+    (state/set-neighbors! game-state neighbors-by-star-id)
+    (swap! game-state assoc :next-hyperlane-id next-hyperlane-id)
+    (println "Generated" (count hyperlanes) "hyperlanes in" (or elapsed-ms 0) "ms")
+    result))
+
 ;; Line segment frustum culling using Cohen-Sutherland algorithm
 (defn- compute-outcode [x y width height]
   "Compute outcode for Cohen-Sutherland line clipping"
@@ -66,80 +141,12 @@
     ;; If mixed, line partially visible (we accept this case)
     (not (pos? (bit-and outcode0 outcode1)))))
 
-(defn generate-delaunay-hyperlanes!
-  "Generate hyperlane connections between stars using Delaunay triangulation.
-  Creates hyperlane entities with :hyperlane and :visual components."
-  [game-state]
-  (println "Generating Delaunay hyperlanes...")
-  (let [start-time (System/currentTimeMillis)
-        ;; Get all star entities with positions
-        star-entities (state/filter-entities-with game-state [:position])
-
-        ;; Build map of entity-id -> position for quick lookup
-        id-to-pos (into {} (map (fn [[id entity]]
-                                  [id (state/get-component entity :position)])
-                                star-entities))
-
-        ;; Create JTS Coordinate array for triangulation
-        coords (mapv (fn [[id entity]]
-                       (let [pos (state/get-component entity :position)]
-                         [id (Coordinate. (:x pos) (:y pos))]))
-                     star-entities)
-
-        ;; Build Delaunay triangulation
-        builder (DelaunayTriangulationBuilder.)
-        _ (.setSites builder ^java.util.Collection (mapv second coords))
-        triangulation (.getEdges builder (GeometryFactory.))
-
-        ;; Extract edges and create hyperlane entities
-        edge-count (atom 0)
-        num-edges (.getNumGeometries triangulation)
-
-        ;; Helper function to find entity ID by coordinate
-        find-id (fn [cx cy epsilon]
-                  (some (fn [[id pos]]
-                          (when (and (< (Math/abs (double (- (:x pos) cx))) epsilon)
-                                    (< (Math/abs (double (- (:y pos) cy))) epsilon))
-                            id))
-                        id-to-pos))]
-
-    ;; Iterate through triangulation edges
-    (dotimes [i num-edges]
-      (let [^org.locationtech.jts.geom.LineString edge (.getGeometryN triangulation i)
-            ^org.locationtech.jts.geom.Coordinate from-coord (.getCoordinateN edge 0)
-            ^org.locationtech.jts.geom.Coordinate to-coord (.getCoordinateN edge 1)
-            epsilon 0.1
-            from-id (find-id (.x from-coord) (.y from-coord) epsilon)
-            to-id (find-id (.x to-coord) (.y to-coord) epsilon)]
-
-        (when (and from-id to-id (not= from-id to-id))
-            ;; Create hyperlane entity
-            (let [;; Randomize visual properties slightly for variety
-                  width-variation (+ 0.8 (* (rand) 0.4))  ; 0.8 - 1.2
-                  color-variation (int (* (rand) 40))     ; Slight color variation
-                  base-color (:color-start hyperlane-config)
-                  varied-color (bit-xor base-color (bit-shift-left color-variation 8))
-
-                  hyperlane (state/create-entity
-                             :hyperlane {:from-id from-id
-                                        :to-id to-id}
-                             :visual {:base-width (* (:base-width hyperlane-config) width-variation)
-                                     :color-start varied-color
-                                     :color-end (:color-end hyperlane-config)
-                                     :glow-color (:glow-color hyperlane-config)
-                                     :animation-offset (* (rand) Math/PI 2)})]  ; Random phase
-              (state/add-entity! game-state hyperlane)
-              (swap! edge-count inc)))))
-
-    (let [elapsed (- (System/currentTimeMillis) start-time)]
-      (println "Generated" @edge-count "hyperlanes in" elapsed "ms"))))
 
 (defn draw-all-hyperlanes
   "Draw all hyperlanes with LOD based on zoom level.
   Renders hyperlanes BEFORE stars so they appear as background connections."
   [^Canvas canvas width height zoom pan-x pan-y game-state current-time]
-  (let [hyperlane-entities (state/filter-entities-with game-state [:hyperlane])
-        all-entities @game-state
+  (let [hyperlane-data (state/hyperlanes game-state)
         settings (state/hyperlane-settings game-state)
         scheme (get color-schemes (:color-scheme settings) (:blue color-schemes))
         opacity (double (max 0.05 (min 1.0 (:opacity settings 0.9))))
@@ -148,36 +155,35 @@
         width-scale (double (max 0.4 (min 3.0 (:line-width settings 1.0))))
         start-color (apply-opacity (:start scheme (:color-start hyperlane-config)) opacity)
         end-color (apply-opacity (:end scheme (:color-end hyperlane-config)) opacity)
-        glow-color (apply-opacity (:glow scheme (:glow-color hyperlane-config)) opacity)
+        glow-color-applied (apply-opacity (:glow scheme (:glow-color hyperlane-config)) opacity)
         lod-level (cond
                     (< zoom 0.8) :far
                     (< zoom 2.0) :medium
                     :else :close)
         rendered (atom 0)
         pulse-frequency (* (:pulse-speed hyperlane-config) animation-speed)]
-    (doseq [[_ hyperlane-entity] hyperlane-entities]
-      (let [hyperlane-data (state/get-component hyperlane-entity :hyperlane)
-            visual (state/get-component hyperlane-entity :visual)
-            from-entity (get-in all-entities [:entities (:from-id hyperlane-data)])
-            to-entity (get-in all-entities [:entities (:to-id hyperlane-data)])]
-        (when (and from-entity to-entity)
-          (let [from-pos (state/get-component from-entity :position)
-                to-pos (state/get-component to-entity :position)
-                from-x (camera/transform-position (:x from-pos) zoom pan-x)
-                from-y (camera/transform-position (:y from-pos) zoom pan-y)
-                to-x (camera/transform-position (:x to-pos) zoom pan-x)
-                to-y (camera/transform-position (:y to-pos) zoom pan-y)
+    (doseq [{:keys [from-id to-id base-width color-start color-end glow-color animation-offset]} hyperlane-data]
+      (let [from-star (state/star-by-id game-state from-id)
+            to-star (state/star-by-id game-state to-id)]
+        (when (and from-star to-star)
+          (let [from-x (camera/transform-position (:x from-star) zoom pan-x)
+                from-y (camera/transform-position (:y from-star) zoom pan-y)
+                to-x (camera/transform-position (:x to-star) zoom pan-x)
+                to-y (camera/transform-position (:y to-star) zoom pan-y)
                 dx (- to-x from-x)
                 dy (- to-y from-y)
                 screen-length (Math/sqrt (+ (* dx dx) (* dy dy)))]
             (when (and (line-segment-visible? from-x from-y to-x to-y width height)
                        (> screen-length (:min-visible-length hyperlane-config)))
               (swap! rendered inc)
-              (let [line-width-base (camera/transform-size (* (:base-width visual) width-scale) zoom)]
+              (let [line-width-base (camera/transform-size (* base-width width-scale) zoom)
+                    start (or color-start start-color)
+                    end (or color-end end-color)
+                    glow (or glow-color glow-color-applied)]
                 (case lod-level
                   :far
                   (let [paint (doto (Paint.)
-                                (.setColor (unchecked-int start-color))
+                                (.setColor (unchecked-int start))
                                 (.setStrokeWidth (float (max 1.0 (* width-scale 1.0))))
                                 (.setMode PaintMode/STROKE))]
                     (.drawLine canvas (float from-x) (float from-y)
@@ -186,7 +192,7 @@
 
                   :medium
                   (let [paint (doto (Paint.)
-                                (.setColor (unchecked-int start-color))
+                                (.setColor (unchecked-int start))
                                 (.setStrokeWidth (float line-width-base))
                                 (.setStrokeCap PaintStrokeCap/ROUND)
                                 (.setMode PaintMode/STROKE))]
@@ -196,7 +202,7 @@
 
                   :close
                   (let [animation-phase (+ (* current-time pulse-frequency Math/PI 2)
-                                           (:animation-offset visual))
+                                           (or animation-offset 0.0))
                         pulse (if animation? (Math/sin animation-phase) 0.0)
                         width-multiplier (if animation?
                                            (+ 1.0 (* pulse (:pulse-amplitude hyperlane-config)))
@@ -204,11 +210,11 @@
                         animated-width (* line-width-base width-multiplier)
                         glow-width (* animated-width 3.0)
                         glow-paint (doto (Paint.)
-                                     (.setColor (unchecked-int glow-color))
+                                     (.setColor (unchecked-int glow))
                                      (.setStrokeWidth (float glow-width))
                                      (.setStrokeCap PaintStrokeCap/ROUND)
                                      (.setMode PaintMode/STROKE))
-                        colors (int-array [start-color end-color])
+                        colors (int-array [start end])
                         shader (Shader/makeLinearGradient
                                 (float from-x) (float from-y)
                                 (float to-x) (float to-y)
