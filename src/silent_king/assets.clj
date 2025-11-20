@@ -45,4 +45,7 @@
    :atlas-image-medium (load-atlas-image "assets/star-atlas-medium.png")
    :atlas-metadata-medium (load-atlas-metadata "assets/star-atlas-medium.json")
    :atlas-size-medium 4096
+   :planet-atlas-image-medium (load-atlas-image "assets/planet-atlas-medium.png")
+   :planet-atlas-metadata-medium (load-atlas-metadata "assets/planet-atlas-medium.json")
+   :planet-atlas-size-medium 4096
    :star-images (load-star-images)})

@@ -15,6 +15,13 @@
     (swap! game-state assoc :next-star-id next-id)
     next-id))
 
+(defn next-planet-id!
+  "Generate and store the next planet id. Starts at 1."
+  [game-state]
+  (let [next-id (inc (long (get @game-state :next-planet-id 0)))]
+    (swap! game-state assoc :next-planet-id next-id)
+    next-id))
+
 (defn next-hyperlane-id!
   "Generate and store the next hyperlane id. Starts at 1."
   [game-state]
@@ -27,6 +34,7 @@
   [game-state]
   (swap! game-state assoc
          :next-star-id 0
+         :next-planet-id 0
          :next-hyperlane-id 0))
 
 (def default-hyperlane-settings
@@ -68,9 +76,11 @@
 (defn create-game-state []
   "Create initial game state structure"
   {:stars {}
+   :planets {}
    :hyperlanes []
    :neighbors-by-star-id {}
    :next-star-id 0
+   :next-planet-id 0
    :next-hyperlane-id 0
    :camera {:zoom 1.0
             :pan-x 0.0
@@ -98,6 +108,9 @@
             :atlas-image-lg nil
             :atlas-metadata-lg {}
             :atlas-size-lg 8192
+            :planet-atlas-image-medium nil
+            :planet-atlas-metadata-medium {}
+            :planet-atlas-size-medium 4096
             :star-images []}
    :widgets {:layout-dirty #{}}
    :selection default-selection
@@ -131,15 +144,35 @@
   [game-state]
   (:stars @game-state))
 
+(defn planets
+  "Return the map of planets keyed by id."
+  [game-state]
+  (:planets @game-state))
+
 (defn star-seq
   "Return a sequence of star maps."
   [game-state]
   (vals (stars game-state)))
 
+(defn planet-seq
+  "Return a sequence of planet maps."
+  [game-state]
+  (vals (planets game-state)))
+
 (defn star-by-id
   "Lookup a star by id."
   [game-state star-id]
   (get (:stars @game-state) star-id))
+
+(defn planets-by-star-id
+  "Return a map of star-id -> vector of planets orbiting that star."
+  [game-state]
+  (reduce (fn [acc {:keys [star-id] :as planet}]
+            (if star-id
+              (update acc star-id (fnil conj []) planet)
+              acc))
+          {}
+          (planet-seq game-state)))
 
 (defn hyperlanes
   "Return the vector of hyperlanes."
@@ -156,6 +189,11 @@
   [game-state stars-map]
   (swap! game-state assoc :stars (or stars-map {})))
 
+(defn set-planets!
+  "Replace planets map on game-state."
+  [game-state planets-map]
+  (swap! game-state assoc :planets (or planets-map {})))
+
 (defn set-hyperlanes!
   "Replace hyperlanes vector on game-state."
   [game-state hyperlanes-vector]
@@ -168,14 +206,16 @@
 
 (defn set-world!
   "Replace world data on game-state with supplied values."
-  [game-state {:keys [stars hyperlanes neighbors-by-star-id next-star-id next-hyperlane-id]}]
+  [game-state {:keys [stars planets hyperlanes neighbors-by-star-id next-star-id next-planet-id next-hyperlane-id]}]
   (swap! game-state
          (fn [state]
            (-> state
                (assoc :stars (or stars {}))
+               (assoc :planets (or planets {}))
                (assoc :hyperlanes (vec (or hyperlanes [])))
                (assoc :neighbors-by-star-id (or neighbors-by-star-id {}))
                (assoc :next-star-id (long (or next-star-id 0)))
+               (assoc :next-planet-id (long (or next-planet-id 0)))
                (assoc :next-hyperlane-id (long (or next-hyperlane-id 0)))))))
 
 (defn add-star!
@@ -184,6 +224,14 @@
   (let [id (or (:id star) (next-star-id! game-state))
         star* (assoc star :id id)]
     (swap! game-state assoc-in [:stars id] star*)
+    id))
+
+(defn add-planet!
+  "Insert a planet map, assigning an id if missing. Returns id."
+  [game-state planet]
+  (let [id (or (:id planet) (next-planet-id! game-state))
+        planet* (assoc planet :id id)]
+    (swap! game-state assoc-in [:planets id] planet*)
     id))
 
 (defn add-hyperlane!

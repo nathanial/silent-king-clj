@@ -5,6 +5,7 @@
             [silent-king.reactui.events-test]
             [silent-king.reactui.interaction-test]
             [silent-king.reactui.layout-test]
+            [silent-king.planet-test]
             [silent-king.selection-test]))
 
 (defn -main
@@ -15,6 +16,7 @@
                                     silent-king.reactui.events-test
                                     silent-king.reactui.interaction-test
                                     silent-king.reactui.layout-test
+                                    silent-king.planet-test
                                     silent-king.selection-test])
         failures (+ (:fail result 0) (:error result 0))]
     (when (pos? failures)

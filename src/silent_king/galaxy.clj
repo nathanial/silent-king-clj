@@ -1,7 +1,8 @@
 (ns silent-king.galaxy
   "Galaxy generation using spiral arms blended with simplex noise for organic structure"
   (:require [silent-king.state :as state])
-  (:import [silentking.noise FastNoiseLite FastNoiseLite$NoiseType]))
+  (:import [silentking.noise FastNoiseLite FastNoiseLite$NoiseType]
+           [java.util Random]))
 
 ;; Galaxy generation parameters
 (def ^:private galaxy-config
@@ -39,6 +40,116 @@
    :core-density-falloff 3.0
    :core-density-edge 0.22
    :core-radius-distribution 1.35})
+
+(def ^:private planet-config
+  {:min-radius 18.0
+   :max-radius 80.0
+   :min-gap 12.0
+   :gap-jitter 10.0
+   :min-size 7.0
+   :max-size 17.0
+   :max-planets 5
+   :base-period 80.0
+   :period-radius-ref 60.0
+   :period-exponent 1.3})
+
+(declare clamp)
+
+(defn- ^Random star->rng
+  [{:keys [id]}]
+  (let [base (long (or id 0))
+        seed (-> (unchecked-multiply 6364136223846793005 base)
+                 (unchecked-add 1442695040888963407))]
+    (Random. seed)))
+
+(defn- density->planet-count
+  ^long [^Random rng density]
+  (let [d (clamp (double (or density 0.0)) 0.0 1.0)
+        base (cond
+               (< d 0.20) 0
+               (< d 0.35) 1
+               (< d 0.55) 2
+               (< d 0.75) 3
+               :else 4)
+        bonus (if (< (.nextDouble rng) d) 1 0)
+        max-planets (:max-planets planet-config)]
+    (-> (+ base bonus)
+        (min max-planets)
+        (max 0))))
+
+(defn- next-orbital-radius
+  ^double [^Random rng last-radius]
+  (let [{:keys [min-gap gap-jitter max-radius]} planet-config
+        gap (+ (double min-gap) (* (double gap-jitter) (.nextDouble rng)))
+        proposed (+ (double last-radius) gap)]
+    (min (double max-radius) proposed)))
+
+(defn- orbital-period
+  ^double [radius]
+  (let [{:keys [base-period period-radius-ref period-exponent]} planet-config
+        safe-radius (max 1.0 (double radius))
+        scale (/ safe-radius (double (max 1.0 (or period-radius-ref 1.0))))]
+    (max 2.0 (* (double base-period) (Math/pow scale (double period-exponent))))))
+
+(defn- random-phase
+  ^double [^Random rng]
+  (* 2.0 Math/PI (.nextDouble rng)))
+
+(defn- random-planet-size
+  ^double [^Random rng]
+  (let [{:keys [min-size max-size]} planet-config
+        span (max 0.0 (- (double max-size) (double min-size)))]
+    (+ (double min-size) (* span (.nextDouble rng)))))
+
+(defn- pick-planet-sprite
+  [^Random rng planet-sprites]
+  (when (seq planet-sprites)
+    (nth planet-sprites (.nextInt rng (count planet-sprites)))))
+
+(defn generate-planets-for-star
+  "Generate a vector of planet maps orbiting the supplied star."
+  [planet-sprites {:keys [id density] :as star}]
+  (let [^Random rng (star->rng star)
+        planet-count (density->planet-count rng density)
+        start-radius (+ (double (:min-radius planet-config))
+                        (* (double (:gap-jitter planet-config)) (.nextDouble rng)))]
+    (loop [i 0
+           radius start-radius
+           planets []]
+      (if (or (= i planet-count)
+              (> radius (:max-radius planet-config)))
+        planets
+        (let [planet {:star-id id
+                      :radius radius
+                      :orbital-period (orbital-period radius)
+                      :phase (random-phase rng)
+                      :size (random-planet-size rng)
+                      :sprite-path (pick-planet-sprite rng planet-sprites)
+                      :eccentricity 0.0
+                      :inclination 0.0}
+              next-radius (next-orbital-radius rng radius)
+              next-radius (if (>= next-radius (:max-radius planet-config))
+                            (inc (double (:max-radius planet-config)))
+                            next-radius)]
+          (recur (inc i)
+                 next-radius
+                 (conj planets planet)))))))
+
+(defn planet-position
+  "Compute the world-space position of a planet relative to its parent star at time t (seconds).
+  Returns {:x :y :angle} where :angle is the orbital angle in radians."
+  [{:keys [radius orbital-period phase]} {:keys [x y]} t]
+  (let [safe-period (max 0.001 (double (or orbital-period 1.0)))
+        omega (/ (* 2.0 Math/PI) safe-period)
+        angle (+ (double (or phase 0.0))
+                 (* omega (double (or t 0.0))))
+        px (+ (double (or x 0.0))
+              (* (double (or radius 0.0)) (Math/cos angle)))
+        py (+ (double (or y 0.0))
+              (* (double (or radius 0.0)) (Math/sin angle)))]
+    {:x px
+     :y py
+     :angle angle}))
 
 (defn create-noise-generator
   "Create a FastNoiseLite instance configured for OpenSimplex2 noise"
@@ -222,8 +333,10 @@
      :rotation-speed rotation-speed}))
 
 (defn generate-galaxy
-  "Pure galaxy generator. Returns {:stars {...} :next-star-id n}."
-  [star-images num-stars]
+  "Pure galaxy generator. Returns {:stars {...} :planets {...} :next-star-id n :next-planet-id m}."
+  [star-images planet-sprites num-stars]
+  (when (empty? planet-sprites)
+    (throw (ex-info "Planet sprites required for galaxy generation" {:planet-sprites-count 0})))
   (let [noise-gen (create-noise-generator)
         {:keys [core-star-probability]} galaxy-config
         core-prob (clamp (or core-star-probability 0.0) 0.0 1.0)]
@@ -231,8 +344,21 @@
            last-id 0
            stars {}]
       (if (= i num-stars)
-        {:stars stars
-         :next-star-id last-id}
+        (let [{:keys [planets next-id]}
+              (reduce (fn [{:keys [planets next-id]} star]
+                        (let [generated (generate-planets-for-star planet-sprites star)]
+                          (reduce (fn [{:keys [planets next-id]} planet]
+                                    (let [id (inc (long next-id))]
+                                      {:planets (assoc planets id (assoc planet :id id))
+                                       :next-id id}))
+                                  {:planets planets :next-id next-id}
+                                  generated)))
+                      {:planets {} :next-id 0}
+                      (vals stars))]
+          {:stars stars
+           :planets planets
+           :next-star-id last-id
+           :next-planet-id next-id})
         (let [{:keys [x y density] :as sample}
               (if (< (rand) core-prob)
                 (sample-core-star noise-gen)
@@ -245,16 +371,19 @@
                  (assoc stars id star)))))))
 
 (defn generate-galaxy!
-  "Generate stars and write them into the world model on game-state."
-  [game-state star-images num-stars]
+  "Generate stars (and their planets) and write them into the world model on game-state."
+  [game-state star-images planet-sprites num-stars]
   (println "Generating" num-stars "stars with spiral arm distribution...")
   (let [start-time (System/currentTimeMillis)
-        {:keys [stars next-star-id] :as result} (generate-galaxy star-images num-stars)
+        {:keys [stars planets next-star-id next-planet-id] :as result}
+        (generate-galaxy star-images planet-sprites num-stars)
         elapsed (- (System/currentTimeMillis) start-time)]
     (state/set-world! game-state {:stars stars
+                                  :planets planets
                                   :hyperlanes []
                                   :neighbors-by-star-id {}
                                   :next-star-id next-star-id
+                                  :next-planet-id next-planet-id
                                   :next-hyperlane-id 0})
-    (println "Generated" (count stars) "stars in" elapsed "ms")
+    (println "Generated" (count stars) "stars and" (count planets) "planets in" elapsed "ms")
     result))

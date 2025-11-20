@@ -25,6 +25,7 @@
 (defonce game-state (atom (state/create-game-state)))
 (defonce render-state (atom (state/create-render-state)))
 (def ^:const world-click-threshold 6.0)
+(def ^:const planet-visibility-zoom 1.5)
 
 ;; Backwards-compatibility aliases for widely-referenced camera helpers
 (def zoom->position-scale camera/zoom->position-scale)
@@ -226,6 +227,34 @@
                                      scaled-height))
       (.restore canvas))))
 
+(defn draw-planet-from-atlas
+  "Draw a planet from the planet atlas at screen coordinates (x, y)"
+  [^Canvas canvas ^Image atlas-image atlas-metadata path screen-x screen-y size]
+  (when (and atlas-image atlas-metadata)
+    (when-let [coords (get atlas-metadata path)]
+      (.save canvas)
+      (.translate canvas screen-x screen-y)
+      (let [tile-size (:size coords)
+            scale (/ size tile-size)
+            scaled-size (* tile-size scale)]
+        (.drawImageRect canvas atlas-image
+                        (Rect/makeXYWH (:x coords) (:y coords) tile-size tile-size)
+                        (Rect/makeXYWH (- (/ scaled-size 2))
+                                       (- (/ scaled-size 2))
+                                       scaled-size
+                                       scaled-size)))
+      (.restore canvas))))
+
+(defn draw-orbit-ring
+  "Draw a thin orbit ring for a planet around its parent star."
+  [^Canvas canvas screen-star-x screen-star-y screen-radius]
+  (let [paint (doto (Paint.)
+                (.setColor (unchecked-int 0x33FFFFFF))
+                (.setMode PaintMode/STROKE)
+                (.setStrokeWidth 1.2))]
+    (.drawCircle canvas (float screen-star-x) (float screen-star-y) (float screen-radius) paint)
+    (.close paint)))
+
 (defn draw-selection-highlight
   "Draw a glowing selection ring around the focused star."
   [^Canvas canvas screen-x screen-y screen-size time]
@@ -257,6 +286,28 @@
          (> (+ screen-y margin) 0)
          (< (- screen-y margin) viewport-height))))
 
+(defn planet-visible?
+  "Check if a planet is visible in the current viewport."
+  [screen-x screen-y screen-size viewport-width viewport-height]
+  (let [margin (max 8.0 (* screen-size 1.5))]
+    (and (> (+ screen-x margin) 0)
+         (< (- screen-x margin) viewport-width)
+         (> (+ screen-y margin) 0)
+         (< (- screen-y margin) viewport-height))))
+
+(defn orbit-visible?
+  "Check if an orbit ring is visible given star screen position and ring radius."
+  [screen-star-x screen-star-y screen-radius viewport-width viewport-height]
+  (let [r (+ (double screen-radius) 4.0)
+        min-x (- screen-star-x r)
+        max-x (+ screen-star-x r)
+        min-y (- screen-star-y r)
+        max-y (+ screen-star-y r)]
+    (and (< min-x viewport-width)
+         (> max-x 0.0)
+         (< min-y viewport-height)
+         (> max-y 0.0))))
+
 (defn draw-frame [^Canvas canvas width height time game-state]
   ;; Clear background
   (.clear canvas (unchecked-int 0xFF000000))
@@ -280,8 +331,8 @@
         atlas-image (case lod-level
                       :xs (:atlas-image-xs assets)
                       :small (:atlas-image-small assets)
-                     :medium (:atlas-image-medium assets)
-                     :full nil)
+                      :medium (:atlas-image-medium assets)
+                      :full nil)
         atlas-metadata (case lod-level
                          :xs (:atlas-metadata-xs assets)
                          :small (:atlas-metadata-small assets)
@@ -296,15 +347,49 @@
         ;; Get star images for full-res rendering
         star-images (:star-images assets)
 
+        planet-atlas-image (:planet-atlas-image-medium assets)
+        planet-atlas-metadata (:planet-atlas-metadata-medium assets)
+
         ;; Stars stored as pure data
-        stars (state/star-seq game-state)
+        stars-by-id (state/stars game-state)
+        stars (vals stars-by-id)
+        planets (state/planet-seq game-state)
 
         ;; Frustum culling: filter visible stars using non-linear transform
         visible-stars (filter (fn [{:keys [x y size]}]
                                 (star-visible? x y size pan-x pan-y width height zoom))
                               stars)
-        visible-count (count visible-stars)
-        total-count (count stars)]
+        visible-star-count (count visible-stars)
+        total-star-count (count stars)
+
+        render-planets? (and (>= zoom planet-visibility-zoom)
+                             planet-atlas-image
+                             (seq planet-atlas-metadata))
+        visible-planets (when render-planets?
+                          (keep (fn [{:keys [star-id radius size] :as planet}]
+                                  (when-let [star (get stars-by-id star-id)]
+                                    (let [{:keys [x y]} (galaxy/planet-position planet star time)
+                                          screen-x (transform-position x zoom pan-x)
+                                          screen-y (transform-position y zoom pan-y)
+                                          screen-size (transform-size (double (or size 8.0)) zoom)
+                                          screen-radius (* (double (or radius 0.0)) (camera/zoom->position-scale zoom))
+                                          star-screen-x (transform-position (:x star) zoom pan-x)
+                                          star-screen-y (transform-position (:y star) zoom pan-y)
+                                          ring-visible? (orbit-visible? star-screen-x star-screen-y screen-radius width height)
+                                          planet-visible? (planet-visible? screen-x screen-y screen-size width height)]
+                                      (when (or ring-visible? planet-visible?)
+                                        {:planet planet
+                                         :star-screen-x star-screen-x
+                                         :star-screen-y star-screen-y
+                                         :screen-radius screen-radius
+                                         :ring-visible? ring-visible?
+                                         :planet-visible? planet-visible?
+                                         :screen-x screen-x
+                                         :screen-y screen-y
+                                         :screen-size screen-size}))))
+                                planets))
+        visible-planet-count (count visible-planets)
+        total-planet-count (count planets)]
 
     ;; Note: No canvas transform needed - we calculate screen positions per-star with non-linear scaling
 
@@ -333,6 +418,26 @@
           ;; Draw from texture atlas
           (draw-star-from-atlas canvas atlas-image atlas-metadata sprite-path screen-x screen-y screen-size rotation atlas-size))))
 
+    ;; Draw orbit rings then planets (planets on top of rings)
+    (when render-planets?
+      (doseq [{:keys [screen-radius star-screen-x star-screen-y ring-visible?]} visible-planets]
+        (when ring-visible?
+          (draw-orbit-ring canvas star-screen-x star-screen-y screen-radius))))
+
+    ;; Draw planets after stars and rings so they appear on top
+    (if render-planets?
+      (let [planets-drawn (reduce (fn [acc {:keys [planet screen-x screen-y screen-size planet-visible?]}]
+                                    (if (and planet-visible?
+                                             (some? (:sprite-path planet)))
+                                      (do
+                                        (draw-planet-from-atlas canvas planet-atlas-image planet-atlas-metadata (:sprite-path planet) screen-x screen-y screen-size)
+                                        (inc acc))
+                                      acc))
+                                  0
+                                  visible-planets)]
+        (swap! game-state assoc-in [:debug :planets-rendered] planets-drawn))
+      (swap! game-state assoc-in [:debug :planets-rendered] 0))
+
     ;; Calculate FPS and metrics
     (let [time-state (state/get-time game-state)
           frame-count (:frame-count time-state)
@@ -352,11 +457,13 @@
           ;; Build metrics map
           metrics {:fps fps
                    :frame-time-ms frame-time-ms
-                   :total-stars total-count
-                   :visible-stars visible-count
+                   :total-stars total-star-count
+                   :visible-stars visible-star-count
+                   :total-planets total-planet-count
+                   :visible-planets visible-planet-count
                    :hyperlane-count hyperlane-count
                    :visible-hyperlanes (if hyperlanes-enabled hyperlanes-count 0)
-                   :draw-calls (+ visible-count hyperlanes-count)
+                   :draw-calls (+ visible-star-count visible-planet-count hyperlanes-count)
                    :memory-mb memory-mb
                    :current-time current-time}]
 
@@ -440,6 +547,9 @@
     (when-let [atlas-image-medium (:atlas-image-medium assets)]
       (.close ^Image atlas-image-medium))
 
+    (when-let [planet-atlas-image-medium (:planet-atlas-image-medium assets)]
+      (.close ^Image planet-atlas-image-medium))
+
     ;; Close all full-res star images
     (when-let [star-images (:star-images assets)]
       (doseq [star-data star-images]
@@ -481,12 +591,16 @@
 
       ;; Load assets
       (let [loaded-assets (assets/load-all-assets)
-            star-images (:star-images loaded-assets)]
-        (println "Loaded" (count star-images) "star images")
+            star-images (:star-images loaded-assets)
+            planet-sprites (keys (:planet-atlas-metadata-medium loaded-assets))]
+        (when (empty? planet-sprites)
+          (throw (ex-info "Planet atlas metadata missing entries; cannot generate planets"
+                          {:atlas "assets/planet-atlas-medium.json"})))
+        (println "Loaded" (count star-images) "star images and" (count planet-sprites) "planet sprites")
         (state/set-assets! game-state loaded-assets)
 
         ;; Generate world data with noise-based clustering
-        (galaxy/generate-galaxy! game-state star-images 1000)
+        (galaxy/generate-galaxy! game-state star-images planet-sprites 1000)
 
         ;; Generate hyperlane connections using Delaunay triangulation
         (hyperlanes/generate-hyperlanes! game-state))
