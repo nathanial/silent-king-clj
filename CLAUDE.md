@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 
 Silent King is a Clojure-based star gallery visualization application that renders thousands of rotating stars with interactive pan and zoom controls. It demonstrates a high-performance rendering pipeline using:
-- Entity-Component System (ECS) architecture
+- A pure-data world model (`:stars`, `:hyperlanes`, `:neighbors-by-star-id`) stored on `game-state`
 - 3-level LOD (Level of Detail) system with texture atlases
 - Non-linear scaling for spatial separation when zooming
 - LWJGL for OpenGL windowing
@@ -36,7 +36,7 @@ The application starts an nREPL server on port 7888 (stored in `.nrepl-port`) wi
 
 ### State Management
 The application uses two main state atoms:
-- `game-state`: Contains entities, camera, input, time, and assets
+- `game-state`: Contains world data (`:stars`, `:hyperlanes`, adjacency), camera, input, time, selection, UI, metrics, and assets
 - `render-state`: Contains window, DirectContext, and Surface
 
 State is managed through the `silent-king.state` namespace, which provides:
@@ -51,7 +51,7 @@ Entities are stored as maps with a `:components` key. Common components:
 - `:transform` - `{:size px :rotation angle}` for rendering
 - `:physics` - `{:rotation-speed rad/s}` for animation
 
-Query entities using `filter-entities-with` which takes a vector of required component keys.
+World accessors are pure data helpers: iterate `state/star-seq` for stars and `state/hyperlanes` for hyperlanes; lookups use `state/star-by-id` and adjacency in `:neighbors-by-star-id`.
 
 ### 3-Level LOD System
 The renderer switches between quality levels based on zoom:
