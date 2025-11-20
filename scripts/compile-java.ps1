@@ -1,3 +1,6 @@
+$ScriptDir = Split-Path $MyInvocation.MyCommand.Path
+Set-Location $ScriptDir\..
+
 Write-Host "Compiling Java sources..."
 if (!(Test-Path -Path "classes")) {
     New-Item -ItemType Directory -Force -Path "classes" | Out-Null

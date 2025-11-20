@@ -1,5 +1,8 @@
 $ErrorActionPreference = "Stop"
 
+$ScriptDir = Split-Path $MyInvocation.MyCommand.Path
+Set-Location $ScriptDir\..
+
 Write-Host "Silent King - Running Tests..."
 
 # We assume windows-x64 since we are in the PowerShell script

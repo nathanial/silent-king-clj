@@ -1,12 +1,15 @@
 $ErrorActionPreference = "Stop"
 
+$ScriptDir = Split-Path $MyInvocation.MyCommand.Path
+Set-Location $ScriptDir\..
+
 Write-Host "Silent King - Build Script"
 Write-Host "=========================="
 Write-Host ""
 
 # Step 0: Compile Java sources
 Write-Host "Step 0: Compiling Java sources..."
-.\compile-java.ps1
+.\scripts\compile-java.ps1
 Write-Host ""
 
 # Step 1: Preprocess individual star images

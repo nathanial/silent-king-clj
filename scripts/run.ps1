@@ -1,5 +1,8 @@
 $ErrorActionPreference = "Stop"
 
+$ScriptDir = Split-Path $MyInvocation.MyCommand.Path
+Set-Location $ScriptDir\..
+
 Write-Host "Silent King - Starting..."
 
 # In PowerShell/Windows, we assume windows-x64 since that's the only Windows alias we have.

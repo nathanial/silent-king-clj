@@ -2,13 +2,16 @@
 
 set -e
 
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+cd "$SCRIPT_DIR/.."
+
 echo "Silent King - Build Script"
 echo "=========================="
 echo ""
 
 # Step 0: Compile Java sources
 echo "Step 0: Compiling Java sources..."
-./compile-java.sh
+./scripts/compile-java.sh
 echo ""
 
 # Step 1: Preprocess individual star images
