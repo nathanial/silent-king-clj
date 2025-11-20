@@ -255,11 +255,37 @@
                (recur (inc i) acc*)))))))))
 
 (defn generate-voronoi!
-  "Generate Voronoi cells from the current world's stars and persist them."
+  "Generate Voronoi cells from the current world's stars and persist them.
+   Updates star positions if relaxation is enabled, preserving original coordinates."
   [game-state]
-  (let [stars (state/star-seq game-state)
+  (let [current-stars (state/star-seq game-state)
+        ;; 1. Ensure original coordinates are stored so we can reset/re-relax
+        stars-with-orig (mapv (fn [s]
+                                (if (and (:orig-x s) (:orig-y s))
+                                  s
+                                  (assoc s :orig-x (:x s) :orig-y (:y s))))
+                              current-stars)
+        ;; 2. Reset to original positions for input to relaxation
+        input-stars (mapv (fn [s]
+                            (assoc s :x (:orig-x s) :y (:orig-y s)))
+                          stars-with-orig)
+
         relax-config (state/voronoi-relax-config game-state)
-        {:keys [voronoi-cells elapsed-ms relax-meta] :as result} (generate-relaxed-voronoi stars relax-config)
+        {:keys [voronoi-cells elapsed-ms relax-meta stars-relaxed] :as result} 
+        (generate-relaxed-voronoi input-stars relax-config)
+
+        ;; 3. Merge relaxed positions back
+        relaxed-lookup (into {} (map (juxt :id identity) stars-relaxed))
+        final-stars-map (reduce (fn [acc s]
+                                  (let [id (:id s)
+                                        relaxed (get relaxed-lookup id)
+                                        new-s (if relaxed
+                                                (assoc s :x (:x relaxed) :y (:y relaxed))
+                                                s)]
+                                    (assoc acc id new-s)))
+                                {}
+                                stars-with-orig)
+
         iterations-used (long (or (some-> relax-meta :iterations-used) 0))
         avg-move (double (or (some-> relax-meta :iteration-stats last :avg-displacement) 0.0))
         base-msg (format "Generated %d Voronoi cells in %d ms"
@@ -270,6 +296,8 @@
                          iterations-used
                          (if (= 1 iterations-used) "" "s")
                          avg-move))]
+    
+    (state/set-stars! game-state final-stars-map)
     (state/set-voronoi-cells! game-state voronoi-cells)
     (swap! game-state assoc :voronoi-generated? true)
     (println (str base-msg (or suffix "")))
@@ -554,10 +582,11 @@
         start (System/currentTimeMillis)]
     (if (zero? iterations)
       (let [base (generate-voronoi stars {:envelope (:envelope cfg)})]
-        (assoc base :relax-meta {:iterations-requested iterations
-                                 :iterations-used 0
-                                 :iteration-stats []
-                                 :relax-elapsed-ms 0}))
+        (assoc base :stars-relaxed stars
+               :relax-meta {:iterations-requested iterations
+                            :iterations-used 0
+                            :iteration-stats []
+                            :relax-elapsed-ms 0}))
       (let [{:keys [stars-relaxed iterations-used iteration-stats envelope elapsed-ms]} (relax-sites stars cfg)
             relaxed-by-id (into {} (map (juxt :id identity) stars-relaxed))
             relaxed-envelope envelope
@@ -572,6 +601,7 @@
                         voronoi-cells)
             total (- (System/currentTimeMillis) start)]
         {:voronoi-cells cells
+         :stars-relaxed stars-relaxed
          :elapsed-ms total
          :envelope envelope
          :relax-meta {:iterations-requested iterations
