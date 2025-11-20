@@ -13,8 +13,8 @@
 (def ^:const ^double epsilon 1.0e-6)
 
 (def ^:private color-schemes
-  {:monochrome {:stroke 0xFFFFFFFF
-                :fill 0x99FFFFFF}
+  {:monochrome {:stroke 0xFF7FA5FF   ;; soft blue outline for contrast
+                :fill 0x55FFFFFF}    ;; lighter fill to reveal borders
    :by-density {:stroke 0xFF66FFCC
                 :fill 0x5566FFCC}
    :by-degree {:stroke 0xFFFFC36F
@@ -30,9 +30,11 @@
 
 (defn- apply-opacity
   [color opacity]
-  (let [alpha (int (Math/round (* 255.0 (clamp opacity 0.0 1.0))))
+  (let [base-alpha (bit-and (unsigned-bit-shift-right color 24) 0xFF)
+        base-frac (/ (double base-alpha) 255.0)
+        out-alpha (int (Math/round (* 255.0 base-frac (clamp opacity 0.0 1.0))))
         rgb (bit-and color 0x00FFFFFF)]
-    (unchecked-int (bit-or (bit-shift-left alpha 24) rgb))))
+    (unchecked-int (bit-or (bit-shift-left out-alpha 24) rgb))))
 
 (defn- coord->map
   [^Coordinate coord]
@@ -114,15 +116,16 @@
 (defn- polygon->cell
   [^Polygon polygon {:keys [coord star] :as site}]
   (let [raw-ring (strip-duplicate-last (vec (.getCoordinates (.getExteriorRing polygon))))
-        ring (keep identity raw-ring)
         center (or (some-> site :coord coord->map)
                     (let [centroid (.getCentroid polygon)]
                       {:x (.getX centroid) :y (.getY centroid)}))
-        vertices (->> ring
-                      (keep (fn [^Coordinate c]
-                              (when c (coord->map c))))
-                      (remove #(or (nil? (:x %)) (nil? (:y %))))
-                      (sort-ccw center))
+        vertex-maps (->> raw-ring
+                         (keep (fn [^Coordinate c]
+                                 (when c
+                                   (let [m (coord->map c)]
+                                     (when (valid-vertex? m) m)))))
+                         vec)
+        vertices (sort-ccw vertex-maps center)
         bbox (vertices->bbox vertices)
         centroid-geom (.getCentroid polygon)
         centroid {:x (.getX centroid-geom)
@@ -254,55 +257,81 @@
                               (max 1.5 (camera/transform-size line-width zoom)))]
     (try
       (if (and canvas (seq cells))
-        (doseq [[_ {:keys [vertices centroid]}] cells]
-          (when (seq vertices)
-            (let [screen-verts (->> (transform-vertices vertices zoom pan-x pan-y)
-                                    (filter valid-vertex?)
-                                    vec)
-                  lw (stroke-width-screen)
-                  draw-fill? true
-                  stroke? true]
+        (let [visible-cells (keep (fn [[_ {:keys [vertices centroid]}]]
+                                    (when (seq vertices)
+                                      (let [screen-verts (->> (transform-vertices vertices zoom pan-x pan-y)
+                                                              (filter valid-vertex?)
+                                                              vec)]
+                                        {:screen-verts screen-verts
+                                         :centroid centroid})))
+                                  cells)]
+
+          ;; Pass 1: fills
+          (doseq [{:keys [screen-verts centroid]} visible-cells]
+            (let [n (count screen-verts)]
+              (cond
+                (>= n 3)
+                (when-let [{:keys [x y]} (first screen-verts)]
+                  (let [path (Path.)]
+                    (.moveTo path (float x) (float y))
+                    (doseq [{:keys [x y]} (rest screen-verts)]
+                      (.lineTo path (float x) (float y)))
+                    (.closePath path)
+                    (.drawPath canvas path fill-paint)
+                    (.close path)
+                    (swap! rendered inc)))
+
+                (= n 2)
+                (let [[p0 p1] screen-verts
+                      mx (/ (+ (:x p0) (:x p1)) 2.0)
+                      my (/ (+ (:y p0) (:y p1)) 2.0)]
+                  (.drawCircle canvas (float mx) (float my) 4.5 fill-paint)
+                  (swap! rendered inc))
+
+                :else
+                (when centroid
+                  (let [{cx :x cy :y} centroid
+                        sx (camera/transform-position (double cx) zoom pan-x)
+                        sy (camera/transform-position (double cy) zoom pan-y)]
+                    (.drawCircle canvas (float sx) (float sy) 6.0 fill-paint)
+                    (swap! rendered inc))))))
+
+          ;; Pass 2: strokes (after fills so borders stay visible)
+          (doseq [{:keys [screen-verts centroid]} visible-cells]
+            (let [lw (stroke-width-screen)
+                  n (count screen-verts)]
               (.setStrokeWidth stroke-paint (float lw))
-              (let [n (count screen-verts)]
-                (cond
-                  (>= n 3)
-                  (when-let [{:keys [x y]} (first screen-verts)]
-                    (let [path (Path.)]
-                      (.moveTo path (float x) (float y))
-                      (doseq [{:keys [x y]} (rest screen-verts)]
-                        (.lineTo path (float x) (float y)))
-                      (.closePath path)
-                      (when draw-fill?
-                        (.drawPath canvas path fill-paint))
-                      (when stroke?
-                        (.drawPath canvas path stroke-paint))
-                      (.close path)
-                      (swap! rendered inc)))
+              (cond
+                (>= n 3)
+                (when-let [{:keys [x y]} (first screen-verts)]
+                  (let [path (Path.)]
+                    (.moveTo path (float x) (float y))
+                    (doseq [{:keys [x y]} (rest screen-verts)]
+                      (.lineTo path (float x) (float y)))
+                    (.closePath path)
+                    (.drawPath canvas path stroke-paint)
+                    (.close path)))
 
-                  (= n 2)
-                  (let [[p0 p1] screen-verts]
-                    (.drawLine canvas (float (:x p0)) (float (:y p0))
-                               (float (:x p1)) (float (:y p1)) stroke-paint)
-                    (when draw-fill?
-                      (let [mx (/ (+ (:x p0) (:x p1)) 2.0)
-                            my (/ (+ (:y p0) (:y p1)) 2.0)]
-                        (.drawCircle canvas (float mx) (float my) 4.5 fill-paint)))
-                    (swap! rendered inc))
+                (= n 2)
+                (let [[p0 p1] screen-verts]
+                  (.drawLine canvas (float (:x p0)) (float (:y p0))
+                             (float (:x p1)) (float (:y p1)) stroke-paint))
 
-                  :else
-                  (when centroid
-                    (let [{cx :x cy :y} centroid
-                          sx (camera/transform-position (double cx) zoom pan-x)
-                          sy (camera/transform-position (double cy) zoom pan-y)]
-                      (.drawCircle canvas (float sx) (float sy) 6.0 fill-paint)
-                      (.drawCircle canvas (float sx) (float sy) 7.0 stroke-paint)
-                      (swap! rendered inc)))))
+                :else
+                (when centroid
+                  (let [{cx :x cy :y} centroid
+                        sx (camera/transform-position (double cx) zoom pan-x)
+                        sy (camera/transform-position (double cy) zoom pan-y)]
+                    (.drawCircle canvas (float sx) (float sy) 7.0 stroke-paint))))))
 
-              (when (and show-centroids? centroid)
-                (let [{cx :x cy :y} centroid
-                      sx (camera/transform-position (double cx) zoom pan-x)
-                      sy (camera/transform-position (double cy) zoom pan-y)]
-                  (.drawCircle canvas (float sx) (float sy) 2.5 centroid-paint))))))
+          ;; Optional centroid debug markers
+          (when show-centroids?
+            (doseq [{:keys [centroid]} visible-cells
+                    :when centroid]
+              (let [{cx :x cy :y} centroid
+                    sx (camera/transform-position (double cx) zoom pan-x)
+                    sy (camera/transform-position (double cy) zoom pan-y)]
+                (.drawCircle canvas (float sx) (float sy) 2.5 centroid-paint)))))
         (when (and enabled? (seq cells) (= 0 @rendered))
           (println "Voronoi draw: 0 cells rendered out of" (count cells))))
       (finally
