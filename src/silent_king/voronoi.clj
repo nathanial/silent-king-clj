@@ -437,7 +437,7 @@
                               {:commands (conj commands
                                                (commands/circle {:x sx :y sy} 6.0 {:fill-color fill-color})
                                                (commands/circle {:x sx :y sy} 7.0 {:stroke-color stroke-color
-                                                                                    :stroke-width lw}))
+                                                                                   :stroke-width lw}))
                                :rendered (inc rendered)})
                             {:commands commands :rendered rendered}))))
                     {:commands [] :rendered 0}

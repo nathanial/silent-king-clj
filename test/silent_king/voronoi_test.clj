@@ -105,7 +105,7 @@
     (state/add-star! game-state star2)
     (state/add-star! game-state star3)
     (voronoi/generate-voronoi! game-state)
-    
+
     (testing "generates polygon commands"
       (let [width 800
             height 600
@@ -121,7 +121,7 @@
           (is (seq fills))
           (is (seq strokes))
           (is (= (count fills) (count strokes))))))
-          
+
     (testing "generates centroids when enabled"
       (state/set-voronoi-setting! game-state :show-centroids? true)
       (let [width 800

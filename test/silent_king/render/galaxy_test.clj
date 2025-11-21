@@ -38,7 +38,7 @@
         (is (= :circle (:op glow)))
         (is (= {:x 100.0 :y 100.0} (:center glow)))
         (is (:fill-color (:style glow)))
-        
+
         (is (= :circle (:op ring)))
         (is (= {:x 100.0 :y 100.0} (:center ring)))
         (is (:stroke-color (:style ring)))))))

@@ -13,7 +13,7 @@
                 :sectors {:sector-1 {:name "Sector Alpha"
                                      :center {:x 120.0 :y 120.0}}}}]
     (state/set-regions! game-state {:region-1 region})
-    
+
     (testing "generates text commands for region name"
       (let [zoom 1.0
             pan-x 0.0
@@ -27,11 +27,11 @@
           (is (= :text (:op shadow)))
           (is (= "Test Region" (:text shadow)))
           (is (= 0x80000000 (:color shadow))) ;; Shadow color
-          
+
           (is (= :text (:op main)))
           (is (= "Test Region" (:text main)))
           (is (= 0xFF00FF00 (:color main))))))
-    
+
     (testing "generates sector labels at high zoom"
       (let [zoom 2.0 ;; High zoom
             pan-x 0.0
@@ -45,10 +45,10 @@
               main (second sector-cmds)]
           (is (= :text (:op shadow)))
           (is (= "Sector Alpha" (:text shadow)))
-          
+
           (is (= :text (:op main)))
           (is (= "Sector Alpha" (:text main))))))
-    
+
     (testing "hides sector labels at low zoom"
       (let [zoom 0.5 ;; Low zoom
             pan-x 0.0

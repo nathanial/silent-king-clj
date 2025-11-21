@@ -187,11 +187,11 @@
                                                              :stroke-width (max 1.0 (* width-scale 1.0))}))
                              :rendered (inc rendered)}
                        :medium {:commands (conj commands
-                                                 (commands/line {:x from-x :y from-y}
-                                                                {:x to-x :y to-y}
-                                                                {:stroke-color start
-                                                                 :stroke-width line-width-base
-                                                                 :stroke-cap :round}))
+                                                (commands/line {:x from-x :y from-y}
+                                                               {:x to-x :y to-y}
+                                                               {:stroke-color start
+                                                                :stroke-width line-width-base
+                                                                :stroke-cap :round}))
                                 :rendered (inc rendered)}
                        :close (let [animation-phase (+ (* current-time pulse-frequency Math/PI 2)
                                                        (or animation-offset 0.0))

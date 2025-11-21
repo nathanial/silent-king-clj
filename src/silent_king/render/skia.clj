@@ -92,14 +92,14 @@
         ty (->float (:y to))]
     (when (and glow (:color glow))
       (with-open [paint (with-stroke (:color glow)
-                                   (* (double (or (:multiplier glow) 1.0))
-                                      (double (or stroke-width 1.0)))
-                                   stroke-cap)]
+                          (* (double (or (:multiplier glow) 1.0))
+                             (double (or stroke-width 1.0)))
+                          stroke-cap)]
         (.drawLine canvas fx fy tx ty paint)))
     (when (or stroke-color gradient)
       (with-open [paint (with-stroke (or stroke-color (:start gradient) 0xFFFFFFFF)
-                                   stroke-width
-                                   stroke-cap)]
+                          stroke-width
+                          stroke-cap)]
         (when gradient
           (when-let [shader (gradient-shader {:from from
                                               :to to

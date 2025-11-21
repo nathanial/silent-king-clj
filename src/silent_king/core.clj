@@ -193,8 +193,6 @@
      SurfaceColorFormat/RGBA_8888
      (ColorSpace/getSRGB))))
 
-
-
 (defn frame-world-plan
   "Build world draw commands and metrics for a frame."
   [width height time game-state]
@@ -262,10 +260,10 @@
                                          :star-screen-y star-screen-y
                                          :screen-radius screen-radius
                                          :ring-visible? ring-visible?
-                                        :planet-visible? planet-visible?
-                                        :screen-x screen-x
-                                        :screen-y screen-y
-                                        :screen-size screen-size}))))
+                                         :planet-visible? planet-visible?
+                                         :screen-x screen-x
+                                         :screen-y screen-y
+                                         :screen-size screen-size}))))
                                 planets))
         visible-planet-count (count visible-planets)
         total-planet-count (count planets)
@@ -341,14 +339,14 @@
           used-memory (- (.totalMemory runtime) (.freeMemory runtime))
           memory-mb (/ used-memory 1048576.0)
           metrics* (assoc metrics
-                         :fps fps
-                         :frame-time-ms frame-time-ms
-                         :draw-calls (+ (:visible-stars metrics 0)
-                                        (:planets-rendered metrics 0)
-                                        hyperlanes-count
-                                        (:visible-voronoi metrics 0))
-                         :memory-mb memory-mb
-                         :current-time current-time)]
+                          :fps fps
+                          :frame-time-ms frame-time-ms
+                          :draw-calls (+ (:visible-stars metrics 0)
+                                         (:planets-rendered metrics 0)
+                                         hyperlanes-count
+                                         (:visible-voronoi metrics 0))
+                          :memory-mb memory-mb
+                          :current-time current-time)]
       (swap! game-state assoc-in [:debug :hyperlanes-rendered] hyperlanes-count)
       (swap! game-state assoc-in [:debug :voronoi-rendered] (:visible-voronoi metrics 0))
       (swap! game-state assoc-in [:debug :planets-rendered] (:planets-rendered metrics 0))

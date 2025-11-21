@@ -89,9 +89,9 @@
                                                   :height (:height track)}
                                                  {:fill-color track-color}))
       (pos? (:width track)) (conj (commands/circle {:x (:x handle)
-                                                   :y (:y handle)}
-                                                  (:radius handle)
-                                                  {:fill-color handle-color})))))
+                                                    :y (:y handle)}
+                                                   (:radius handle)
+                                                   {:fill-color handle-color})))))
 
 (defmethod render/plan-node :slider
   [context node]

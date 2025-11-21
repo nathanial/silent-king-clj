@@ -10,7 +10,7 @@
           screen-x (camera/transform-position world-x zoom pan-x)
           inverted-x (camera/inverse-transform-position screen-x zoom pan-x)]
       (is (= 100.0 inverted-x))))
-  
+
   (testing "transform-position applies zoom and pan"
     ;; scale = zoom^2.5 = 2.0^2.5 approx 5.656
     ;; pos = 10 * 5.656 + 20 = 76.56

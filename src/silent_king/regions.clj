@@ -236,30 +236,30 @@
                           text-size (max 12.0 (min 48.0 (* 14.0 (Math/sqrt zoom))))
                           shadow-color 0x80000000
                           cmds (cond-> commands
-                                  true (conj (commands/text {:text name
-                                                             :position {:x (+ screen-x 2) :y (+ screen-y 2)}
-                                                             :font {:size text-size}
-                                                             :color shadow-color})
-                                             (commands/text {:text name
-                                                             :position {:x screen-x :y screen-y}
-                                                             :font {:size text-size}
-                                                             :color color}))
-                                  (> zoom 0.8)
-                                  (into (for [{s-name :name s-center :center} (vals sectors)
-                                              :when (and s-name s-center)]
-                                          (let [sx (:x s-center)
-                                                sy (:y s-center)
-                                                ssx (camera/transform-position (double sx) zoom pan-x)
-                                                ssy (camera/transform-position (double sy) zoom pan-y)
-                                                sector-size (max 10.0 (* 0.7 text-size))]
-                                            [(commands/text {:text s-name
-                                                             :position {:x (+ ssx 1) :y (+ ssy 1)}
-                                                             :font {:size sector-size}
-                                                             :color shadow-color})
-                                             (commands/text {:text s-name
-                                                             :position {:x ssx :y ssy}
-                                                             :font {:size sector-size}
-                                                             :color 0xDDCCCCCC})]))))]
+                                 true (conj (commands/text {:text name
+                                                            :position {:x (+ screen-x 2) :y (+ screen-y 2)}
+                                                            :font {:size text-size}
+                                                            :color shadow-color})
+                                            (commands/text {:text name
+                                                            :position {:x screen-x :y screen-y}
+                                                            :font {:size text-size}
+                                                            :color color}))
+                                 (> zoom 0.8)
+                                 (into (for [{s-name :name s-center :center} (vals sectors)
+                                             :when (and s-name s-center)]
+                                         (let [sx (:x s-center)
+                                               sy (:y s-center)
+                                               ssx (camera/transform-position (double sx) zoom pan-x)
+                                               ssy (camera/transform-position (double sy) zoom pan-y)
+                                               sector-size (max 10.0 (* 0.7 text-size))]
+                                           [(commands/text {:text s-name
+                                                            :position {:x (+ ssx 1) :y (+ ssy 1)}
+                                                            :font {:size sector-size}
+                                                            :color shadow-color})
+                                            (commands/text {:text s-name
+                                                            :position {:x ssx :y ssy}
+                                                            :font {:size sector-size}
+                                                            :color 0xDDCCCCCC})]))))]
                       {:commands cmds
                        :rendered (inc rendered)})
                     {:commands commands :rendered rendered}))
