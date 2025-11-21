@@ -3,7 +3,8 @@
   (:require [silent-king.camera :as camera]
             [silent-king.render.commands :as commands]
             [silent-king.state :as state]
-            [silent-king.color :as color])
+            [silent-king.color :as color]
+            [silent-king.schemas :as schemas])
   (:import [org.locationtech.jts.triangulate DelaunayTriangulationBuilder]
            [org.locationtech.jts.geom Coordinate GeometryFactory LineString]))
 
@@ -74,11 +75,13 @@
            acc []]
       (if (= i num-edges)
         (let [neighbors (build-neighbors acc)
-              elapsed (- (System/currentTimeMillis) start-time)]
-          {:hyperlanes acc
-           :neighbors-by-star-id neighbors
-           :next-hyperlane-id next-id
-           :elapsed-ms elapsed})
+              elapsed (- (System/currentTimeMillis) start-time)
+              result {:hyperlanes acc
+                      :neighbors-by-star-id neighbors
+                      :next-hyperlane-id next-id
+                      :elapsed-ms elapsed}]
+          (schemas/validate-if-enabled! schemas/GeneratedHyperlanes result "generated-hyperlanes")
+          result)
         (let [^LineString edge (.getGeometryN triangulation i)
               ^Coordinate from-coord (.getCoordinateN edge 0)
               ^Coordinate to-coord (.getCoordinateN edge 1)

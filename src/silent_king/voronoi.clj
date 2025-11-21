@@ -3,7 +3,8 @@
   (:require [silent-king.camera :as camera]
             [silent-king.render.commands :as commands]
             [silent-king.state :as state]
-            [silent-king.color :as color])
+            [silent-king.color :as color]
+            [silent-king.schemas :as schemas])
   (:import [org.locationtech.jts.geom Coordinate Envelope GeometryFactory Polygon]
            [org.locationtech.jts.triangulate VoronoiDiagramBuilder]))
 
@@ -211,11 +212,14 @@
                      stars)
          site-count (count sites)
          env (or envelope (-> (star-envelope stars)
-                              (expand-envelope)))]
+                              (expand-envelope)))
+         cells-schema [:map-of schemas/PositiveId schemas/VoronoiCell]]
      (if (< site-count 2)
-       {:voronoi-cells {}
-        :elapsed-ms (- (System/currentTimeMillis) start)
-        :envelope env}
+       (let [result {:voronoi-cells {}
+                     :elapsed-ms (- (System/currentTimeMillis) start)
+                     :envelope env}]
+         (schemas/validate-if-enabled! cells-schema (:voronoi-cells result) "voronoi-cells")
+         result)
        (let [builder (VoronoiDiagramBuilder.)
              _ (.setSites builder ^java.util.Collection (mapv :coord sites))
              _ (when env
@@ -225,9 +229,11 @@
          (loop [i 0
                 acc {}]
            (if (= i num-polys)
-             {:voronoi-cells acc
-              :elapsed-ms (- (System/currentTimeMillis) start)
-              :envelope env}
+             (let [result {:voronoi-cells acc
+                           :elapsed-ms (- (System/currentTimeMillis) start)
+                           :envelope env}]
+               (schemas/validate-if-enabled! cells-schema (:voronoi-cells result) "voronoi-cells")
+               result)
              (let [^Polygon poly (.getGeometryN diagram i)
                    centroid (.getCentroid poly)
                    centroid-map {:x (.getX centroid)
@@ -543,7 +549,8 @@
   "Generate Voronoi cells, optionally applying Lloyd relaxation to star sites."
   [stars relax-config]
   (let [{:keys [iterations] :as cfg} (normalize-relax-config relax-config)
-        start (System/currentTimeMillis)]
+        start (System/currentTimeMillis)
+        cells-schema [:map-of schemas/PositiveId schemas/VoronoiCell]]
     (if (zero? iterations)
       (let [base (generate-voronoi stars {:envelope (:envelope cfg)})]
         (assoc base :stars-relaxed stars
@@ -563,12 +570,14 @@
                                              :relaxed-site (select-keys relaxed [:x :y]))]
                                  [sid cell])))
                         voronoi-cells)
-            total (- (System/currentTimeMillis) start)]
-        {:voronoi-cells cells
-         :stars-relaxed stars-relaxed
-         :elapsed-ms total
-         :envelope envelope
-         :relax-meta {:iterations-requested iterations
-                      :iterations-used iterations-used
-                      :iteration-stats iteration-stats
-                      :relax-elapsed-ms elapsed-ms}}))))
+            total (- (System/currentTimeMillis) start)
+            result {:voronoi-cells cells
+                    :stars-relaxed stars-relaxed
+                    :elapsed-ms total
+                    :envelope envelope
+                    :relax-meta {:iterations-requested iterations
+                                 :iterations-used iterations-used
+                                 :iteration-stats iteration-stats
+                                 :relax-elapsed-ms elapsed-ms}}]
+        (schemas/validate-if-enabled! cells-schema (:voronoi-cells result) "voronoi-cells")
+        result))))

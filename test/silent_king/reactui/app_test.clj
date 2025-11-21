@@ -19,6 +19,11 @@
       ui-core/normalize-tree
       (layout/compute-layout test-viewport)))
 
+(defn- build-layout-with-tab
+  [game-state tab-id]
+  (swap! game-state assoc :control-panel-tab tab-id)
+  (build-layout game-state))
+
 (defn- find-node-by
   [node pred]
   (when node
@@ -108,7 +113,7 @@
 
 (deftest hyperlane-settings-slider-updates-state
   (let [game-state (atom (state/create-game-state))
-        tree (build-layout game-state)
+        tree (build-layout-with-tab game-state :hyperlanes)
         opacity-slider (find-slider-with-event tree [:hyperlanes/set-opacity])
         track (get-in opacity-slider [:layout :slider :track])
         click-x (+ (:x track) (:width track))
@@ -120,7 +125,7 @@
 
 (deftest voronoi-settings-slider-updates-state
   (let [game-state (atom (state/create-game-state))
-        tree (build-layout game-state)
+        tree (build-layout-with-tab game-state :voronoi)
         opacity-slider (find-slider-with-event tree [:voronoi/set-opacity])
         track (get-in opacity-slider [:layout :slider :track])
         click-x (+ (:x track) (:width track))
@@ -132,7 +137,7 @@
 
 (deftest voronoi-relax-iterations-slider-updates-state
   (let [game-state (atom (state/create-game-state))
-        tree (build-layout game-state)
+        tree (build-layout-with-tab game-state :voronoi)
         iter-slider (find-slider-with-event tree [:voronoi/set-relax-iterations])]
     (is iter-slider)
     (events/dispatch-event! game-state [:voronoi/set-relax-iterations state/relax-iterations-limit])
@@ -140,7 +145,7 @@
 
 (deftest hyperlane-color-dropdown-selects-scheme
   (let [game-state (atom (state/create-game-state))
-        initial-tree (build-layout game-state)
+        initial-tree (build-layout-with-tab game-state :hyperlanes)
         dropdown (find-dropdown-by-id initial-tree :hyperlane-color)
         header (get-in dropdown [:layout :dropdown :header])
         toggle-events (interaction/click->events initial-tree
@@ -148,7 +153,7 @@
                                                  (+ (:y header) 4))]
     (doseq [event toggle-events]
       (events/dispatch-event! game-state event))
-    (let [expanded-tree (build-layout game-state)
+    (let [expanded-tree (build-layout-with-tab game-state :hyperlanes)
           dropdown* (find-dropdown-by-id expanded-tree :hyperlane-color)
           red-option (some #(when (= :red (:value %)) %)
                            (get-in dropdown* [:layout :dropdown :options]))]
@@ -164,7 +169,7 @@
 
 (deftest voronoi-color-dropdown-selects-scheme
   (let [game-state (atom (state/create-game-state))
-        initial-tree (build-layout game-state)
+        initial-tree (build-layout-with-tab game-state :voronoi)
         dropdown (find-dropdown-by-id initial-tree :voronoi-color)
         header (get-in dropdown [:layout :dropdown :header])
         toggle-events (interaction/click->events initial-tree
@@ -172,7 +177,7 @@
                                                  (+ (:y header) 4))]
     (doseq [event toggle-events]
       (events/dispatch-event! game-state event))
-    (let [expanded-tree (build-layout game-state)
+    (let [expanded-tree (build-layout-with-tab game-state :voronoi)
           dropdown* (find-dropdown-by-id expanded-tree :voronoi-color)
           degree-option (some #(when (= :by-degree (:value %)) %)
                               (get-in dropdown* [:layout :dropdown :options]))]

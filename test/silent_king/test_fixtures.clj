@@ -1,5 +1,6 @@
 (ns silent-king.test-fixtures
-  (:require [silent-king.state :as state]))
+  (:require [silent-king.color :as color]
+            [silent-king.state :as state]))
 
 (defn reset-world!
   "Clear stars/hyperlanes and reset id counters on the supplied game-state atom."
@@ -31,9 +32,9 @@
   (state/add-hyperlane! game-state {:from-id from-id
                                     :to-id to-id
                                     :base-width 2.0
-                                    :color-start 0xFF6699FF
-                                    :color-end 0xFF3366CC
-                                    :glow-color 0x406699FF
+                                    :color-start (color/hsv 220 60 100)
+                                    :color-end (color/hsv 220 75 80)
+                                    :glow-color (color/hsv 220 60 100 0.25)
                                     :animation-offset 0.0}))
 
 (defn recompute-neighbors!

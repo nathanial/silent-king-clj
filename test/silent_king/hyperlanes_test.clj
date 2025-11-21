@@ -1,5 +1,6 @@
 (ns silent-king.hyperlanes-test
   (:require [clojure.test :refer [deftest is testing]]
+            [silent-king.color :as color]
             [silent-king.hyperlanes :as hyperlanes]
             [silent-king.state :as state]))
 
@@ -7,7 +8,14 @@
   (let [game-state (atom (state/create-game-state))
         star1 {:id 1 :x 0.0 :y 0.0}
         star2 {:id 2 :x 100.0 :y 0.0}
-        hyperlane {:id 1 :from-id 1 :to-id 2 :base-width 2.0 :color-start 0xFF0000FF :color-end 0xFF00FF00}]
+        hyperlane {:id 1
+                   :from-id 1
+                   :to-id 2
+                   :base-width 2.0
+                   :color-start (color/hsv 220 60 100)
+                   :color-end (color/hsv 220 75 80)
+                   :glow-color (color/hsv 220 60 100 0.25)
+                   :animation-offset 0.0}]
 
     (state/add-star! game-state star1)
     (state/add-star! game-state star2)

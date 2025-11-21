@@ -3,7 +3,8 @@
   (:require [silent-king.state :as state]
             [silent-king.camera :as camera]
             [silent-king.render.commands :as commands]
-            [silent-king.color :as color])
+            [silent-king.color :as color]
+            [silent-king.schemas :as schemas])
   (:import [java.util Random]))
 
 (set! *warn-on-reflection* true)
@@ -212,6 +213,7 @@
         regions-map (into {} regions)
         elapsed (- (System/currentTimeMillis) start)]
 
+    (schemas/validate-if-enabled! [:map-of schemas/RegionId schemas/Region] regions-map "regions")
     (state/set-regions! game-state regions-map)
     (println (format "Generated %d regions in %d ms (Threshold: %.2f)"
                      (count regions-map) elapsed threshold))

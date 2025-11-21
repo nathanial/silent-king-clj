@@ -1,6 +1,7 @@
 (ns silent-king.state
   "Game state management and world data helpers"
-  (:require [silent-king.camera :as camera]))
+  (:require [silent-king.camera :as camera]
+            [silent-king.schemas :as schemas]))
 
 (set! *warn-on-reflection* true)
 
@@ -9,6 +10,10 @@
 (defn- clamp
   [value min-value max-value]
   (-> value double (max min-value) (min max-value)))
+
+(defn- validate-if-enabled!
+  [schema value context]
+  (schemas/validate-if-enabled! schema value context))
 
 ;; =============================================================================
 ;; World ID Generation
@@ -107,74 +112,78 @@
 (defn create-game-state
   "Create initial game state structure."
   []
-  {:stars {}
-   :planets {}
-   :hyperlanes []
-   :voronoi-cells {}
-   :regions {}
-   :neighbors-by-star-id {}
-   :next-star-id 0
-   :next-planet-id 0
-   :next-hyperlane-id 0
-   :camera {:zoom 1.0
-            :pan-x 0.0
-            :pan-y 0.0}
-   :input {:mouse-x 0.0
-           :mouse-y 0.0
-           :mouse-down-x 0.0
-           :mouse-down-y 0.0
-           :dragging false
-           :ui-active? false
-           :mouse-initialized? false}
-   :time {:start-time (System/nanoTime)
-          :current-time 0.0
-          :frame-count 0}
-   :assets {:individual-images []
-            :atlas-image-xs nil
-            :atlas-metadata-xs {}
-            :atlas-size-xs 4096
-            :atlas-image-small nil
-            :atlas-metadata-small {}
-            :atlas-size-small 4096
-            :atlas-image-medium nil
-            :atlas-metadata-medium {}
-            :atlas-size-medium 4096
-            :atlas-image-lg nil
-            :atlas-metadata-lg {}
-            :atlas-size-lg 8192
-            :planet-atlas-image-medium nil
-            :planet-atlas-metadata-medium {}
-            :planet-atlas-size-medium 4096
-            :star-images []}
-   :widgets {:layout-dirty #{}}
-   :selection default-selection
-   :ui {:scale 2.0
-        :star-inspector {:visible? false
-                         :pinned? false}
-        :hyperlane-panel {:expanded? true}
-        :voronoi-panel {:expanded? true}
-        :viewport {:width 0.0
-                   :height 0.0}
-        :windows {}
-        :window-order default-window-order
-        :performance-overlay {:visible? true
-                              :expanded? true}
-        :dropdowns {}}
-   :features {:stars-and-planets? true
-              :hyperlanes? true
-              :voronoi? (:enabled? default-voronoi-settings)
-              :minimap? true}
-   :hyperlane-settings default-hyperlane-settings
-   :voronoi-settings default-voronoi-settings
-   :voronoi-generated? false
-   :metrics {:performance default-performance-metrics}})
+  (let [state {:stars {}
+               :planets {}
+               :hyperlanes []
+               :voronoi-cells {}
+               :regions {}
+               :neighbors-by-star-id {}
+               :next-star-id 0
+               :next-planet-id 0
+               :next-hyperlane-id 0
+               :camera {:zoom 1.0
+                        :pan-x 0.0
+                        :pan-y 0.0}
+               :input {:mouse-x 0.0
+                       :mouse-y 0.0
+                       :mouse-down-x 0.0
+                       :mouse-down-y 0.0
+                       :dragging false
+                       :ui-active? false
+                       :mouse-initialized? false}
+               :time {:start-time (System/nanoTime)
+                      :current-time 0.0
+                      :frame-count 0}
+               :assets {:individual-images []
+                        :atlas-image-xs nil
+                        :atlas-metadata-xs {}
+                        :atlas-size-xs 4096
+                        :atlas-image-small nil
+                        :atlas-metadata-small {}
+                        :atlas-size-small 4096
+                        :atlas-image-medium nil
+                        :atlas-metadata-medium {}
+                        :atlas-size-medium 4096
+                        :atlas-image-lg nil
+                        :atlas-metadata-lg {}
+                        :atlas-size-lg 8192
+                        :planet-atlas-image-medium nil
+                        :planet-atlas-metadata-medium {}
+                        :planet-atlas-size-medium 4096
+                        :star-images []}
+               :widgets {:layout-dirty #{}}
+               :selection default-selection
+               :ui {:scale 2.0
+                    :star-inspector {:visible? false
+                                     :pinned? false}
+                    :hyperlane-panel {:expanded? true}
+                    :voronoi-panel {:expanded? true}
+                    :viewport {:width 0.0
+                               :height 0.0}
+                    :windows {}
+                    :window-order default-window-order
+                    :performance-overlay {:visible? true
+                                          :expanded? true}
+                    :dropdowns {}}
+               :features {:stars-and-planets? true
+                          :hyperlanes? true
+                          :voronoi? (:enabled? default-voronoi-settings)
+                          :minimap? true}
+               :hyperlane-settings default-hyperlane-settings
+               :voronoi-settings default-voronoi-settings
+               :voronoi-generated? false
+               :metrics {:performance default-performance-metrics}}]
+    (validate-if-enabled! schemas/GameState state "game-state")
+    state))
 
 (defn create-render-state
   "Create initial render state structure"
   []
-  {:window nil
-   :context nil
-   :surface nil})
+  (let [state {:window nil
+               :context nil
+               :surface nil}]
+    (validate-if-enabled! schemas/RenderState state "render-state")
+    state))
 
 ;; =============================================================================
 ;; World Accessors & Mutators
@@ -268,25 +277,39 @@
 (defn set-world!
   "Replace world data on game-state with supplied values."
   [game-state {:keys [stars planets hyperlanes voronoi-cells neighbors-by-star-id next-star-id next-planet-id next-hyperlane-id voronoi-generated?]}]
-  (swap! game-state
-         (fn [state]
-           (-> state
-               (assoc :stars (or stars {}))
-               (assoc :planets (or planets {}))
-               (assoc :hyperlanes (vec (or hyperlanes [])))
-               (assoc :voronoi-cells (or voronoi-cells {}))
-               (assoc :regions {})
-               (assoc :voronoi-generated? (boolean voronoi-generated?))
-               (assoc :neighbors-by-star-id (or neighbors-by-star-id {}))
-               (assoc :next-star-id (long (or next-star-id 0)))
-               (assoc :next-planet-id (long (or next-planet-id 0)))
-               (assoc :next-hyperlane-id (long (or next-hyperlane-id 0)))))))
+  (let [world {:stars (or stars {})
+               :planets (or planets {})
+               :hyperlanes (vec (or hyperlanes []))
+               :voronoi-cells (or voronoi-cells {})
+               :regions {}
+               :neighbors-by-star-id (or neighbors-by-star-id {})
+               :next-star-id (long (or next-star-id 0))
+               :next-planet-id (long (or next-planet-id 0))
+               :next-hyperlane-id (long (or next-hyperlane-id 0))
+               :voronoi-generated? (boolean voronoi-generated?)}
+        _ (validate-if-enabled! schemas/WorldSnapshot world "world-snapshot")
+        new-state (swap! game-state
+                         (fn [state]
+                           (-> state
+                               (assoc :stars (:stars world))
+                               (assoc :planets (:planets world))
+                               (assoc :hyperlanes (:hyperlanes world))
+                               (assoc :voronoi-cells (:voronoi-cells world))
+                               (assoc :regions (:regions world))
+                               (assoc :voronoi-generated? (:voronoi-generated? world))
+                               (assoc :neighbors-by-star-id (:neighbors-by-star-id world))
+                               (assoc :next-star-id (:next-star-id world))
+                               (assoc :next-planet-id (:next-planet-id world))
+                               (assoc :next-hyperlane-id (:next-hyperlane-id world)))))]
+    (validate-if-enabled! schemas/GameState new-state "game-state")
+    new-state))
 
 (defn add-star!
   "Insert a star map, assigning an id if missing. Returns id."
   [game-state star]
   (let [id (or (:id star) (next-star-id! game-state))
         star* (assoc star :id id)]
+    (validate-if-enabled! schemas/Star star* "star")
     (swap! game-state assoc-in [:stars id] star*)
     id))
 
@@ -295,6 +318,7 @@
   [game-state planet]
   (let [id (or (:id planet) (next-planet-id! game-state))
         planet* (assoc planet :id id)]
+    (validate-if-enabled! schemas/Planet planet* "planet")
     (swap! game-state assoc-in [:planets id] planet*)
     id))
 
@@ -303,6 +327,7 @@
   [game-state hyperlane]
   (let [id (or (:id hyperlane) (next-hyperlane-id! game-state))
         hyperlane* (assoc hyperlane :id id)]
+    (validate-if-enabled! schemas/Hyperlane hyperlane* "hyperlane")
     (swap! game-state update :hyperlanes
            (fnil conj [])
            hyperlane*)

@@ -1,6 +1,7 @@
 (ns silent-king.galaxy
   "Galaxy generation using spiral arms blended with simplex noise for organic structure"
-  (:require [silent-king.state :as state])
+  (:require [silent-king.schemas :as schemas]
+            [silent-king.state :as state])
   (:import [silentking.noise FastNoiseLite FastNoiseLite$NoiseType]
            [java.util Random]))
 
@@ -354,11 +355,13 @@
                                   {:planets planets :next-id next-id}
                                   generated)))
                       {:planets {} :next-id 0}
-                      (vals stars))]
-          {:stars stars
-           :planets planets
-           :next-star-id last-id
-           :next-planet-id next-id})
+                      (vals stars))
+              result {:stars stars
+                      :planets planets
+                      :next-star-id last-id
+                      :next-planet-id next-id}]
+          (schemas/validate-if-enabled! schemas/GeneratedGalaxy result "generated-galaxy")
+          result)
         (let [{:keys [density] :as sample}
               (if (< (rand) core-prob)
                 (sample-core-star noise-gen)
