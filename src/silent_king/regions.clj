@@ -150,9 +150,7 @@
         ;; Group results
         (let [groups (group-by val assignments)]
           (reduce (fn [acc [sector-idx assigned-ids]]
-                    (let [keys (vec (keys assigned-ids)) ;; keys of the map entry are actually the star-ids because group-by value is [star-id sector-idx]... wait, group-by val returns map entries.
-                          ;; assignments is {star-id sector-idx}. group-by val gives {sector-idx [[star-id sector-idx] ...]}.
-                          ;; Correction: group-by on a map returns {val [ [key val] ... ] }
+                    (let [;; assignments is {star-id sector-idx}. group-by val gives {sector-idx [[star-id sector-idx] ...]}.
                           star-ids (map first assigned-ids)
                           id (keyword (str "sector-" sector-idx))
                           name (sector-name sector-idx)

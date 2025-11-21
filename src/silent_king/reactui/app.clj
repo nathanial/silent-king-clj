@@ -295,18 +295,18 @@
                   {:x (/ (double (or (:mouse-x input) 0.0)) scale)
                    :y (/ (double (or (:mouse-y input) 0.0)) scale)})
         render-context {:pointer pointer
-                        :active-interaction (ui-core/active-interaction)}]
-    (let [{:keys [layout-tree commands]} (ui-core/render-ui-tree {:canvas nil
-                                                                  :tree (root-tree game-state)
-                                                                  :viewport (logical-viewport scale viewport)
-                                                                  :context render-context})
-          scaled-commands (if (= 1.0 scale)
-                            commands
-                            (into [(commands/save)
-                                   (commands/scale scale scale)]
-                                  (concat commands
-                                          [(commands/restore)])))]
-      (when canvas
-        (skia/draw-commands! canvas scaled-commands))
-      {:layout-tree layout-tree
-       :commands scaled-commands})))
+                        :active-interaction (ui-core/active-interaction)}
+        {:keys [layout-tree commands]} (ui-core/render-ui-tree {:canvas nil
+                                                                :tree (root-tree game-state)
+                                                                :viewport (logical-viewport scale viewport)
+                                                                :context render-context})
+        scaled-commands (if (= 1.0 scale)
+                          commands
+                          (into [(commands/save)
+                                 (commands/scale scale scale)]
+                                (concat commands
+                                        [(commands/restore)])))]
+    (when canvas
+      (skia/draw-commands! canvas scaled-commands))
+    {:layout-tree layout-tree
+     :commands scaled-commands}))

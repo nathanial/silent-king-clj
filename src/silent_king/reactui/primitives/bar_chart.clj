@@ -92,5 +92,5 @@
                               (map-indexed vector bars))))))
 
 (defmethod render/plan-node :bar-chart
-  [context node]
+  [_context node]
   (plan-bar-chart node))

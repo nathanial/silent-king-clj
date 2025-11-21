@@ -91,8 +91,9 @@
 ;; Game State Structure
 ;; =============================================================================
 
-(defn create-game-state []
-  "Create initial game state structure"
+(defn create-game-state
+  "Create initial game state structure."
+  []
   {:stars {}
    :planets {}
    :hyperlanes []

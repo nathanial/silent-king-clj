@@ -2,7 +2,6 @@
   "Button primitive: normalization, layout, rendering, and pointer handling."
   (:require [silent-king.reactui.core :as core]
             [silent-king.reactui.events :as ui-events]
-            [silent-king.reactui.interaction :as interaction]
             [silent-king.reactui.layout :as layout]
             [silent-king.reactui.render :as render]
             [silent-king.render.commands :as commands]))
@@ -73,7 +72,7 @@
                                  :color final-text})))))
 
 (defmethod render/plan-node :button
-  [context node]
+  [_context node]
   (plan-button node))
 
 (defn- contains-point?

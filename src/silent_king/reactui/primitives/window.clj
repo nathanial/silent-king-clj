@@ -232,7 +232,7 @@
       (ui-events/dispatch-event! game-state event))))
 
 (defn handle-window-pointer-down!
-  [node game-state px py]
+  [node _game-state px py]
   (when-let [region (interaction/window-region node px py)]
     (let [bounds (layout/bounds node)
           window-layout (get-in node [:layout :window])

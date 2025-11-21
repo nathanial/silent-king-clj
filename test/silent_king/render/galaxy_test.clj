@@ -1,7 +1,6 @@
 (ns silent-king.render.galaxy-test
   (:require [clojure.test :refer [deftest is testing]]
-            [silent-king.render.galaxy :as galaxy]
-            [silent-king.render.commands :as commands]))
+            [silent-king.render.galaxy :as galaxy]))
 
 (deftest plan-star-from-atlas-test
   (testing "generates correct image-rect command"

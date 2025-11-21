@@ -94,7 +94,7 @@
                                                    {:fill-color handle-color})))))
 
 (defmethod render/plan-node :slider
-  [context node]
+  [_context node]
   (plan-slider node))
 
 (defn slider-drag!

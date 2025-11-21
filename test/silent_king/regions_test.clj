@@ -1,8 +1,7 @@
 (ns silent-king.regions-test
   (:require [clojure.test :refer [deftest is testing]]
             [silent-king.regions :as regions]
-            [silent-king.state :as state]
-            [silent-king.render.commands :as commands]))
+            [silent-king.state :as state]))
 
 (deftest plan-regions-test
   (let [game-state (atom (state/create-game-state))

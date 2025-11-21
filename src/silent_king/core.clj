@@ -143,18 +143,18 @@
              mouse-y (:mouse-y input)
              camera (state/get-camera game-state)
              old-zoom (:zoom camera)
-               zoom-factor (Math/pow 1.1 yoffset)
-               new-zoom (max 0.4 (min 10.0 (* old-zoom zoom-factor)))
-               old-pan-x (:pan-x camera)
-               old-pan-y (:pan-y camera)
-               world-x (inverse-transform-position mouse-x old-zoom old-pan-x)
-               world-y (inverse-transform-position mouse-y old-zoom old-pan-y)
-               new-pan-x (- mouse-x (* world-x (zoom->position-scale new-zoom)))
-               new-pan-y (- mouse-y (* world-y (zoom->position-scale new-zoom)))]
-           (state/update-camera! game-state assoc
-                                 :zoom new-zoom
-                                 :pan-x new-pan-x
-                                 :pan-y new-pan-y)))))
+             zoom-factor (Math/pow 1.1 yoffset)
+             new-zoom (max 0.4 (min 10.0 (* old-zoom zoom-factor)))
+             old-pan-x (:pan-x camera)
+             old-pan-y (:pan-y camera)
+             world-x (inverse-transform-position mouse-x old-zoom old-pan-x)
+             world-y (inverse-transform-position mouse-y old-zoom old-pan-y)
+             new-pan-x (- mouse-x (* world-x (zoom->position-scale new-zoom)))
+             new-pan-y (- mouse-y (* world-y (zoom->position-scale new-zoom)))]
+         (state/update-camera! game-state assoc
+                               :zoom new-zoom
+                               :pan-x new-pan-x
+                               :pan-y new-pan-y)))))
 
   (GLFW/glfwSetKeyCallback
    window

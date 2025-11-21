@@ -1,5 +1,5 @@
 (ns silent-king.reactui.interaction-test
-  (:require [clojure.test :refer [deftest is testing]]
+  (:require [clojure.test :refer [deftest is]]
             [silent-king.reactui.core :as reactui]
             [silent-king.reactui.interaction :as interaction]
             [silent-king.reactui.layout :as layout]

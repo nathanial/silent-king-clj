@@ -77,7 +77,7 @@
       {:type :header
        :bounds header}
 
-      (and expanded?)
+      expanded?
       (some (fn [option]
               (when (contains-point? (:bounds option) px py)
                 {:type :option

@@ -121,7 +121,7 @@
                                                :stroke-width 1.0})))))
 
 (defmethod render/plan-node :minimap
-  [context node]
+  [_context node]
   (plan-minimap node))
 
 (defmethod core/pointer-down! :minimap

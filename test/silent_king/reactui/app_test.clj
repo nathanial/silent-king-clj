@@ -38,8 +38,6 @@
                        (and (= :slider (:type node))
                             (= event (get-in node [:props :on-change]))))))
 
-
-
 (defn- find-dropdown-by-id
   [tree dropdown-id]
   (find-node-by tree (fn [node]
@@ -50,8 +48,6 @@
   [tree]
   (find-node-by tree (fn [node]
                        (= :bar-chart (:type node)))))
-
-
 
 (defn- find-window-with-title
   [tree title]

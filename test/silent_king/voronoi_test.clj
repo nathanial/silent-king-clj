@@ -1,8 +1,7 @@
 (ns silent-king.voronoi-test
   (:require [clojure.test :refer [deftest is testing]]
             [silent-king.state :as state]
-            [silent-king.voronoi :as voronoi]
-            [silent-king.render.commands :as commands]))
+            [silent-king.voronoi :as voronoi]))
 
 (defn- distance
   [{x1 :x y1 :y} {x2 :x y2 :y}]

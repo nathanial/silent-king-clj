@@ -96,5 +96,5 @@
            :children [])))
 
 (defmethod layout-node :default
-  [node context]
+  [node _context]
   (throw (ex-info "Unknown primitive type" {:type (:type node)})))
