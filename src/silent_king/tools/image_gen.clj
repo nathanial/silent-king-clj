@@ -37,10 +37,22 @@
 ;; Image Handling
 ;; =============================================================================
 
+(defn get-mime-type [file-path]
+  (let [lower (str/lower-case (str file-path))]
+    (cond
+      (str/ends-with? lower ".jpg") "image/jpeg"
+      (str/ends-with? lower ".jpeg") "image/jpeg"
+      (str/ends-with? lower ".png") "image/png"
+      (str/ends-with? lower ".webp") "image/webp"
+      (str/ends-with? lower ".gif") "image/gif"
+      :else "image/png")))
+
 (defn encode-base64 [file-path]
   (let [file (io/file file-path)
-        bytes (java.nio.file.Files/readAllBytes (.toPath file))]
-    (.encodeToString (Base64/getEncoder) bytes)))
+        bytes (java.nio.file.Files/readAllBytes (.toPath file))
+        b64 (.encodeToString (Base64/getEncoder) bytes)]
+    {:b64 b64
+     :mime (get-mime-type file-path)}))
 
 (defn decode-base64 [base64-str]
   (.decode (Base64/getDecoder) base64-str))
@@ -125,7 +137,7 @@
 (def api-endpoint "https://openrouter.ai/api/v1/chat/completions")
 (def model "google/gemini-2.5-flash-image")
 
-(defn build-payload [base64-images prompt context style size]
+(defn build-payload [image-data-list prompt context style size]
   (let [has-spaceship? (> (count (str/split (str/lower-case context) #"spaceship")) 1)
         spaceship-extra (if has-spaceship?
                           "CRITICAL: Must be viewed from directly above (top-down perspective). "
@@ -140,9 +152,9 @@
     {:model model
      :messages [{:role "user"
                  :content (concat
-                           (for [b64 base64-images]
+                           (for [{:keys [b64 mime]} image-data-list]
                              {:type "image_url"
-                              :image_url {:url (str "data:image/png;base64," b64)}})
+                              :image_url {:url (str "data:" mime ";base64," b64)}})
                            [{:type "text"
                              :text full-prompt}])}]
      :max_tokens 2048}))
