@@ -14,5 +14,5 @@ if (-not $env:OPENROUTER_API_KEY) {
     Write-Host "Warning: OPENROUTER_API_KEY not found in environment. Application may fail if not provided elsewhere." -ForegroundColor Yellow
 }
 
-clojure -M:image-gen -m silent-king.tools.image-gen $args
+clojure -M:image-gen $args
 

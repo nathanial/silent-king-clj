@@ -1,0 +1,38 @@
+# Context: space background for a retro space strategy game
+# Style: Atmospheric, deep, and highly artistic. Use rich dark colors for the void with vibrant highlights. prioritized for readability of game units on top. NOT photorealistic - use artistic stylization with smooth gradients.
+#
+# Background Generation Prompts
+# One prompt per line - customize freely without rebuilding!
+# Empty lines and lines starting with # (except Context/Style) are ignored
+
+# Starfields
+Create a deep space starfield with sparse distant stars on a pitch black void
+Create a dense starfield with thousands of tiny glittering white and blue stars
+Create a colorful star cluster background with stars in varying hues of red, gold, and blue
+Create a retro arcade style starfield with simple bright pixel stars
+Create a faint background starfield with subtle twinkling stars in a dark blue void
+
+# Nebulae
+Create a vibrant purple nebula background with swirling violet gas clouds
+Create a deep red emission nebula with glowing crimson clouds and dark dust lanes
+Create a soft blue reflection nebula with azure mists and embedded bright stars
+Create a mysterious green nebula with emerald gas clouds and eerie glow
+Create a golden nebula background with shimmering yellow dust and warm light
+Create a dramatic multicolor nebula mixing pink, cyan, and purple clouds
+Create a dark molecular cloud background with thick dust obscuring the stars
+Create a wispy veil nebula with delicate filaments of cyan and magenta gas
+
+# Deep Space & Galaxies
+Create a view from inside a spiral galaxy with a bright band of stars and dust
+Create a galactic core background with intense bright light and dense star clusters
+Create a deep cosmic void background with very few faint stars and subtle gradients
+Create a distant galaxy cluster background with many small fuzzy galaxies
+Create a cosmic web background with faint connecting filaments of matter
+
+# Stylized & Exotic
+Create a retro synthwave space background with neon colors and deep purples
+Create a stylized vector art space background with clean shapes and flat colors
+Create a watercolor texture space background with soft blended cosmic colors
+Create a hyperspace effect background with streaking stars and motion lines
+Create a chaotic warp space background with swirling unnatural colors
+
