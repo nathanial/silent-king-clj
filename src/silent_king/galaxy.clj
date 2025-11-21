@@ -333,7 +333,9 @@
      :sprite-path path
      :rotation-speed rotation-speed}))
 
-(defn generate-galaxy
+(defn ^{:malli/schema [:=> [:cat schemas/StarImages schemas/PlanetSprites schemas/NonNegInt]
+                       schemas/GeneratedGalaxy]}
+  generate-galaxy
   "Pure galaxy generator. Returns {:stars {...} :planets {...} :next-star-id n :next-planet-id m}."
   [star-images planet-sprites num-stars]
   (when (empty? planet-sprites)

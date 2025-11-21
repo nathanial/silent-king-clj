@@ -9,8 +9,8 @@ High-level plan for adopting [malli](https://github.com/metosin/malli) in Silent
 - [x] Dependency added in `deps.edn` (malli 0.20.0).
 - [x] `silent-king.schemas` added with core world/runtime schemas, opt-in boundary validation helpers, and REPL checkers.
 - [x] Boundary validation wired into `create-game-state`, `set-world!`, `add-*`, galaxy/hyperlane generators, Voronoi, and regions; schema tests and runner updates in place.
-- [ ] Function instrumentation via `malli.instrument` (not started).
-- [ ] UI tree and event payload schemas/validation (not started).
+- [x] Function instrumentation via `malli.instrument` for generators (opt-in, enabled during tests).
+- [x] UI tree and event payload schemas with opt-in validation hooks.
 - [ ] CLI hook and broader REPL/generator tooling (partial: `check-game-state!`/`explain-game-state` exist; others pending).
 - [ ] Tightening maps/targeted invariants beyond current open maps (not started).
 
@@ -329,7 +329,7 @@ Key idea: **validate at boundaries**, not inside tight loops. This keeps malli�
 - `silent-king.voronoi` and region builders
   - Validate Voronoi and region maps after generation, when they’re relatively small and infrequent compared to render ticks.
 
-### 4.3 UI & Reactified Layer — **NOT STARTED**
+### 4.3 UI & Reactified Layer — **DONE (opt-in validation in place)**
 
 - For the React-style UI (`src/silent_king/reactui`):
   - Define schemas for the **UI element tree** (e.g. `[:enum :vstack :hstack :panel :button :label :slider :dropdown]` plus props).
@@ -340,9 +340,9 @@ Key idea: **validate at boundaries**, not inside tight loops. This keeps malli�
     - Schemas for events like `[:ui/set-zoom double?]`, `[:ui/toggle-hyperlanes]`, etc.
     - Dispatcher can `assert-valid!` before applying state transitions in dev builds.
 
-### 4.4 Tests & Fixtures — **PARTIAL**
+### 4.4 Tests & Fixtures — **DONE**
 
-- Schema-based regression tests added for game-state and generators; fixture validation (e.g., `recompute-neighbors!`) still pending.
+- Schema-based regression tests for game-state and generators; fixture validation (`recompute-neighbors!`) guarded by opt-in boundary checks.
 
 - In `test/silent_king/test_fixtures.clj`:
   - Use malli schemas to assert that test helpers build valid worlds:
@@ -357,7 +357,7 @@ Key idea: **validate at boundaries**, not inside tight loops. This keeps malli�
 
 ## 5. Instrumentation & Tooling
 
-### 5.1 Function Instrumentation — **NOT STARTED**
+### 5.1 Function Instrumentation — **DONE**
 
 - Use `malli.instrument` to instrument selected functions in dev/test:
 
@@ -402,9 +402,7 @@ Key idea: **validate at boundaries**, not inside tight loops. This keeps malli�
   - Validate `(state/create-game-state)` against `GameState`.
   - Validate outputs of `generate-galaxy` against `GeneratedGalaxy` and `generate-hyperlanes` against `GeneratedHyperlanes` in test runs.
 
-### Phase 2 – World Generators & Mutators — **IN PROGRESS (instrumentation pending)**
-
-- Status note: Opt-in validation is wired for generators and mutators; `malli.instrument` metadata/hooks still need to be added.
+### Phase 2 – World Generators & Mutators — **DONE**
 
 - Annotate and instrument:
   - `silent-king.galaxy/generate-galaxy`.
@@ -415,15 +413,15 @@ Key idea: **validate at boundaries**, not inside tight loops. This keeps malli�
   - World snapshots flowing into `set-world!`.
   - Entity insertion via `add-*` helpers when running tests.
 
-### Phase 3 – Voronoi, Regions, UI & Events — **PARTIAL**
+### Phase 3 – Voronoi, Regions, UI & Events — **DONE**
 
 - Add schemas for:
   - `VoronoiCell`, `Region`, and any associated config maps.
-  - React UI element tree and event descriptors. **(Pending)**
+  - React UI element tree and event descriptors.
 - Validate:
-  - Voronoi and region generation outputs. **(Done)**
-  - Root React UI trees in tests. **(Pending)**
-  - Event payloads before dispatch in dev/test. **(Pending)**
+  - Voronoi and region generation outputs.
+  - Root React UI trees in tests.
+  - Event payloads before dispatch in dev/test.
 
 ### Phase 4 – Tightening & Tooling — **NOT STARTED**
 

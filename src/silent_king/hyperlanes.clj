@@ -50,7 +50,9 @@
           {}
           hyperlanes))
 
-(defn generate-hyperlanes
+(defn ^{:malli/schema [:=> [:cat [:sequential schemas/Star]]
+                       schemas/GeneratedHyperlanes]}
+  generate-hyperlanes
   "Pure hyperlane generator using Delaunay triangulation.
   Accepts a sequence of star maps with :id/:x/:y.
   Returns {:hyperlanes [...] :neighbors-by-star-id {...} :next-hyperlane-id n}."

@@ -4,6 +4,7 @@
             [silent-king.reactui.layout :as layout]
             [silent-king.reactui.render :as render]
             [silent-king.render.skia :as skia]
+            [silent-king.schemas :as schemas]
             [silent-king.state :as state]))
 
 (set! *warn-on-reflection* true)
@@ -122,6 +123,7 @@
    Returns {:layout-tree .. :commands ..}"
   [{:keys [canvas tree viewport context]}]
   (let [normalized (normalize-tree tree)
+        _ (schemas/validate-ui-tree! normalized)
         layout-tree (layout/compute-layout normalized viewport)
         {:keys [commands overlays]} (render/plan-tree layout-tree context)]
     (reset! last-layout layout-tree)

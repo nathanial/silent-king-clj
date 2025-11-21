@@ -1,6 +1,7 @@
 (ns silent-king.reactui.events
   "Dispatch helpers that translate UI event vectors into game-state updates."
-  (:require [silent-king.state :as state]
+  (:require [silent-king.schemas :as schemas]
+            [silent-king.state :as state]
             [silent-king.voronoi :as voronoi]))
 
 (set! *warn-on-reflection* true)
@@ -22,8 +23,14 @@
 (def ^:private voronoi-color-schemes
   #{:monochrome :by-density :by-degree})
 
+(defn- validate-ui-event!
+  [event]
+  (schemas/validate-ui-event! event)
+  event)
+
 (defmulti dispatch-event!
   (fn [_game-state event]
+    (validate-ui-event! event)
     (first event)))
 
 (defmethod dispatch-event! :ui/toggle-hyperlanes

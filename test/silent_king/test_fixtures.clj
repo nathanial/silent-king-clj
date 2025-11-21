@@ -1,5 +1,6 @@
 (ns silent-king.test-fixtures
   (:require [silent-king.color :as color]
+            [silent-king.schemas :as schemas]
             [silent-king.state :as state]))
 
 (defn reset-world!
@@ -48,5 +49,6 @@
                                                               :hyperlane hyperlane})))
                           {}
                           (state/hyperlanes game-state))]
+    (schemas/validate-if-enabled! schemas/NeighborsByStarId neighbors "neighbors-by-star-id")
     (state/set-neighbors! game-state neighbors)
     neighbors))

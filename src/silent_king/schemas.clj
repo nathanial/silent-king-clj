@@ -39,8 +39,17 @@
 
 (def NonNegNumber [:and number? [:>= 0]])
 (def PositiveId [:and int? [:> 0]])
+(def NonNegInt [:and int? [:>= 0]])
 (def MaybeId [:maybe PositiveId])
 (def WorldCoord [:map [:x number?] [:y number?]])
+
+(def StarImage
+  [:map {:closed false}
+   [:path [:or string? keyword?]]])
+
+(def PlanetSprite [:or string? keyword? map?])
+(def PlanetSprites [:sequential PlanetSprite])
+(def StarImages [:sequential StarImage])
 
 ;; =============================================================================
 ;; Core world model
@@ -51,10 +60,10 @@
    [:id PositiveId]
    [:x number?]
    [:y number?]
-   [:size NonNegNumber]
-   [:density NonNegNumber]
-   [:sprite-path [:or string? keyword?]]
-   [:rotation-speed number?]])
+   [:size {:optional true} NonNegNumber]
+   [:density {:optional true} NonNegNumber]
+   [:sprite-path {:optional true} [:or string? keyword?]]
+   [:rotation-speed {:optional true} number?]])
 
 (def Planet
   [:map {:closed false}
@@ -271,6 +280,23 @@
    [:elapsed-ms {:optional true} int?]])
 
 ;; =============================================================================
+;; UI schemas
+;; =============================================================================
+
+(def UiElement
+  [:map {:closed false}
+   [:type keyword?]
+   [:props map?]
+   [:children [:sequential any?]]])
+
+(def UiTree UiElement)
+(def UiEvent
+  [:and
+   [:sequential any?]
+   [:fn (fn [event] (keyword? (first event)))]])
+(def UiEvents [:sequential UiEvent])
+
+;; =============================================================================
 ;; REPL helpers
 ;; =============================================================================
 
@@ -286,3 +312,13 @@
   [game-state]
   (let [value (if (instance? clojure.lang.IAtom game-state) @game-state game-state)]
     (me/humanize (m/explain GameState value))))
+
+(defn validate-ui-tree!
+  "Validate a normalized UI tree when boundary checks are enabled."
+  [tree]
+  (validate-if-enabled! UiTree tree "ui-tree"))
+
+(defn validate-ui-event!
+  "Validate a UI event vector when boundary checks are enabled."
+  [event]
+  (validate-if-enabled! UiEvent event "ui-event"))
