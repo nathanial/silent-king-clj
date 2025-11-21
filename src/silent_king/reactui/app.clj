@@ -24,6 +24,7 @@
 (def ^:private performance-window-id :ui/performance-overlay)
 (def ^:private star-inspector-window-id :ui/star-inspector)
 (def ^:private minimap-window-id :ui/minimap)
+(def ^:private galaxy-window-id :ui/galaxy)
 
 (defn control-panel-props
   [game-state]
@@ -265,9 +266,29 @@
        :children (cond-> []
                    content (conj content))})))
 
+(defn galaxy-window
+  [game-state]
+  (let [default-bounds {:x 100.0 :y 100.0 :width 600.0 :height 400.0}
+        bounds (state/window-bounds game-state galaxy-window-id default-bounds)
+        minimized? (state/window-minimized? game-state galaxy-window-id)
+        content (when-not minimized?
+                  [:galaxy {:game-state game-state}])]
+    {:type :window
+     :props {:title "Galaxy View"
+             :bounds bounds
+             :minimized? minimized?
+             :resizable? true
+             :min-width 200.0
+             :min-height 200.0
+             :on-change-bounds [:ui.window/set-bounds galaxy-window-id]
+             :on-toggle-minimized [:ui.window/toggle-minimized galaxy-window-id]}
+     :children (cond-> []
+                 content (conj content))}))
+
 (defn root-tree
   [game-state]
   [:vstack {:key :ui-root}
+   (galaxy-window game-state)
    (control-panel-window game-state)
    (hyperlane-settings-window game-state)
    (voronoi-settings-window game-state)

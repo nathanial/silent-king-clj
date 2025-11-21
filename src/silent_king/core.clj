@@ -310,39 +310,31 @@
     {:commands commands
      :metrics metrics}))
 
-(defn draw-frame [^Canvas canvas width height time game-state]
-  (let [{:keys [commands metrics]} (frame-world-plan width height time game-state)
-        ui-result (react-app/render! nil {:x 0.0
+(defn draw-frame [^Canvas canvas width height _time game-state]
+  (let [ui-result (react-app/render! nil {:x 0.0
                                           :y 0.0
                                           :width width
                                           :height height}
                                      game-state)
         ui-commands (:commands ui-result)
+        ;; Just clear to black and then draw the UI
         frame-commands (into [(commands/clear (color/hsv 0 0 0))]
-                             (concat commands ui-commands))]
+                             ui-commands)]
     (skia/draw-commands! canvas frame-commands)
     (let [time-state (state/get-time game-state)
           frame-count (:frame-count time-state)
           current-time (:current-time time-state)
           fps (if (pos? current-time) (/ frame-count current-time) 0.0)
-          hyperlanes-count (:visible-hyperlanes metrics 0)
           frame-time-ms (/ 1000.0 (max fps 0.0001))
           runtime (Runtime/getRuntime)
           used-memory (- (.totalMemory runtime) (.freeMemory runtime))
           memory-mb (/ used-memory 1048576.0)
-          metrics* (assoc metrics
-                          :fps fps
-                          :frame-time-ms frame-time-ms
-                          :draw-calls (+ (:visible-stars metrics 0)
-                                         (:planets-rendered metrics 0)
-                                         hyperlanes-count
-                                         (:visible-voronoi metrics 0))
-                          :memory-mb memory-mb
-                          :current-time current-time)]
-      (swap! game-state assoc-in [:debug :hyperlanes-rendered] hyperlanes-count)
-      (swap! game-state assoc-in [:debug :voronoi-rendered] (:visible-voronoi metrics 0))
-      (swap! game-state assoc-in [:debug :planets-rendered] (:planets-rendered metrics 0))
-      (state/record-performance-metrics! game-state (dissoc metrics* :planets-rendered)))))
+          ;; Create a basic metrics map since we aren't calculating world metrics here anymore
+          metrics {:fps fps
+                   :frame-time-ms frame-time-ms
+                   :memory-mb memory-mb
+                   :current-time current-time}]
+      (state/record-performance-metrics! game-state metrics))))
 
 (defn render-loop [game-state render-state]
   (println "Starting render loop...")

@@ -225,6 +225,11 @@
   (state/focus-camera-on-world! game-state pos)
   nil)
 
+(defmethod dispatch-event! :camera/set-pan
+  [game-state [_ x y]]
+  (state/update-camera! game-state assoc :pan-x (double x) :pan-y (double y))
+  nil)
+
 (defmethod dispatch-event! :default
   [_ event]
   (println "Unhandled UI event" event)

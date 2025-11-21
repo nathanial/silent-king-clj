@@ -3,6 +3,7 @@
   (:require [silent-king.reactui.primitives.bar-chart]
             [silent-king.reactui.primitives.button]
             [silent-king.reactui.primitives.dropdown]
+            [silent-king.reactui.primitives.galaxy]
             [silent-king.reactui.primitives.label]
             [silent-king.reactui.primitives.minimap]
             [silent-king.reactui.primitives.slider]
