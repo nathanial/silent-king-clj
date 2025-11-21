@@ -4,6 +4,18 @@ High-level plan for adopting [malli](https://github.com/metosin/malli) in Silent
 
 ---
 
+## Status Snapshot
+
+- [x] Dependency added in `deps.edn` (malli 0.20.0).
+- [x] `silent-king.schemas` added with core world/runtime schemas, opt-in boundary validation helpers, and REPL checkers.
+- [x] Boundary validation wired into `create-game-state`, `set-world!`, `add-*`, galaxy/hyperlane generators, Voronoi, and regions; schema tests and runner updates in place.
+- [ ] Function instrumentation via `malli.instrument` (not started).
+- [ ] UI tree and event payload schemas/validation (not started).
+- [ ] CLI hook and broader REPL/generator tooling (partial: `check-game-state!`/`explain-game-state` exist; others pending).
+- [ ] Tightening maps/targeted invariants beyond current open maps (not started).
+
+---
+
 ## 1. Goals & Constraints
 
 - **Goals**
@@ -262,7 +274,7 @@ The world model today lives primarily in `silent-king.state`, `silent-king.galax
 
 Key idea: **validate at boundaries**, not inside tight loops. This keeps malli’s overhead small while still catching structural bugs.
 
-### 4.1 World Creation & Mutations
+### 4.1 World Creation & Mutations — **DONE (opt-in validation in place)**
 
 - Add boundary validation helpers in `silent-king.schemas`:
 
@@ -285,7 +297,7 @@ Key idea: **validate at boundaries**, not inside tight loops. This keeps malli�
   - `silent-king.state/add-star!`, `add-planet!`, `add-hyperlane!`
     - In dev/test, validate each inserted entity against `Star` / `Planet` / `Hyperlane`.
 
-### 4.2 World Generators
+### 4.2 World Generators — **DONE (opt-in validation in place)**
 
 - `silent-king.galaxy/generate-galaxy`
   - Actual signature (per `galaxy.clj`): returns only stars/planets and their next ids:
@@ -317,7 +329,7 @@ Key idea: **validate at boundaries**, not inside tight loops. This keeps malli�
 - `silent-king.voronoi` and region builders
   - Validate Voronoi and region maps after generation, when they’re relatively small and infrequent compared to render ticks.
 
-### 4.3 UI & Reactified Layer
+### 4.3 UI & Reactified Layer — **NOT STARTED**
 
 - For the React-style UI (`src/silent_king/reactui`):
   - Define schemas for the **UI element tree** (e.g. `[:enum :vstack :hstack :panel :button :label :slider :dropdown]` plus props).
@@ -328,7 +340,9 @@ Key idea: **validate at boundaries**, not inside tight loops. This keeps malli�
     - Schemas for events like `[:ui/set-zoom double?]`, `[:ui/toggle-hyperlanes]`, etc.
     - Dispatcher can `assert-valid!` before applying state transitions in dev builds.
 
-### 4.4 Tests & Fixtures
+### 4.4 Tests & Fixtures — **PARTIAL**
+
+- Schema-based regression tests added for game-state and generators; fixture validation (e.g., `recompute-neighbors!`) still pending.
 
 - In `test/silent_king/test_fixtures.clj`:
   - Use malli schemas to assert that test helpers build valid worlds:
@@ -343,7 +357,7 @@ Key idea: **validate at boundaries**, not inside tight loops. This keeps malli�
 
 ## 5. Instrumentation & Tooling
 
-### 5.1 Function Instrumentation
+### 5.1 Function Instrumentation — **NOT STARTED**
 
 - Use `malli.instrument` to instrument selected functions in dev/test:
 
@@ -360,14 +374,14 @@ Key idea: **validate at boundaries**, not inside tight loops. This keeps malli�
 - Attach `:malli/schema` metadata to functions we care about (e.g. world generators, state setters).
   - Example: annotate `generate-galaxy` and `generate-hyperlanes` with input/output schemas.
 
-### 5.2 REPL Utilities
+### 5.2 REPL Utilities — **PARTIAL**
 
 - Add REPL helpers in `silent-king.schemas` or a dev-only namespace:
   - `check-game-state!` – validate the global `game-state` atom against `GameState`.
   - `explain-game-state` – pretty-print `m/explain` errors with a focus on top-level keys and IDs.
   - `sample-star`, `sample-planet` – use `malli.generator` (optional dependency) to generate sample entities for debugging or prototyping.
 
-### 5.3 CLI Hooks (Optional)
+### 5.3 CLI Hooks (Optional) — **NOT STARTED**
 
 - Add a lightweight script or alias to validate a serialized world:
   - For example, if a future tool writes world snapshots to JSON/EDN, a `clojure -M:validate-world path.edn` command can read the file and validate it via malli.
@@ -376,7 +390,7 @@ Key idea: **validate at boundaries**, not inside tight loops. This keeps malli�
 
 ## 6. Phased Rollout
 
-### Phase 1 – Foundations (Schemas + Dev Helpers)
+### Phase 1 – Foundations (Schemas + Dev Helpers) — **DONE**
 
 - Add `metosin/malli` to `deps.edn`.
 - Implement `silent-king.schemas` with:
@@ -388,7 +402,9 @@ Key idea: **validate at boundaries**, not inside tight loops. This keeps malli�
   - Validate `(state/create-game-state)` against `GameState`.
   - Validate outputs of `generate-galaxy` against `GeneratedGalaxy` and `generate-hyperlanes` against `GeneratedHyperlanes` in test runs.
 
-### Phase 2 – World Generators & Mutators
+### Phase 2 – World Generators & Mutators — **IN PROGRESS (instrumentation pending)**
+
+- Status note: Opt-in validation is wired for generators and mutators; `malli.instrument` metadata/hooks still need to be added.
 
 - Annotate and instrument:
   - `silent-king.galaxy/generate-galaxy`.
@@ -399,17 +415,17 @@ Key idea: **validate at boundaries**, not inside tight loops. This keeps malli�
   - World snapshots flowing into `set-world!`.
   - Entity insertion via `add-*` helpers when running tests.
 
-### Phase 3 – Voronoi, Regions, UI & Events
+### Phase 3 – Voronoi, Regions, UI & Events — **PARTIAL**
 
 - Add schemas for:
   - `VoronoiCell`, `Region`, and any associated config maps.
-  - React UI element tree and event descriptors.
+  - React UI element tree and event descriptors. **(Pending)**
 - Validate:
-  - Voronoi and region generation outputs.
-  - Root React UI trees in tests.
-  - Event payloads before dispatch in dev/test.
+  - Voronoi and region generation outputs. **(Done)**
+  - Root React UI trees in tests. **(Pending)**
+  - Event payloads before dispatch in dev/test. **(Pending)**
 
-### Phase 4 – Tightening & Tooling
+### Phase 4 – Tightening & Tooling — **NOT STARTED**
 
 - Gradually move from open maps (`{:closed false}`) to closed maps where appropriate:
   - Especially for world entities and performance metrics.
