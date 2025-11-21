@@ -1,14 +1,9 @@
 (ns silent-king.reactui.render
-  "Skija renderer for the Reactified UI tree."
+  "Rendering planner for the Reactified UI tree."
   (:require [silent-king.minimap.math :as minimap-math]
-            [silent-king.reactui.layout :as layout])
-  (:import [io.github.humbleui.skija Canvas Font Typeface Paint PaintMode]
-           [io.github.humbleui.types Rect]))
+            [silent-king.reactui.layout :as layout]))
 
 (set! *warn-on-reflection* true)
-
-(defonce ^Typeface default-typeface
-  (Typeface/makeDefault))
 
 (def ^:dynamic *overlay-collector* nil)
 (def ^:dynamic *render-context* nil)
@@ -17,18 +12,6 @@
   [overlay]
   (when *overlay-collector*
     (swap! *overlay-collector* conj overlay)))
-
-(defmulti draw-node
-  (fn [_ node]
-    (:type node)))
-
-(defmulti draw-overlay
-  (fn [_ overlay]
-    (:type overlay)))
-
-(defn make-font
-  [font-size]
-  (Font. default-typeface (float font-size)))
 
 (defn approx-text-width
   [text font-size]
@@ -176,18 +159,31 @@
   []
   (:active-interaction *render-context*))
 
-(defmethod draw-node :default
-  [_ _]
-  nil)
+(defmulti plan-node
+  (fn [_ node]
+    (:type node)))
 
-(defn draw-tree
-  "Render a laid-out tree."
-  [canvas node context]
-  (when canvas
-    (let [overlays (atom [])
-          ctx (or context {})]
-      (binding [*overlay-collector* overlays
-                *render-context* ctx]
-        (draw-node canvas node)
-        (doseq [overlay @overlays]
-          (draw-overlay canvas overlay))))))
+(defmulti plan-overlay
+  (fn [_ overlay]
+    (:type overlay)))
+
+(defmethod plan-node :default
+  [context node]
+  (mapcat #(plan-node context %)
+          (:children node)))
+
+(defmethod plan-overlay :default
+  [_ _]
+  [])
+
+(defn plan-tree
+  "Plan draw commands for a laid-out UI tree, returning both node and overlay commands."
+  [node context]
+  (let [overlays (atom [])
+        ctx (or context {})]
+    (binding [*overlay-collector* overlays
+              *render-context* ctx]
+      (let [node-commands (vec (plan-node ctx node))
+            overlay-commands (vec (mapcat #(plan-overlay ctx %) @overlays))]
+        {:commands (into [] (concat node-commands overlay-commands))
+         :overlays @overlays}))))

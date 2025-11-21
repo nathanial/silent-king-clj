@@ -2,9 +2,8 @@
   "Bar chart primitive: normalization, layout, and rendering."
   (:require [silent-king.reactui.core :as core]
             [silent-king.reactui.layout :as layout]
-            [silent-king.reactui.render :as render])
-  (:import [io.github.humbleui.skija Canvas Paint]
-           [io.github.humbleui.types Rect]))
+            [silent-king.reactui.render :as render]
+            [silent-king.render.commands :as commands]))
 
 (set! *warn-on-reflection* true)
 
@@ -52,14 +51,14 @@
                                 :bar-gap bar-gap}}
            :children [])))
 
-(defn draw-bar-chart
-  [^Canvas canvas node]
+(defn plan-bar-chart
+  [node]
   (let [{:keys [x y width height]} (layout/bounds node)
         {:keys [values min max bar-gap]} (get-in node [:layout :bar-chart])
         {:keys [background-color bar-color grid-color baseline-value]} (:props node)
-        background-color (unchecked-int (or background-color 0x3310131C))
-        bar-color (unchecked-int (or bar-color 0xFF9CDCFE))
-        grid-color (unchecked-int (or grid-color 0x33FFFFFF))
+        background-color (render/->color-int background-color 0x3310131C)
+        bar-color (render/->color-int bar-color 0xFF9CDCFE)
+        grid-color (render/->color-int grid-color 0x33FFFFFF)
         bars (vec values)
         count (count bars)
         safe-width (double (clojure.core/max width 0.0))
@@ -74,33 +73,24 @@
         baseline (double (or baseline-value min-value))
         baseline-ratio (render/clamp01 (/ (- baseline min-value) span))
         baseline-y (+ y (* (- 1.0 baseline-ratio) height))]
-    (with-open [^Paint bg (doto (Paint.)
-                            (.setColor background-color))]
-      (let [rect (Rect/makeXYWH (float x) (float y) (float width) (float height))]
-        (.drawRect canvas rect bg)))
-    (when grid-color
-      (with-open [^Paint grid (doto (Paint.)
-                                (.setColor grid-color)
-                                (.setStrokeWidth 1.0))]
-        (.drawLine canvas (float x)
-                   (float baseline-y)
-                   (float (+ x width))
-                   (float baseline-y)
-                   grid))
-      (when (pos? count)
-        (with-open [^Paint paint (doto (Paint.)
-                                   (.setColor bar-color))]
-          (doseq [[idx value] (map-indexed vector bars)]
-            (let [ratio (render/clamp01 (/ (- (double value) min-value) span))
-                  bar-height (* ratio height)
-                  bar-x (+ x (* idx (+ bar-width gap)))
-                  bar-y (+ y (- height bar-height))
-                  rect (Rect/makeXYWH (float bar-x)
-                                      (float bar-y)
-                                      (float bar-width)
-                                      (float bar-height))]
-              (.drawRect canvas rect paint))))))))
+    (cond-> [(commands/rect {:x x :y y :width width :height height}
+                            {:fill-color background-color})
+             (commands/line {:x x :y baseline-y}
+                            {:x (+ x width) :y baseline-y}
+                            {:stroke-color grid-color
+                             :stroke-width 1.0})]
+      (pos? count) (into (map (fn [[idx value]]
+                                (let [ratio (render/clamp01 (/ (- (double value) min-value) span))
+                                      bar-height (* ratio height)
+                                      bar-x (+ x (* idx (+ bar-width gap)))
+                                      bar-y (+ y (- height bar-height))]
+                                  (commands/rect {:x bar-x
+                                                  :y bar-y
+                                                  :width bar-width
+                                                  :height bar-height}
+                                                 {:fill-color bar-color})))
+                              (map-indexed vector bars))))))
 
-(defmethod render/draw-node :bar-chart
-  [canvas node]
-  (draw-bar-chart canvas node))
+(defmethod render/plan-node :bar-chart
+  [context node]
+  (plan-bar-chart node))

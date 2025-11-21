@@ -8,6 +8,8 @@
             [silent-king.reactui.components.star-inspector :as star-inspector]
             [silent-king.reactui.core :as ui-core]
             [silent-king.reactui.primitives]
+            [silent-king.render.commands :as commands]
+            [silent-king.render.skia :as skia]
             [silent-king.selection :as selection]
             [silent-king.state :as state])
   (:import [io.github.humbleui.skija Canvas]))
@@ -294,13 +296,16 @@
                    :y (/ (double (or (:mouse-y input) 0.0)) scale)})
         render-context {:pointer pointer
                         :active-interaction (ui-core/active-interaction)}]
-    (when canvas
-      (.save canvas)
-      (.scale canvas (float scale) (float scale)))
-    (let [result (ui-core/render-ui-tree {:canvas canvas
-                                          :tree (root-tree game-state)
-                                          :viewport (logical-viewport scale viewport)
-                                          :context render-context})]
+    (let [{:keys [layout-tree commands]} (ui-core/render-ui-tree {:canvas nil
+                                                                  :tree (root-tree game-state)
+                                                                  :viewport (logical-viewport scale viewport)
+                                                                  :context render-context})
+          scaled-commands (if (= 1.0 scale)
+                            commands
+                            (into [(commands/save)
+                                   (commands/scale scale scale)]
+                                  (concat commands
+                                          [(commands/restore)])))]
       (when canvas
-        (.restore canvas))
-      result)))
+        (skia/draw-commands! canvas scaled-commands))
+      layout-tree)))

@@ -5,9 +5,8 @@
             [silent-king.reactui.events :as ui-events]
             [silent-king.reactui.layout :as layout]
             [silent-king.reactui.render :as render]
-            [silent-king.reactui.primitives.window :as window])
-  (:import [io.github.humbleui.skija Canvas Paint PaintMode]
-           [io.github.humbleui.types Rect]))
+            [silent-king.reactui.primitives.window :as window]
+            [silent-king.render.commands :as commands]))
 
 (set! *warn-on-reflection* true)
 
@@ -82,65 +81,48 @@
         dy (- (double y2) (double y))]
     (Math/sqrt (+ (* dx dx) (* dy dy)))))
 
-(defmethod render/draw-node :minimap
-  [^Canvas canvas node]
+(defn plan-minimap
+  [node]
   (let [{:keys [stars world-bounds viewport-rect background-color viewport-color]} (:props node)
         {:keys [x y width height]} (layout/bounds node)
         bg-color (render/->color-int background-color 0xFF000000)
         viewport-color (render/->color-int viewport-color 0xFF00FF00)
         widget-bounds {:x x :y y :width width :height height}
         cell-size (render/heatmap-cell-size width height)
-        {:keys [counts cols rows max-density]} (render/bucket-stars-into-grid stars world-bounds widget-bounds cell-size)
-        counts-array ^ints counts]
-    (with-open [^Paint bg (doto (Paint.)
-                            (.setColor bg-color))]
-      (try
-        (.drawRect canvas (Rect/makeXYWH (float x) (float y) (float width) (float height)) bg)
-        (catch ArithmeticException _ nil)
-        (catch Exception _ nil)))
+        heatmap (when world-bounds
+                  (render/bucket-stars-into-grid stars world-bounds widget-bounds cell-size))
+        {:keys [counts cols rows max-density]} heatmap
+        counts-array ^ints counts
+        viewport-bounds (when world-bounds
+                          (minimap-math/viewport->minimap-rect viewport-rect
+                                                               world-bounds
+                                                               widget-bounds))
+        base-commands [(commands/rect widget-bounds {:fill-color bg-color})]]
+    (cond-> base-commands
+      (pos? (or max-density 0))
+      (into (for [row (range rows)
+                  col (range cols)
+                  :let [idx (+ (* row cols) col)
+                        count (aget counts-array idx)]
+                  :when (pos? count)]
+              (let [px (+ x (* col cell-size))
+                    py (+ y (* row cell-size))
+                    cell-w (max 0.0 (min cell-size (- (+ x width) px)))
+                    cell-h (max 0.0 (min cell-size (- (+ y height) py)))]
+                (commands/rect {:x px
+                                :y py
+                                :width cell-w
+                                :height cell-h}
+                               {:fill-color (render/density->color count max-density)}))))
+      viewport-bounds
+      (conj (commands/rect viewport-bounds {:stroke-color viewport-color
+                                            :stroke-width 1.0}))
+      true (conj (commands/rect widget-bounds {:stroke-color (render/->color-int nil 0xFF444444)
+                                               :stroke-width 1.0})))))
 
-    (when (pos? max-density)
-      (with-open [^Paint heatmap-paint (Paint.)]
-        (dotimes [row rows]
-          (dotimes [col cols]
-            (let [idx (+ (* row cols) col)
-                  count (aget counts-array idx)]
-              (when (pos? count)
-                (let [px (+ x (* col cell-size))
-                      py (+ y (* row cell-size))
-                      cell-w (max 0.0 (min cell-size (- (+ x width) px)))
-                      cell-h (max 0.0 (min cell-size (- (+ y height) py)))]
-                  (when (and (pos? cell-w) (pos? cell-h))
-                    (.setColor heatmap-paint (render/density->color count max-density))
-                    (try
-                      (.drawRect canvas (Rect/makeXYWH (float px)
-                                                       (float py)
-                                                       (float cell-w)
-                                                       (float cell-h))
-                                 heatmap-paint)
-                      (catch ArithmeticException _ nil)
-                      (catch Exception _ nil))))))))))
-
-    (when-let [{:keys [x y width height]} (minimap-math/viewport->minimap-rect viewport-rect
-                                                                               world-bounds
-                                                                               widget-bounds)]
-      (with-open [^Paint viewport-paint (doto (Paint.)
-                                          (.setColor viewport-color)
-                                          (.setStrokeWidth 1.0)
-                                          (.setMode PaintMode/STROKE))]
-        (try
-          (.drawRect canvas (Rect/makeXYWH (float x) (float y) (float width) (float height)) viewport-paint)
-          (catch ArithmeticException _ nil)
-          (catch Exception _ nil))))
-
-    (with-open [^Paint border-paint (doto (Paint.)
-                                      (.setColor (render/->color-int nil 0xFF444444))
-                                      (.setStrokeWidth 1.0)
-                                      (.setMode PaintMode/STROKE))]
-      (try
-        (.drawRect canvas (Rect/makeXYWH (float x) (float y) (float width) (float height)) border-paint)
-        (catch ArithmeticException _ nil)
-        (catch Exception _ nil)))))
+(defmethod render/plan-node :minimap
+  [context node]
+  (plan-minimap node))
 
 (defmethod core/pointer-down! :minimap
   [node game-state x y]

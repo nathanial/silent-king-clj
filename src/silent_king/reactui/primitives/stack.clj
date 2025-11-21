@@ -1,9 +1,8 @@
 (ns silent-king.reactui.primitives.stack
   "Stack primitives: vstack and hstack layout plus rendering."
   (:require [silent-king.reactui.layout :as layout]
-            [silent-king.reactui.render :as render])
-  (:import [io.github.humbleui.skija Canvas Paint]
-           [io.github.humbleui.types Rect]))
+            [silent-king.reactui.render :as render]
+            [silent-king.render.commands :as commands]))
 
 (set! *warn-on-reflection* true)
 
@@ -91,23 +90,19 @@
                  next-x
                  (max max-height child-height)))))))
 
-(defn draw-stack
-  [^Canvas canvas node]
+(defn plan-stack
+  [context node]
   (let [{:keys [background-color]} (:props node)
-        {:keys [x y width height]} (layout/bounds node)]
-    (when background-color
-      (with-open [^Paint paint (doto (Paint.)
-                                 (.setColor (unchecked-int background-color)))]
-        (.drawRect canvas
-                   (Rect/makeXYWH (float x) (float y) (float width) (float height))
-                   paint)))
-    (doseq [child (:children node)]
-      (render/draw-node canvas child))))
+        bounds (layout/bounds node)
+        child-commands (mapcat #(render/plan-node context %) (:children node))]
+    (cond-> []
+      background-color (conj (commands/rect bounds {:fill-color (render/->color-int background-color background-color)}))
+      true (into child-commands))))
 
-(defmethod render/draw-node :vstack
-  [canvas node]
-  (draw-stack canvas node))
+(defmethod render/plan-node :vstack
+  [context node]
+  (plan-stack context node))
 
-(defmethod render/draw-node :hstack
-  [canvas node]
-  (draw-stack canvas node))
+(defmethod render/plan-node :hstack
+  [context node]
+  (plan-stack context node))

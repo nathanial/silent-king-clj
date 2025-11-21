@@ -4,9 +4,8 @@
             [silent-king.reactui.events :as ui-events]
             [silent-king.reactui.interaction :as interaction]
             [silent-king.reactui.layout :as layout]
-            [silent-king.reactui.render :as render])
-  (:import [io.github.humbleui.skija Canvas Paint]
-           [io.github.humbleui.types Rect]))
+            [silent-king.reactui.render :as render]
+            [silent-king.render.commands :as commands]))
 
 (set! *warn-on-reflection* true)
 
@@ -65,14 +64,14 @@
     (and (= :slider (:type active))
          (= (:bounds active) (layout/bounds node)))))
 
-(defn draw-slider
-  [^Canvas canvas node]
+(defn plan-slider
+  [node]
   (let [{:keys [background-color track-color handle-color]} (:props node)
         {:keys [x y width height]} (layout/bounds node)
         {:keys [track handle]} (get-in node [:layout :slider])
-        bg-color (or background-color 0x00111111)
-        t-color (or track-color 0xFF3C3F4A)
-        h-color (or handle-color 0xFFF0F0F0)
+        bg-color (when background-color (render/->color-int background-color 0x00111111))
+        t-color (render/->color-int track-color 0xFF3C3F4A)
+        h-color (render/->color-int handle-color 0xFFF0F0F0)
         hovered? (render/pointer-over-node? node)
         active? (active-slider? node)
         track-color (cond active? (render/adjust-color t-color 0.9)
@@ -81,32 +80,22 @@
         handle-color (cond active? (render/adjust-color h-color 0.9)
                            hovered? (render/adjust-color h-color 1.05)
                            :else h-color)]
-    (when background-color
-      (with-open [^Paint bg (doto (Paint.)
-                              (.setColor (unchecked-int bg-color)))]
-        (.drawRect canvas
-                   (Rect/makeXYWH (float x) (float y) (float width) (float height))
-                   bg)))
-    (when (pos? (:width track))
-      (with-open [^Paint track-paint (doto (Paint.)
-                                       (.setColor (unchecked-int track-color)))]
-        (.drawRect canvas
-                   (Rect/makeXYWH (float (:x track))
-                                  (float (:y track))
-                                  (float (:width track))
-                                  (float (:height track)))
-                   track-paint))
-      (with-open [^Paint handle-paint (doto (Paint.)
-                                        (.setColor (unchecked-int handle-color)))]
-        (.drawCircle canvas
-                     (float (:x handle))
-                     (float (:y handle))
-                     (float (:radius handle))
-                     handle-paint)))))
+    (cond-> []
+      bg-color (conj (commands/rect {:x x :y y :width width :height height}
+                                    {:fill-color bg-color}))
+      (pos? (:width track)) (conj (commands/rect {:x (:x track)
+                                                  :y (:y track)
+                                                  :width (:width track)
+                                                  :height (:height track)}
+                                                 {:fill-color track-color}))
+      (pos? (:width track)) (conj (commands/circle {:x (:x handle)
+                                                   :y (:y handle)}
+                                                  (:radius handle)
+                                                  {:fill-color handle-color})))))
 
-(defmethod render/draw-node :slider
-  [canvas node]
-  (draw-slider canvas node))
+(defmethod render/plan-node :slider
+  [context node]
+  (plan-slider node))
 
 (defn slider-drag!
   [node game-state px]

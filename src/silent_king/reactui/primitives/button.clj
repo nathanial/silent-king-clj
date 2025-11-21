@@ -4,9 +4,8 @@
             [silent-king.reactui.events :as ui-events]
             [silent-king.reactui.interaction :as interaction]
             [silent-king.reactui.layout :as layout]
-            [silent-king.reactui.render :as render])
-  (:import [io.github.humbleui.skija Canvas Font Paint PaintMode]
-           [io.github.humbleui.types Rect]))
+            [silent-king.reactui.render :as render]
+            [silent-king.render.commands :as commands]))
 
 (set! *warn-on-reflection* true)
 
@@ -39,12 +38,12 @@
     (and (= :button (:type active))
          (= (:bounds active) (layout/bounds node)))))
 
-(defn draw-button
-  [^Canvas canvas node]
+(defn plan-button
+  [node]
   (let [{:keys [label background-color text-color font-size]} (:props node)
         {:keys [x y width height]} (layout/bounds node)
-        bg-color (or background-color 0xFF2D2F38)
-        txt-color (or text-color 0xFFFFFFFF)
+        bg-color (render/->color-int background-color 0xFF2D2F38)
+        txt-color (render/->color-int text-color 0xFFFFFFFF)
         hovered? (render/pointer-over-node? node)
         active? (active-button? node)
         shade (cond active? 0.9
@@ -62,31 +61,20 @@
         border-color (cond active? (render/adjust-color bg-color 0.7)
                            hovered? (render/adjust-color bg-color 1.2)
                            :else nil)]
-    (with-open [^Paint paint (doto (Paint.)
-                               (.setColor (unchecked-int final-bg)))]
-      (.drawRect canvas
-                 (Rect/makeXYWH (float x) (float y) (float width) (float height))
-                 paint))
-    (when border-color
-      (with-open [^Paint border (doto (Paint.)
-                                  (.setColor (unchecked-int border-color))
-                                  (.setStrokeWidth 1.0)
-                                  (.setMode PaintMode/STROKE))]
-        (.drawRect canvas
-                   (Rect/makeXYWH (float x) (float y) (float width) (float height))
-                   border)))
-    (with-open [^Paint text-paint (doto (Paint.)
-                                    (.setColor (unchecked-int final-text)))]
-      (with-open [^Font font (render/make-font size)]
-        (.drawString canvas text
-                     (float text-x)
-                     (float baseline)
-                     font
-                     text-paint)))))
+    (cond-> []
+      true (conj (commands/rect {:x x :y y :width width :height height}
+                                {:fill-color final-bg}))
+      border-color (conj (commands/rect {:x x :y y :width width :height height}
+                                        {:stroke-color border-color
+                                         :stroke-width 1.0}))
+      true (conj (commands/text {:text text
+                                 :position {:x text-x :y baseline}
+                                 :font {:size size}
+                                 :color final-text})))))
 
-(defmethod render/draw-node :button
-  [canvas node]
-  (draw-button canvas node))
+(defmethod render/plan-node :button
+  [context node]
+  (plan-button node))
 
 (defn- contains-point?
   [{:keys [x y width height]} px py]

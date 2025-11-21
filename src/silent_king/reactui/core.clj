@@ -3,6 +3,7 @@
   (:require [silent-king.reactui.interaction :as interaction]
             [silent-king.reactui.layout :as layout]
             [silent-king.reactui.render :as render]
+            [silent-king.render.skia :as skia]
             [silent-king.state :as state]))
 
 (set! *warn-on-reflection* true)
@@ -118,14 +119,17 @@
    - :tree     – the root Hiccup element
    - :viewport – {:x ... :y ... :width ... :height ...}
 
-   Returns the laid out tree."
+   Returns {:layout-tree .. :commands ..}"
   [{:keys [canvas tree viewport context]}]
   (let [normalized (normalize-tree tree)
-        layout-tree (layout/compute-layout normalized viewport)]
+        layout-tree (layout/compute-layout normalized viewport)
+        {:keys [commands overlays]} (render/plan-tree layout-tree context)]
     (reset! last-layout layout-tree)
     (when canvas
-      (render/draw-tree canvas layout-tree context))
-    layout-tree))
+      (skia/draw-commands! canvas commands))
+    {:layout-tree layout-tree
+     :commands commands
+     :overlays overlays}))
 
 (defn current-layout
   []

@@ -14,14 +14,14 @@
                        :gap 2}
               [:label {:text "Demo"}]
               [:label {:text "Pipeline"}]]
-        result (reactui/render-ui-tree
-                {:canvas nil
-                 :tree tree
-                 :viewport {:x 0 :y 0 :width 200 :height 200}})
-        root-bounds (layout/bounds result)]
+        {:keys [layout-tree]} (reactui/render-ui-tree
+                               {:canvas nil
+                                :tree tree
+                                :viewport {:x 0 :y 0 :width 200 :height 200}})
+        root-bounds (layout/bounds layout-tree)]
     (testing "layout succeeds"
-      (is (= :vstack (:type result)))
-      (is (= 2 (count (:children result))))
+      (is (= :vstack (:type layout-tree)))
+      (is (= 2 (count (:children layout-tree))))
       (is (map? root-bounds))
       (is (= 5.0 (:x root-bounds)))
       (is (= 180.0 (:width root-bounds))))))
@@ -42,9 +42,9 @@
                        :step 0.1
                        :value 0.4
                        :on-change [:ui/set-zoom]}]
-        layout-tree (reactui/render-ui-tree {:canvas nil
-                                             :tree tree
-                                             :viewport {:x 0 :y 0 :width 200 :height 40}})
+        {:keys [layout-tree]} (reactui/render-ui-tree {:canvas nil
+                                                       :tree tree
+                                                       :viewport {:x 0 :y 0 :width 200 :height 40}})
         slider-node (find-node layout-tree :slider)
         track (get-in slider-node [:layout :slider :track])
         scale (state/ui-scale game-state)
@@ -95,9 +95,10 @@
                        :viewport-rect minimap-viewport-rect
                        :stars []}
                       overrides)]
-     (reactui/render-ui-tree {:canvas nil
-                              :tree [:minimap props]
-                              :viewport {:x 0 :y 0 :width 400 :height 400}}))))
+     (let [{:keys [layout-tree]} (reactui/render-ui-tree {:canvas nil
+                                                          :tree [:minimap props]
+                                                          :viewport {:x 0 :y 0 :width 400 :height 400}})]
+       layout-tree))))
 
 (deftest minimap-window-header-drag-still-works
   (reactui/release-capture!)
@@ -113,9 +114,9 @@
                          :viewport-rect minimap-viewport-rect
                          :visible? true
                          :stars []}]]
-        layout-tree (reactui/render-ui-tree {:canvas nil
-                                             :tree tree
-                                             :viewport {:x 0 :y 0 :width 640 :height 480}})
+        {:keys [layout-tree]} (reactui/render-ui-tree {:canvas nil
+                                                       :tree tree
+                                                       :viewport {:x 0 :y 0 :width 640 :height 480}})
         window-node (find-node layout-tree :window)
         header (get-in window-node [:layout :window :header])
         start-x (+ (:x header) (/ (:width header) 2.0))
@@ -198,9 +199,9 @@
                          :world-bounds minimap-world-bounds
                          :viewport-rect minimap-viewport-rect
                          :stars []}]]
-        layout-tree (reactui/render-ui-tree {:canvas nil
-                                             :tree tree
-                                             :viewport {:x 0 :y 0 :width 640 :height 480}})
+        {:keys [layout-tree]} (reactui/render-ui-tree {:canvas nil
+                                                       :tree tree
+                                                       :viewport {:x 0 :y 0 :width 640 :height 480}})
         window-node (find-node layout-tree :window)
         minimap-node (find-node layout-tree :minimap)
         widget-bounds (layout/bounds minimap-node)

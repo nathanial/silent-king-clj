@@ -3,9 +3,8 @@
   (:require [silent-king.reactui.core :as core]
             [silent-king.reactui.interaction :as interaction]
             [silent-king.reactui.layout :as layout]
-            [silent-king.reactui.render :as render])
-  (:import [io.github.humbleui.skija Canvas Font Paint PaintMode]
-           [io.github.humbleui.types Rect]))
+            [silent-king.reactui.render :as render]
+            [silent-king.render.commands :as commands]))
 
 (set! *warn-on-reflection* true)
 
@@ -94,8 +93,8 @@
     (and (= :dropdown (:type active))
          (= (:node active) node))))
 
-(defn draw-dropdown
-  [^Canvas canvas node]
+(defn plan-dropdown
+  [node]
   (let [{:keys [selected
                 background-color
                 text-color
@@ -104,17 +103,13 @@
                 option-selected-text-color
                 border-color]} (:props node)
         {:keys [header options expanded? all-options]} (get-in node [:layout :dropdown])
-        header-bg (or background-color 0xFF2D2F38)
-        option-bg (or option-background 0xFF1E2230)
-        selected-bg (or option-selected-background 0xFF3C4456)
-        txt-color (or text-color 0xFFCBCBCB)
-        selected-txt-color (or option-selected-text-color 0xFF0F111A)
-        caret (if expanded? "▲" "▼")
+        header-bg (render/->color-int background-color 0xFF2D2F38)
+        option-bg (render/->color-int option-background 0xFF1E2230)
+        selected-bg (render/->color-int option-selected-background 0xFF3C4456)
+        txt-color (render/->color-int text-color 0xFFCBCBCB)
+        selected-txt-color (render/->color-int option-selected-text-color 0xFF0F111A)
+        caret (if expanded? "▼" "▲")
         caret-color txt-color
-        header-rect (Rect/makeXYWH (float (:x header))
-                                   (float (:y header))
-                                   (float (:width header))
-                                   (float (:height header)))
         padding 10.0
         font-size 16.0
         text-x (+ (:x header) padding)
@@ -132,29 +127,11 @@
                             :else border-color)
         header-text-color (if header-active?
                             (render/adjust-color txt-color 0.95)
-                            txt-color)]
-    (with-open [^Paint header-paint (doto (Paint.)
-                                      (.setColor (unchecked-int header-color)))]
-      (.drawRect canvas header-rect header-paint))
-    (when header-border
-      (with-open [^Paint border-paint (doto (Paint.)
-                                        (.setColor (unchecked-int header-border))
-                                        (.setStrokeWidth 1.0)
-                                        (.setMode PaintMode/STROKE))]
-        (.drawRect canvas header-rect border-paint)))
-    (with-open [^Paint text-paint (doto (Paint.)
-                                    (.setColor (unchecked-int header-text-color)))]
-      (with-open [^Font font (render/make-font font-size)]
-        (.drawString canvas label
-                     (float text-x)
-                     (float text-baseline)
-                     font
-                     text-paint)
-        (.drawString canvas caret
-                     (float caret-x)
-                     (float caret-baseline)
-                     font
-                     text-paint)))
+                            txt-color)
+        header-bounds {:x (:x header)
+                       :y (:y header)
+                       :width (:width header)
+                       :height (:height header)}]
     (when (and expanded? (seq options))
       (render/queue-overlay! {:type :dropdown
                               :node node
@@ -164,45 +141,49 @@
                               :option-bg option-bg
                               :selected-bg selected-bg
                               :text-color txt-color
-                              :selected-text-color selected-txt-color}))))
+                              :selected-text-color selected-txt-color}))
+    (cond-> [(commands/rect header-bounds {:fill-color header-color})
+             (commands/text {:text label
+                             :position {:x text-x :y text-baseline}
+                             :font {:size font-size}
+                             :color header-text-color})
+             (commands/text {:text caret
+                             :position {:x caret-x :y caret-baseline}
+                             :font {:size font-size}
+                             :color caret-color})]
+      header-border (into [(commands/rect header-bounds {:stroke-color header-border
+                                                         :stroke-width 1.0})]))))
 
-(defmethod render/draw-node :dropdown
-  [canvas node]
-  (draw-dropdown canvas node))
+(defmethod render/plan-node :dropdown
+  [_ node]
+  (plan-dropdown node))
 
-(defmethod render/draw-overlay :dropdown
-  [^Canvas canvas {:keys [node selected options padding option-bg selected-bg text-color selected-text-color]}]
-  (doseq [option options]
-    (let [bounds (:bounds option)
-          selected? (= (:value option) selected)
-          hovered? (render/pointer-in-bounds? bounds)
-          active? (active-dropdown-option? node option)
-          base-bg (cond active? (render/adjust-color option-bg 0.85)
-                        hovered? (render/adjust-color option-bg 1.1)
-                        :else option-bg)
-          bg (if selected?
-               (cond active? (render/adjust-color selected-bg 0.9)
-                     hovered? (render/adjust-color selected-bg 1.05)
-                     :else selected-bg)
-               base-bg)
-          option-text-color (if (or selected? active?)
-                              selected-text-color
-                              text-color)
-          rect (Rect/makeXYWH (float (:x bounds))
-                              (float (:y bounds))
-                              (float (:width bounds))
-                              (float (:height bounds)))]
-      (with-open [^Paint option-paint (doto (Paint.)
-                                        (.setColor (unchecked-int bg)))]
-        (.drawRect canvas rect option-paint))
-      (with-open [^Paint text-paint (doto (Paint.)
-                                      (.setColor (unchecked-int option-text-color)))]
-        (with-open [^Font font (render/make-font 15.0)]
-          (.drawString canvas (:label option)
-                       (float (+ (:x bounds) padding))
-                       (float (+ (:y bounds) (/ (:height bounds) 2.0) 5.0))
-                       font
-                       text-paint))))))
+(defmethod render/plan-overlay :dropdown
+  [_ {:keys [node selected options padding option-bg selected-bg text-color selected-text-color]}]
+  (mapcat (fn [option]
+            (let [bounds (:bounds option)
+                  selected? (= (:value option) selected)
+                  hovered? (render/pointer-in-bounds? bounds)
+                  active? (active-dropdown-option? node option)
+                  base-bg (cond active? (render/adjust-color option-bg 0.85)
+                                hovered? (render/adjust-color option-bg 1.1)
+                                :else option-bg)
+                  bg (if selected?
+                       (cond active? (render/adjust-color selected-bg 0.9)
+                             hovered? (render/adjust-color selected-bg 1.05)
+                             :else selected-bg)
+                       base-bg)
+                  option-text-color (if (or selected? active?)
+                                      selected-text-color
+                                      text-color)
+                  text-y (+ (:y bounds) (/ (:height bounds) 2.0) 5.0)]
+              [(commands/rect bounds {:fill-color bg})
+               (commands/text {:text (:label option)
+                               :position {:x (+ (:x bounds) padding)
+                                          :y text-y}
+                               :font {:size 15.0}
+                               :color option-text-color})]))
+          options))
 
 (defmethod core/pointer-down! :dropdown
   [node _game-state x y]

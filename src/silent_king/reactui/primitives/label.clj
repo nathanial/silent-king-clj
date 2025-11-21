@@ -2,8 +2,8 @@
   "Label primitive: normalization, layout, and rendering."
   (:require [silent-king.reactui.core :as core]
             [silent-king.reactui.layout :as layout]
-            [silent-king.reactui.render :as render])
-  (:import [io.github.humbleui.skija Canvas Font Paint]))
+            [silent-king.reactui.render :as render]
+            [silent-king.render.commands :as commands]))
 
 (set! *warn-on-reflection* true)
 
@@ -38,21 +38,17 @@
            :layout {:bounds final-bounds}
            :children [])))
 
-(defn draw-label
-  [^Canvas canvas node]
+(defn plan-label
+  [node]
   (let [{:keys [text color font-size]} (:props node)
         {:keys [x y]} (layout/bounds node)
         size (double (or font-size 16.0))
         baseline (+ y size)]
-    (with-open [^Paint paint (doto (Paint.)
-                               (.setColor (unchecked-int (or color 0xFFFFFFFF))))]
-      (with-open [^Font font (render/make-font size)]
-        (.drawString canvas (or text "")
-                     (float x)
-                     (float baseline)
-                     font
-                     paint)))))
+    [(commands/text {:text (or text "")
+                     :position {:x x :y baseline}
+                     :font {:size size}
+                     :color (render/->color-int color 0xFFFFFFFF)})]))
 
-(defmethod render/draw-node :label
-  [canvas node]
-  (draw-label canvas node))
+(defmethod render/plan-node :label
+  [_ node]
+  (plan-label node))
