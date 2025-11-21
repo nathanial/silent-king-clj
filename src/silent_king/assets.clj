@@ -17,7 +17,7 @@
 
 (defn load-atlas-metadata
   "Load atlas metadata from JSON file"
-  [metadata-path]
+  [^String metadata-path]
   (println (format "Loading atlas metadata from %s..." metadata-path))
   (let [metadata-file (File. metadata-path)
         json-data (json/read-str (slurp metadata-file) :key-fn keyword)]
@@ -30,7 +30,7 @@
 
 (defn load-atlas-image
   "Load the atlas texture"
-  [image-path]
+  [^String image-path]
   (println (format "Loading atlas texture from %s..." image-path))
   (let [atlas-file (File. image-path)]
     (Image/makeFromEncoded (.getBytes (Data/makeFromFileName (.getPath atlas-file))))))

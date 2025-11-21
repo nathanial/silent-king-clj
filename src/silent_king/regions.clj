@@ -41,9 +41,9 @@
         dr (- (.nextInt rng v) (/ v 2))
         dg (- (.nextInt rng v) (/ v 2))
         db (- (.nextInt rng v) (/ v 2))
-        r* (Math/max 50 (Math/min 255 (+ r dr)))
-        g* (Math/max 50 (Math/min 255 (+ g dg)))
-        b* (Math/max 50 (Math/min 255 (+ b db)))]
+        r* (Math/max (long 50) (Math/min (long 255) (long (+ r dr))))
+        g* (Math/max (long 50) (Math/min (long 255) (long (+ g dg))))
+        b* (Math/max (long 50) (Math/min (long 255) (long (+ b db))))]
     (color/rgb (long r*) (long g*) (long b*) a)))
 
 (defn- edge-length

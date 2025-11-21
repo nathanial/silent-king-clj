@@ -18,6 +18,7 @@
            [org.lwjgl.opengl GL GL11 GL30]
            [org.lwjgl.system MemoryUtil]
            [io.github.humbleui.skija Canvas Surface DirectContext BackendRenderTarget FramebufferFormat ColorSpace SurfaceOrigin SurfaceColorFormat Image]))
+(set! *warn-on-reflection* true)
 (defonce game-state (atom (state/create-game-state)))
 (defonce render-state (atom (state/create-render-state)))
 (def ^:const world-click-threshold 6.0)
