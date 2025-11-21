@@ -122,6 +122,40 @@ Or using the Clojure CLI directly:
 clojure -M:test
 ```
 
+### Malli Schemas & Boundary Validation
+
+The world and UI state are described with [malli](https://github.com/metosin/malli) schemas in `src/silent_king/schemas.clj`. Validation is designed to run at **boundaries only** (world creation, pure generators, UI event dispatch), not inside hot render loops.
+
+- **Where validation happens (when enabled)**:
+  - `state/create-game-state`, `create-render-state`, `set-world!`, and `add-*` helpers validate against `GameState`, `RenderState`, and entity schemas.
+  - Pure generators (`galaxy/generate-galaxy`, `hyperlanes/generate-hyperlanes`, Voronoi/regions) validate their return maps.
+  - React-style UI:
+    - `reactui.core/render-ui-tree` validates the normalized UI tree.
+    - `reactui.events/dispatch-event!` validates UI event vectors.
+- **How it’s controlled**:
+  - Validation is gated by the dynamic flag `silent-king.schemas/*validate-boundaries?*` and is **off by default** for normal runs.
+  - The test runner binds this flag to `true` and also enables `malli.instrument` for core generators.
+
+To turn on boundary validation in a REPL:
+
+```clojure
+(require '[silent-king.schemas :as schemas]
+         '[silent-king.dev :as dev]
+         '[silent-king.state :as state]
+         '[silent-king.galaxy :as galaxy])
+
+;; Optional: instrument selected functions that have :malli/schema metadata
+(dev/instrument!)
+
+(binding [schemas/*validate-boundaries?* true]
+  (let [game-state (atom (state/create-game-state))]
+    ;; Any calls that hit boundaries will now be checked:
+    (galaxy/generate-galaxy [{:path "mock.png"}] ["planet.png"] 100)
+    (schemas/check-game-state! @game-state)))
+```
+
+If you hit a validation exception, `:humanized` in the exception data will explain which keys/fields are wrong.
+
 ### Code Style
 
 *   **Namespaces**: Kebab-case, matching file paths (e.g., `silent-king.widgets.core`).
