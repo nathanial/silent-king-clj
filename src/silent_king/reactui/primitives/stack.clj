@@ -95,10 +95,10 @@
   [context node]
   (let [{:keys [background-color]} (:props node)
         bounds (layout/bounds node)
-        child-commands (mapcat #(render/plan-node context %) (:children node))]
+        child-commands (map #(render/plan-node context %) (:children node))]
     (cond-> []
       background-color (conj (commands/rect bounds {:fill-color (color/ensure background-color)}))
-      true (into child-commands))))
+      true (conj child-commands))))
 
 (defmethod render/plan-node :vstack
   [context node]

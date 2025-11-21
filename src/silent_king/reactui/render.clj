@@ -116,8 +116,8 @@
 
 (defmethod plan-node :default
   [context node]
-  (mapcat #(plan-node context %)
-          (:children node)))
+  (map #(plan-node context %)
+       (:children node)))
 
 (defmethod plan-overlay :default
   [_ _]
@@ -130,7 +130,7 @@
         ctx (or context {})]
     (binding [*overlay-collector* overlays
               *render-context* ctx]
-      (let [node-commands (vec (plan-node ctx node))
-            overlay-commands (vec (mapcat #(plan-overlay ctx %) @overlays))]
-        {:commands (into [] (concat node-commands overlay-commands))
+      (let [node-commands (plan-node ctx node)
+            overlay-commands (map #(plan-overlay ctx %) @overlays)]
+        {:commands [node-commands overlay-commands]
          :overlays @overlays}))))

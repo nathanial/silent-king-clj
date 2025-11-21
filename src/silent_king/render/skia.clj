@@ -190,6 +190,8 @@
   "Apply a sequence of draw commands to the provided Canvas."
   [^Canvas canvas commands & [_opts]]
   (doseq [cmd commands]
-    (when cmd
-      (execute-command! canvas cmd)))
+    (cond
+      (map? cmd) (execute-command! canvas cmd)
+      (coll? cmd) (draw-commands! canvas cmd)
+      :else nil))
   canvas)

@@ -129,7 +129,7 @@
                          :y (:y resize)
                          :width (:width resize)
                          :height (:height resize)})
-        child-commands (mapcat #(render/plan-node context %) (:children node))]
+        child-commands (map #(render/plan-node context %) (:children node))]
     (cond-> [(commands/rect bounds {:fill-color body-color})]
       header-bounds (conj (commands/rect header-bounds {:fill-color header-fill}))
       (and content-bounds (not minimized?)) (conj (commands/rect content-bounds {:fill-color content-color}))
@@ -171,13 +171,13 @@
            (pos? (:width content))
            (pos? (:height content))
            (not minimized?))
-      (into (concat [(commands/save)
+      (conj (concat [(commands/save)
                      (commands/clip-rect content-bounds)]
                     child-commands
                     [(commands/restore)]))
       (and (seq (:children node))
            (or (not content-bounds) minimized?))
-      (into child-commands))))
+      (conj child-commands))))
 
 (defmethod render/plan-node :window
   [context node]
