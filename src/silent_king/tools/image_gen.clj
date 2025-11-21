@@ -5,10 +5,9 @@
             [hato.client :as http]
             [clojure.tools.cli :as cli])
   (:import [java.awt.image BufferedImage]
-           [java.awt Graphics2D Color RenderingHints]
+           [java.awt Color RenderingHints]
            [javax.imageio ImageIO]
-           [java.util Base64]
-           [java.io ByteArrayInputStream File]))
+           [java.util Base64]))
 
 ;; =============================================================================
 ;; Utilities
@@ -291,7 +290,6 @@
           (log "Starting generation...")
           
           (let [results (atom [])
-                total (count (:prompts prompts-data))
                 batches (partition-all 10 (map-indexed vector (:prompts prompts-data)))]
             
             (doseq [batch batches]

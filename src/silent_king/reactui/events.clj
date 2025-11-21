@@ -220,6 +220,11 @@
     (state/toggle-window-minimized! game-state window-id))
   nil)
 
+(defmethod dispatch-event! :ui.window/bring-to-front
+  [game-state [_ window-id]]
+  (state/bring-window-to-front! game-state window-id)
+  nil)
+
 (defmethod dispatch-event! :camera/pan-to-world
   [game-state [_ pos]]
   (state/focus-camera-on-world! game-state pos)

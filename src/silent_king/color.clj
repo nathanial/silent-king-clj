@@ -208,7 +208,7 @@
 (defn lighten
   "Lighten a color by a factor (0.0-1.0). Works best in HSL."
   [color factor]
-  (let [base (if (= (:type color) :hsl) color (let [c (to-rgb color)]
+  (let [base (if (= (:type color) :hsl) color (let [_ (to-rgb color)]
                                                 (hsl 0 0 0) ;; TODO: full conversion RGB->HSL if needed, 
                                                 ;; but for now let's just operate on RGB simply or implement full chain.
                                                 ;; Implementing RGB->HSL is tedious, let's stick to simple RGB lerp to white if not HSL.

@@ -21,6 +21,19 @@
     (swap! game-state assoc :next-star-id next-id)
     next-id))
 
+(def ^:private control-panel-window-id :ui/control-panel)
+(def ^:private performance-window-id :ui/performance-overlay)
+(def ^:private star-inspector-window-id :ui/star-inspector)
+(def ^:private minimap-window-id :ui/minimap)
+(def ^:private galaxy-window-id :ui/galaxy)
+
+(def default-window-order
+  [galaxy-window-id
+   minimap-window-id
+   control-panel-window-id
+   performance-window-id
+   star-inspector-window-id])
+
 (defn next-planet-id!
   "Generate and store the next planet id. Starts at 1."
   [game-state]
@@ -143,6 +156,7 @@
         :viewport {:width 0.0
                    :height 0.0}
         :windows {}
+        :window-order default-window-order
         :performance-overlay {:visible? true
                               :expanded? true}
         :dropdowns {}}
@@ -532,6 +546,19 @@
   [game-state window-id value]
   (when window-id
     (swap! game-state assoc-in [:ui :windows window-id :minimized?] (boolean value))))
+
+(defn get-window-order
+  [game-state]
+  (or (get-in @game-state [:ui :window-order]) default-window-order))
+
+(defn bring-window-to-front!
+  [game-state window-id]
+  (when window-id
+    (swap! game-state update-in [:ui :window-order]
+           (fn [order]
+             (let [order (or order default-window-order)
+                   others (filterv #(not= % window-id) order)]
+               (conj others window-id))))))
 
 (defn performance-overlay-visible?
   [game-state]

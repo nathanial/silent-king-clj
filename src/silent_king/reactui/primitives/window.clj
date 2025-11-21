@@ -232,8 +232,14 @@
     (when (vector? event)
       (ui-events/dispatch-event! game-state event))))
 
+(defn dispatch-bring-to-front!
+  [node game-state]
+  (when-let [event (-> node :props :on-bring-to-front)]
+    (when (vector? event)
+      (ui-events/dispatch-event! game-state event))))
+
 (defn handle-window-pointer-down!
-  [node _game-state px py]
+  [node game-state px py]
   (when-let [region (interaction/window-region node px py)]
     (let [bounds (layout/bounds node)
           window-layout (get-in node [:layout :window])
@@ -241,8 +247,11 @@
           stored-height (or (:stored-height window-layout) (:height bounds))
           enriched-bounds (assoc bounds :stored-height stored-height)]
       (case (:kind region)
-        :move (start-window-move! node px py)
+        :move (do
+                (dispatch-bring-to-front! node game-state)
+                (start-window-move! node px py))
         :resize (do
+                  (dispatch-bring-to-front! node game-state)
                   (core/capture-node! node)
                   (core/set-active-interaction! node :window-resize
                                                 {:value {:start-pointer {:x px :y py}
@@ -250,6 +259,7 @@
                                                          :constraints constraints}})
                   true)
         :minimize (do
+                    (dispatch-bring-to-front! node game-state)
                     (core/capture-node! node)
                     (core/set-active-interaction! node :window-minimize
                                                   {:value {:button-bounds (:bounds region)}})

@@ -60,8 +60,8 @@
         
         ;; Layout tabs
         tabs (:tabs props)
-        tab-count (count tabs)
-        tab-area-width (- width control-size 24.0) ;; Space for title + controls
+        _tab-count (count tabs)
+        _tab-area-width (- width control-size 24.0) ;; Space for title + controls
         ;; We'll put tabs below the title or to the right?
         ;; Let's put them in the bottom half of the header if it's tall, or right aligned?
         ;; Design choice: Header has 2 rows? Or just one row with title left, tabs middle?
@@ -309,6 +309,12 @@
     (when (vector? event)
       (ui-events/dispatch-event! game-state (conj event tab-id)))))
 
+(defn dispatch-bring-to-front!
+  [node game-state]
+  (when-let [event (-> node :props :on-bring-to-front)]
+    (when (vector? event)
+      (ui-events/dispatch-event! game-state event))))
+
 (defn handle-window-pointer-down!
   [node game-state px py]
   ;; Check tabs first
@@ -319,6 +325,7 @@
                           tabs)]
     (if clicked-tab
       (do
+        (dispatch-bring-to-front! node game-state)
         (core/capture-node! node)
         (core/set-active-interaction! node :tab-click {:value (:id clicked-tab)})
         true)
@@ -330,8 +337,11 @@
               stored-height (or (:stored-height window-layout) (:height bounds))
               enriched-bounds (assoc bounds :stored-height stored-height)]
           (case (:kind region)
-            :move (start-window-move! node px py)
+            :move (do
+                    (dispatch-bring-to-front! node game-state)
+                    (start-window-move! node px py))
             :resize (do
+                      (dispatch-bring-to-front! node game-state)
                       (core/capture-node! node)
                       (core/set-active-interaction! node :window-resize
                                                     {:value {:start-pointer {:x px :y py}
@@ -339,6 +349,7 @@
                                                              :constraints constraints}})
                       true)
             :minimize (do
+                        (dispatch-bring-to-front! node game-state)
                         (core/capture-node! node)
                         (core/set-active-interaction! node :window-minimize
                                                       {:value {:button-bounds (:bounds region)}})

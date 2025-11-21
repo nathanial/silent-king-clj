@@ -103,7 +103,7 @@
      :props {:text (coerce-text element)}
      :children []}
     :else
-    (throw (ex-info "Unsupported element type" {:element element}))))
+    (throw (ex-info "Unsupported element type" {:type type}))))
 
 (defn normalize-tree
   "Normalize a root UI element into the internal map form."

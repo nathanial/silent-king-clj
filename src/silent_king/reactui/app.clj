@@ -148,6 +148,7 @@
              :min-height (:height control-panel/default-panel-bounds)
              :on-change-bounds [:ui.window/set-bounds control-panel-window-id]
              :on-toggle-minimized [:ui.window/toggle-minimized control-panel-window-id]
+             :on-bring-to-front [:ui.window/bring-to-front control-panel-window-id]
              :tabs [{:id :main :label "Main"}
                     {:id :hyperlanes :label "Hyperlanes"}
                     {:id :voronoi :label "Voronoi"}]
@@ -171,7 +172,8 @@
              :min-width (:width performance-overlay/default-panel-bounds)
              :min-height (:height performance-overlay/default-panel-bounds)
              :on-change-bounds [:ui.window/set-bounds performance-window-id]
-             :on-toggle-minimized [:ui.window/toggle-minimized performance-window-id]}
+             :on-toggle-minimized [:ui.window/toggle-minimized performance-window-id]
+             :on-bring-to-front [:ui.window/bring-to-front performance-window-id]}
      :children (cond-> []
                  content (conj content))}))
 
@@ -191,7 +193,8 @@
                  :min-width (:width star-inspector/default-panel-bounds)
                  :min-height (:height star-inspector/default-panel-bounds)
                  :on-change-bounds [:ui.window/set-bounds star-inspector-window-id]
-                 :on-toggle-minimized [:ui.window/toggle-minimized star-inspector-window-id]}
+                 :on-toggle-minimized [:ui.window/toggle-minimized star-inspector-window-id]
+                 :on-bring-to-front [:ui.window/bring-to-front star-inspector-window-id]}
          :children (cond-> []
                      content (conj content))}))))
 
@@ -215,7 +218,8 @@
                :min-height (:height minimap/default-panel-bounds)
                :content-padding {:all 12.0}
                :on-change-bounds [:ui.window/set-bounds minimap-window-id]
-               :on-toggle-minimized [:ui.window/toggle-minimized minimap-window-id]}
+               :on-toggle-minimized [:ui.window/toggle-minimized minimap-window-id]
+               :on-bring-to-front [:ui.window/bring-to-front minimap-window-id]}
        :children (cond-> []
                    content (conj content))})))
 
@@ -234,21 +238,26 @@
              :min-width 200.0
              :min-height 200.0
              :on-change-bounds [:ui.window/set-bounds galaxy-window-id]
-             :on-toggle-minimized [:ui.window/toggle-minimized galaxy-window-id]}
+             :on-toggle-minimized [:ui.window/toggle-minimized galaxy-window-id]
+             :on-bring-to-front [:ui.window/bring-to-front galaxy-window-id]}
      :children (cond-> []
                  content (conj content))}))
 
 (defn root-tree
   [game-state]
-  [:vstack {:key :ui-root}
-   (galaxy-window game-state)
-   (control-panel-window game-state)
-   (performance-overlay-window game-state)
-    ;; Render last so it stacks on the right side without overlapping other panels.
-   (when-let [window (star-inspector-window game-state)]
-     window)
-   (when-let [window (minimap-window game-state)]
-     window)])
+  (let [window-order (state/get-window-order game-state)
+        renderers {galaxy-window-id galaxy-window
+                   minimap-window-id minimap-window
+                   control-panel-window-id control-panel-window
+                   performance-window-id performance-overlay-window
+                   star-inspector-window-id star-inspector-window}]
+    (into [:vstack {:key :ui-root}]
+          (for [window-id window-order
+                :let [renderer (get renderers window-id)]
+                :when renderer
+                :let [component (renderer game-state)]
+                :when component]
+            component))))
 
 (defn logical-viewport
   [scale {:keys [x y width height]}]

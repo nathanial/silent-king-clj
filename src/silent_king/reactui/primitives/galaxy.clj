@@ -208,7 +208,7 @@
     true))
 
 (defmethod core/pointer-up! :galaxy
-  [node game-state x y]
+  [_node game-state x y]
   (let [interaction (some-> (core/active-interaction) :value)
         {:keys [start-pointer]} interaction
         dx (- x (:x start-pointer))
