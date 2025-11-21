@@ -1,7 +1,8 @@
 (ns silent-king.reactui.render
   "Rendering planner for the Reactified UI tree."
   (:require [silent-king.minimap.math :as minimap-math]
-            [silent-king.reactui.layout :as layout]))
+            [silent-king.reactui.layout :as layout]
+            [silent-king.color :as color]))
 
 (set! *warn-on-reflection* true)
 
@@ -20,76 +21,22 @@
      0.55))
 
 (defn clamp01
+  "Clamp value between 0.0 and 1.0."
   [value]
   (-> value
       (max 0.0)
       (min 1.0)))
 
-(defn- adjust-channel
-  [value factor]
-  (-> (* (double value) factor)
-      (double)
-      (Math/round)
-      (max 0)
-      (min 255)))
-
 (defn adjust-color
   [color factor]
-  (let [a (bit-and (bit-shift-right color 24) 0xFF)
-        r (bit-and (bit-shift-right color 16) 0xFF)
-        g (bit-and (bit-shift-right color 8) 0xFF)
-        b (bit-and color 0xFF)
-        nr (adjust-channel r factor)
-        ng (adjust-channel g factor)
-        nb (adjust-channel b factor)]
-    (unchecked-int (bit-or (bit-shift-left a 24)
-                           (bit-shift-left nr 16)
-                           (bit-shift-left ng 8)
-                           nb))))
-
-(defn ->color-int
-  "Convert the supplied value (which may be a long ARGB literal) into a signed 32-bit int.
-  Ensures we never trigger Math/toIntExact overflow even if the high bit is set."
-  [value default]
-  (let [raw (long (or value default))
-        signed (if (> raw 0x7FFFFFFF)
-                 (- raw 0x100000000)
-                 raw)]
-    (int signed)))
-
-(defn- lerp
-  [a b t]
-  (+ a (* t (- b a))))
-
-(defn- round-channel
-  [value]
-  (int (long (Math/round (double value)))))
+  (color/multiply color factor))
 
 (defn blend-colors
   [color-a color-b t]
-  (let [t (clamp01 t)
-        ca (->color-int color-a color-a)
-        cb (->color-int color-b color-b)
-        a1 (bit-and (bit-shift-right ca 24) 0xFF)
-        r1 (bit-and (bit-shift-right ca 16) 0xFF)
-        g1 (bit-and (bit-shift-right ca 8) 0xFF)
-        b1 (bit-and ca 0xFF)
-        a2 (bit-and (bit-shift-right cb 24) 0xFF)
-        r2 (bit-and (bit-shift-right cb 16) 0xFF)
-        g2 (bit-and (bit-shift-right cb 8) 0xFF)
-        b2 (bit-and cb 0xFF)
-        a (round-channel (lerp a1 a2 t))
-        r (round-channel (lerp r1 r2 t))
-        g (round-channel (lerp g1 g2 t))
-        b (round-channel (lerp b1 b2 t))]
-    (->color-int (bit-or (bit-shift-left a 24)
-                         (bit-shift-left r 16)
-                         (bit-shift-left g 8)
-                         b)
-                 color-a)))
+  (color/lerp color-a color-b t))
 
-(def ^:const heatmap-low-color 0x1A08244A)
-(def ^:const heatmap-high-color 0xFFF1C232)
+(def heatmap-low-color (color/hex 0x1A08244A))
+(def heatmap-high-color (color/hex 0xFFF1C232))
 
 (defn heatmap-cell-size
   [width height]
@@ -135,7 +82,7 @@
     (let [ratio (double (/ count max-count))
           eased (Math/pow ratio 0.6)]
       (blend-colors heatmap-low-color heatmap-high-color eased))
-    (->color-int heatmap-low-color heatmap-low-color)))
+    heatmap-low-color))
 
 (defn pointer-position
   []

@@ -5,7 +5,8 @@
             [silent-king.reactui.interaction :as interaction]
             [silent-king.reactui.layout :as layout]
             [silent-king.reactui.render :as render]
-            [silent-king.render.commands :as commands]))
+            [silent-king.render.commands :as commands]
+            [silent-king.color :as color]))
 
 (set! *warn-on-reflection* true)
 
@@ -69,9 +70,9 @@
   (let [{:keys [background-color track-color handle-color]} (:props node)
         {:keys [x y width height]} (layout/bounds node)
         {:keys [track handle]} (get-in node [:layout :slider])
-        bg-color (when background-color (render/->color-int background-color 0x00111111))
-        t-color (render/->color-int track-color 0xFF3C3F4A)
-        h-color (render/->color-int handle-color 0xFFF0F0F0)
+        bg-color (when background-color (color/ensure background-color))
+        t-color (or (color/ensure track-color) (color/hex 0xFF3C3F4A))
+        h-color (or (color/ensure handle-color) (color/hex 0xFFF0F0F0))
         hovered? (render/pointer-over-node? node)
         active? (active-slider? node)
         track-color (cond active? (render/adjust-color t-color 0.9)

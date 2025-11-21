@@ -13,7 +13,8 @@
             [silent-king.render.commands :as commands]
             [silent-king.render.skia :as skia]
             [nrepl.server :as nrepl]
-            [cider.nrepl :refer [cider-nrepl-handler]])
+            [cider.nrepl :refer [cider-nrepl-handler]]
+            [silent-king.color :as color])
   (:import [org.lwjgl.glfw GLFW GLFWErrorCallback GLFWCursorPosCallbackI GLFWMouseButtonCallbackI GLFWScrollCallbackI GLFWKeyCallbackI]
            [org.lwjgl.opengl GL GL11 GL30]
            [org.lwjgl.system MemoryUtil]
@@ -317,7 +318,7 @@
                                           :height height}
                                      game-state)
         ui-commands (:commands ui-result)
-        frame-commands (into [(commands/clear 0xFF000000)]
+        frame-commands (into [(commands/clear (color/hex 0xFF000000))]
                              (concat commands ui-commands))]
     (skia/draw-commands! canvas frame-commands)
     (let [time-state (state/get-time game-state)

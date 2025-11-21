@@ -1,5 +1,6 @@
 (ns silent-king.render.skia
   "Interpret draw command data and apply it to a Skija Canvas."
+  (:require [silent-king.color :as color])
   (:import [io.github.humbleui.skija Canvas FilterTileMode Font Image Paint PaintMode PaintStrokeCap Path Shader Typeface]
            [io.github.humbleui.types Rect]))
 
@@ -8,14 +9,15 @@
 (defonce ^Typeface default-typeface
   (Typeface/makeDefault))
 
-(defn- ->int-color
-  "Convert long ARGB to signed int to avoid overflow in Skija."
+(defn- reify-color
+  "Convert color structure to signed int for Skija. Ensures input is a color map."
   [value default]
-  (let [raw (long (or value default 0))
-        signed (if (> raw 0x7FFFFFFF)
-                 (- raw 0x100000000)
-                 raw)]
-    (int signed)))
+  (let [c (or value default)]
+    (if (integer? c)
+      (color/->int (color/ensure c))
+      (if-let [safe-c (or (color/ensure c) (color/rgb 0 0 0 0))]
+        (color/->int safe-c)
+        (color/->int (color/rgb 0 0 0 0))))))
 
 (defn- ->float
   [value]
@@ -35,12 +37,12 @@
 (defn- with-fill
   ^Paint [color]
   (doto ^Paint (Paint.)
-    (.setColor (->int-color color color))))
+    (.setColor (reify-color color color))))
 
 (defn- with-stroke
   ^Paint [color width cap]
   (doto ^Paint (Paint.)
-    (.setColor (->int-color color color))
+    (.setColor (reify-color color color))
     (.setMode PaintMode/STROKE)
     (.setStrokeWidth (->float (or width 1.0)))
     (.setStrokeCap (stroke-cap cap))))
@@ -73,8 +75,8 @@
   [{:keys [from to start end]}]
   (when (and from to start end)
     (let [^floats positions (float-array [0.0 1.0])
-          ^ints colors (int-array [(->int-color start start)
-                                   (->int-color end end)])]
+          ^ints colors (int-array [(reify-color start start)
+                                   (reify-color end end)])]
       (Shader/makeLinearGradient (->float (:x from))
                                  (->float (:y from))
                                  (->float (:x to))
@@ -97,7 +99,7 @@
                           stroke-cap)]
         (.drawLine canvas fx fy tx ty paint)))
     (when (or stroke-color gradient)
-      (with-open [paint (with-stroke (or stroke-color (:start gradient) 0xFFFFFFFF)
+      (with-open [paint (with-stroke (or stroke-color (:start gradient) (color/rgb 255 255 255))
                           stroke-width
                           stroke-cap)]
         (when gradient
@@ -168,7 +170,7 @@
 (defn execute-command!
   [^Canvas canvas command]
   (case (:op command)
-    :clear (.clear canvas (->int-color (:color command) 0xFF000000))
+    :clear (.clear canvas (reify-color (:color command) (color/rgb 0 0 0)))
     :save (.save canvas)
     :restore (.restore canvas)
     :translate (.translate canvas (->float (:dx command)) (->float (:dy command)))

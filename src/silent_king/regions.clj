@@ -2,7 +2,8 @@
   "Region generation using graph partitioning on the hyperlane network (Void Carver)."
   (:require [silent-king.state :as state]
             [silent-king.camera :as camera]
-            [silent-king.render.commands :as commands])
+            [silent-king.render.commands :as commands]
+            [silent-king.color :as color])
   (:import [java.util Random]))
 
 (set! *warn-on-reflection* true)
@@ -27,15 +28,13 @@
   (let [r (+ 100 (.nextInt rng 155))
         g (+ 100 (.nextInt rng 155))
         b (+ 100 (.nextInt rng 155))]
-    (bit-or 0xFF000000 (bit-shift-left r 16) (bit-shift-left g 8) b)))
+    (color/rgb r g b 255)))
 
 (defn- variation-color
   "Return a color that is a slight variation of the base color."
   [base-color ^Random rng]
-  (let [a (bit-and (unsigned-bit-shift-right base-color 24) 0xFF)
-        r (bit-and (unsigned-bit-shift-right base-color 16) 0xFF)
-        g (bit-and (unsigned-bit-shift-right base-color 8) 0xFF)
-        b (bit-and base-color 0xFF)
+  (let [base (color/to-rgb base-color)
+        {:keys [r g b a]} base
         ;; Variation range
         v 60
         dr (- (.nextInt rng v) (/ v 2))
@@ -44,10 +43,7 @@
         r* (Math/max 50 (Math/min 255 (+ r dr)))
         g* (Math/max 50 (Math/min 255 (+ g dg)))
         b* (Math/max 50 (Math/min 255 (+ b db)))]
-    (bit-or (bit-shift-left a 24)
-            (bit-shift-left (int r*) 16)
-            (bit-shift-left (int g*) 8)
-            (int b*))))
+    (color/rgb (long r*) (long g*) (long b*) a)))
 
 (defn- edge-length
   [star-a star-b]
@@ -232,7 +228,7 @@
                           screen-x (camera/transform-position (double x) zoom pan-x)
                           screen-y (camera/transform-position (double y) zoom pan-y)
                           text-size (max 12.0 (min 48.0 (* 14.0 (Math/sqrt zoom))))
-                          shadow-color 0x80000000
+                          shadow-color (color/hex 0x80000000)
                           cmds (cond-> commands
                                  true (conj (commands/text {:text name
                                                             :position {:x (+ screen-x 2) :y (+ screen-y 2)}
@@ -241,7 +237,7 @@
                                             (commands/text {:text name
                                                             :position {:x screen-x :y screen-y}
                                                             :font {:size text-size}
-                                                            :color color}))
+                                                            :color (color/ensure color)}))
                                  (> zoom 0.8)
                                  (into (for [{s-name :name s-center :center} (vals sectors)
                                              :when (and s-name s-center)]
@@ -257,7 +253,7 @@
                                             (commands/text {:text s-name
                                                             :position {:x ssx :y ssy}
                                                             :font {:size sector-size}
-                                                            :color 0xDDCCCCCC})]))))]
+                                                            :color (color/hex 0xDDCCCCCC)})]))))]
                       {:commands cmds
                        :rendered (inc rendered)})
                     {:commands commands :rendered rendered}))

@@ -5,7 +5,8 @@
             [silent-king.reactui.interaction :as interaction]
             [silent-king.reactui.layout :as layout]
             [silent-king.reactui.render :as render]
-            [silent-king.render.commands :as commands]))
+            [silent-king.render.commands :as commands]
+            [silent-king.color :as color]))
 
 (set! *warn-on-reflection* true)
 
@@ -85,13 +86,13 @@
   (let [{:keys [title background-color header-color border-color content-background-color title-color button-icon-color]} (:props node)
         {:keys [bounds window]} (:layout node)
         {:keys [header content minimize resize resizable? minimized?]} window
-        body-color (render/->color-int background-color 0xF021252F)
-        header-base (render/->color-int header-color 0xFF1C1F2C)
-        border-color (render/->color-int border-color 0x802C303C)
-        content-color (render/->color-int (or content-background-color (render/adjust-color body-color 1.07))
-                                          (render/adjust-color body-color 1.07))
-        text-color (render/->color-int title-color 0xFFFFFFFF)
-        icon-color (render/->color-int button-icon-color text-color)
+        body-color (or (color/ensure background-color) (color/hex 0xF021252F))
+        header-base (or (color/ensure header-color) (color/hex 0xFF1C1F2C))
+        border-color (or (color/ensure border-color) (color/hex 0x802C303C))
+        content-color (or (color/ensure content-background-color)
+                          (render/adjust-color body-color 1.07))
+        text-color (or (color/ensure title-color) (color/hex 0xFFFFFFFF))
+        icon-color (or (color/ensure button-icon-color) text-color)
         header-hover? (and header (render/pointer-in-bounds? header)
                            (not (and minimize (render/pointer-in-bounds? minimize))))
         header-active? (active-window-kind? node :window-move)

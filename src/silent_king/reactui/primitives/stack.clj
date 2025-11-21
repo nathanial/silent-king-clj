@@ -2,7 +2,8 @@
   "Stack primitives: vstack and hstack layout plus rendering."
   (:require [silent-king.reactui.layout :as layout]
             [silent-king.reactui.render :as render]
-            [silent-king.render.commands :as commands]))
+            [silent-king.render.commands :as commands]
+            [silent-king.color :as color]))
 
 (set! *warn-on-reflection* true)
 
@@ -96,7 +97,7 @@
         bounds (layout/bounds node)
         child-commands (mapcat #(render/plan-node context %) (:children node))]
     (cond-> []
-      background-color (conj (commands/rect bounds {:fill-color (render/->color-int background-color background-color)}))
+      background-color (conj (commands/rect bounds {:fill-color (color/ensure background-color)}))
       true (into child-commands))))
 
 (defmethod render/plan-node :vstack

@@ -4,7 +4,8 @@
             [silent-king.reactui.events :as ui-events]
             [silent-king.reactui.layout :as layout]
             [silent-king.reactui.render :as render]
-            [silent-king.render.commands :as commands]))
+            [silent-king.render.commands :as commands]
+            [silent-king.color :as color]))
 
 (set! *warn-on-reflection* true)
 
@@ -41,8 +42,8 @@
   [node]
   (let [{:keys [label background-color text-color font-size]} (:props node)
         {:keys [x y width height]} (layout/bounds node)
-        bg-color (render/->color-int background-color 0xFF2D2F38)
-        txt-color (render/->color-int text-color 0xFFFFFFFF)
+        bg-color (or (color/ensure background-color) (color/hex 0xFF2D2F38))
+        txt-color (or (color/ensure text-color) (color/hex 0xFFFFFFFF))
         hovered? (render/pointer-over-node? node)
         active? (active-button? node)
         shade (cond active? 0.9

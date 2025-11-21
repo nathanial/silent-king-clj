@@ -3,7 +3,8 @@
   (:require [silent-king.reactui.core :as core]
             [silent-king.reactui.layout :as layout]
             [silent-king.reactui.render :as render]
-            [silent-king.render.commands :as commands]))
+            [silent-king.render.commands :as commands]
+            [silent-king.color :as color]))
 
 (set! *warn-on-reflection* true)
 
@@ -47,7 +48,7 @@
     [(commands/text {:text (or text "")
                      :position {:x x :y baseline}
                      :font {:size size}
-                     :color (render/->color-int color 0xFFFFFFFF)})]))
+                     :color (or (color/ensure color) (color/hex 0xFFFFFFFF))})]))
 
 (defmethod render/plan-node :label
   [_ node]

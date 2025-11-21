@@ -1,14 +1,15 @@
 (ns silent-king.regions-test
   (:require [clojure.test :refer [deftest is testing]]
             [silent-king.regions :as regions]
-            [silent-king.state :as state]))
+            [silent-king.state :as state]
+            [silent-king.color :as color]))
 
 (deftest plan-regions-test
   (let [game-state (atom (state/create-game-state))
         region {:id :region-1
                 :name "Test Region"
                 :center {:x 100.0 :y 100.0}
-                :color 0xFF00FF00
+                :color (color/hex 0xFF00FF00)
                 :sectors {:sector-1 {:name "Sector Alpha"
                                      :center {:x 120.0 :y 120.0}}}}]
     (state/set-regions! game-state {:region-1 region})
@@ -25,11 +26,11 @@
               main (second commands)]
           (is (= :text (:op shadow)))
           (is (= "Test Region" (:text shadow)))
-          (is (= 0x80000000 (:color shadow))) ;; Shadow color
+          (is (= (color/hex 0x80000000) (:color shadow))) ;; Shadow color
 
           (is (= :text (:op main)))
           (is (= "Test Region" (:text main)))
-          (is (= 0xFF00FF00 (:color main))))))
+          (is (= (color/hex 0xFF00FF00) (:color main))))))
 
     (testing "generates sector labels at high zoom"
       (let [zoom 2.0 ;; High zoom

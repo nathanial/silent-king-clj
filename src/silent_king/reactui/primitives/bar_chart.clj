@@ -3,7 +3,8 @@
   (:require [silent-king.reactui.core :as core]
             [silent-king.reactui.layout :as layout]
             [silent-king.reactui.render :as render]
-            [silent-king.render.commands :as commands]))
+            [silent-king.render.commands :as commands]
+            [silent-king.color :as color]))
 
 (set! *warn-on-reflection* true)
 
@@ -56,9 +57,9 @@
   (let [{:keys [x y width height]} (layout/bounds node)
         {:keys [values min max bar-gap]} (get-in node [:layout :bar-chart])
         {:keys [background-color bar-color grid-color baseline-value]} (:props node)
-        background-color (render/->color-int background-color 0x3310131C)
-        bar-color (render/->color-int bar-color 0xFF9CDCFE)
-        grid-color (render/->color-int grid-color 0x33FFFFFF)
+        background-color (or (color/ensure background-color) (color/hex 0x3310131C))
+        bar-color (or (color/ensure bar-color) (color/hex 0xFF9CDCFE))
+        grid-color (or (color/ensure grid-color) (color/hex 0x33FFFFFF))
         bars (vec values)
         count (count bars)
         safe-width (double (clojure.core/max width 0.0))

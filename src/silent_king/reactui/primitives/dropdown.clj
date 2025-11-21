@@ -4,7 +4,8 @@
             [silent-king.reactui.interaction :as interaction]
             [silent-king.reactui.layout :as layout]
             [silent-king.reactui.render :as render]
-            [silent-king.render.commands :as commands]))
+            [silent-king.render.commands :as commands]
+            [silent-king.color :as color]))
 
 (set! *warn-on-reflection* true)
 
@@ -103,11 +104,11 @@
                 option-selected-text-color
                 border-color]} (:props node)
         {:keys [header options expanded? all-options]} (get-in node [:layout :dropdown])
-        header-bg (render/->color-int background-color 0xFF2D2F38)
-        option-bg (render/->color-int option-background 0xFF1E2230)
-        selected-bg (render/->color-int option-selected-background 0xFF3C4456)
-        txt-color (render/->color-int text-color 0xFFCBCBCB)
-        selected-txt-color (render/->color-int option-selected-text-color 0xFF0F111A)
+        header-bg (or (color/ensure background-color) (color/hex 0xFF2D2F38))
+        option-bg (or (color/ensure option-background) (color/hex 0xFF1E2230))
+        selected-bg (or (color/ensure option-selected-background) (color/hex 0xFF3C4456))
+        txt-color (or (color/ensure text-color) (color/hex 0xFFCBCBCB))
+        selected-txt-color (or (color/ensure option-selected-text-color) (color/hex 0xFF0F111A))
         caret (if expanded? "▼" "▲")
         caret-color txt-color
         padding 10.0

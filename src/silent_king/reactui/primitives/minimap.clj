@@ -6,7 +6,8 @@
             [silent-king.reactui.layout :as layout]
             [silent-king.reactui.render :as render]
             [silent-king.reactui.primitives.window :as window]
-            [silent-king.render.commands :as commands]))
+            [silent-king.render.commands :as commands]
+            [silent-king.color :as color]))
 
 (set! *warn-on-reflection* true)
 
@@ -85,8 +86,8 @@
   [node]
   (let [{:keys [stars world-bounds viewport-rect background-color viewport-color]} (:props node)
         {:keys [x y width height]} (layout/bounds node)
-        bg-color (render/->color-int background-color 0xFF000000)
-        viewport-color (render/->color-int viewport-color 0xFF00FF00)
+        bg-color (or (color/ensure background-color) (color/hex 0xFF000000))
+        viewport-color (or (color/ensure viewport-color) (color/hex 0xFF00FF00))
         widget-bounds {:x x :y y :width width :height height}
         cell-size (render/heatmap-cell-size width height)
         heatmap (when world-bounds
@@ -117,7 +118,7 @@
       viewport-bounds
       (conj (commands/rect viewport-bounds {:stroke-color viewport-color
                                             :stroke-width 1.0}))
-      true (conj (commands/rect widget-bounds {:stroke-color (render/->color-int nil 0xFF444444)
+      true (conj (commands/rect widget-bounds {:stroke-color (color/hex 0xFF444444)
                                                :stroke-width 1.0})))))
 
 (defmethod render/plan-node :minimap

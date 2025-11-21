@@ -2,7 +2,8 @@
   "Voronoi cell generation and rendering over the star field."
   (:require [silent-king.camera :as camera]
             [silent-king.render.commands :as commands]
-            [silent-king.state :as state])
+            [silent-king.state :as state]
+            [silent-king.color :as color])
   (:import [org.locationtech.jts.geom Coordinate Envelope GeometryFactory Polygon]
            [org.locationtech.jts.triangulate VoronoiDiagramBuilder]))
 
@@ -25,24 +26,24 @@
 
 (def ^:private color-schemes
   ;; Palettes are vectors so we can graph-color neighboring cells differently.
-  {:monochrome [{:stroke 0xFF7FA5FF :fill 0x33FFFFFF}
-                {:stroke 0xFF5FD7FF :fill 0x33E9FBFF}
-                {:stroke 0xFF7FE5B5 :fill 0x33E4FFE1}
-                {:stroke 0xFFDBA7FF :fill 0x33F4E1FF}
-                {:stroke 0xFFFFC36F :fill 0x33FFE7C0}
-                {:stroke 0xFFFF8A7A :fill 0x33FFD7CF}]
-   :by-density [{:stroke 0xFF3ED8A2 :fill 0x333ED8A2}
-                {:stroke 0xFF21A6F3 :fill 0x3321A6F3}
-                {:stroke 0xFF7A6BFF :fill 0x337A6BFF}
-                {:stroke 0xFFF27CC2 :fill 0x33F27CC2}
-                {:stroke 0xFFFFB347 :fill 0x33FFB347}
-                {:stroke 0xFF4BD6C0 :fill 0x334BD6C0}]
-   :by-degree [{:stroke 0xFFE86F4F :fill 0x33E86F4F}
-               {:stroke 0xFFF2B14C :fill 0x33F2B14C}
-               {:stroke 0xFF7CC86B :fill 0x337CC86B}
-               {:stroke 0xFF5BC0EB :fill 0x335BC0EB}
-               {:stroke 0xFF9A7FFB :fill 0x339A7FFB}
-               {:stroke 0xFFD86FFF :fill 0x33D86FFF}]
+  {:monochrome [{:stroke (color/hex 0xFF7FA5FF) :fill (color/hex 0x33FFFFFF)}
+                {:stroke (color/hex 0xFF5FD7FF) :fill (color/hex 0x33E9FBFF)}
+                {:stroke (color/hex 0xFF7FE5B5) :fill (color/hex 0x33E4FFE1)}
+                {:stroke (color/hex 0xFFDBA7FF) :fill (color/hex 0x33F4E1FF)}
+                {:stroke (color/hex 0xFFFFC36F) :fill (color/hex 0x33FFE7C0)}
+                {:stroke (color/hex 0xFFFF8A7A) :fill (color/hex 0x33FFD7CF)}]
+   :by-density [{:stroke (color/hex 0xFF3ED8A2) :fill (color/hex 0x333ED8A2)}
+                {:stroke (color/hex 0xFF21A6F3) :fill (color/hex 0x3321A6F3)}
+                {:stroke (color/hex 0xFF7A6BFF) :fill (color/hex 0x337A6BFF)}
+                {:stroke (color/hex 0xFFF27CC2) :fill (color/hex 0x33F27CC2)}
+                {:stroke (color/hex 0xFFFFB347) :fill (color/hex 0x33FFB347)}
+                {:stroke (color/hex 0xFF4BD6C0) :fill (color/hex 0x334BD6C0)}]
+   :by-degree [{:stroke (color/hex 0xFFE86F4F) :fill (color/hex 0x33E86F4F)}
+               {:stroke (color/hex 0xFFF2B14C) :fill (color/hex 0x33F2B14C)}
+               {:stroke (color/hex 0xFF7CC86B) :fill (color/hex 0x337CC86B)}
+               {:stroke (color/hex 0xFF5BC0EB) :fill (color/hex 0x335BC0EB)}
+               {:stroke (color/hex 0xFF9A7FFB) :fill (color/hex 0x339A7FFB)}
+               {:stroke (color/hex 0xFFD86FFF) :fill (color/hex 0x33D86FFF)}]
    :by-region []}) ;; Empty vector acts as a flag for region-based coloring
 
 (defn- clamp
@@ -71,14 +72,6 @@
 (defn- valid-vertex?
   [{:keys [x y]}]
   (and (number? x) (number? y) (not (Double/isNaN (double x))) (not (Double/isNaN (double y)))))
-
-(defn- apply-opacity
-  [color opacity]
-  (let [base-alpha (bit-and (unsigned-bit-shift-right color 24) 0xFF)
-        base-frac (/ (double base-alpha) 255.0)
-        out-alpha (int (Math/round (* 255.0 base-frac (clamp opacity 0.0 1.0))))
-        rgb (bit-and color 0x00FFFFFF)]
-    (unchecked-int (bit-or (bit-shift-left out-alpha 24) rgb))))
 
 (defn- palette-for-settings
   [{:keys [color-scheme]}]
@@ -353,7 +346,7 @@
                   nil))
               regions)
         ;; Default color for unregioned space (dark grey)
-        0xFF303030)))
+        (color/hex 0xFF303030))))
 
 (defn plan-voronoi-cells
   "Plan Voronoi overlay commands with LOD and culling. Returns {:commands [...] :rendered n}."
@@ -386,7 +379,7 @@
                               {}
                               (sort (keys cells))))
 
-        centroid-color (apply-opacity (:stroke (get cell-colors (first (keys cells)) (first palette))) 1.0)
+        centroid-color (color/multiply-alpha (:stroke (get cell-colors (first (keys cells)) (first palette))) 1.0)
         stroke-width-screen (fn []
                               (max 1.5 (camera/transform-size line-width zoom)))]
     (if (and enabled? (seq cells))
@@ -403,8 +396,8 @@
             {:keys [commands rendered]}
             (reduce (fn [{:keys [commands rendered]} {:keys [screen-verts centroid color]}]
                       (let [n (count screen-verts)
-                            stroke-color (apply-opacity (:stroke color) (max 0.7 opacity))
-                            fill-color (apply-opacity (:fill color) opacity)
+                            stroke-color (color/multiply-alpha (:stroke color) (max 0.7 opacity))
+                            fill-color (color/multiply-alpha (:fill color) opacity)
                             lw (stroke-width-screen)]
                         (cond
                           (>= n 3)

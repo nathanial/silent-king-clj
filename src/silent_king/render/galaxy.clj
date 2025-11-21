@@ -1,6 +1,7 @@
 (ns silent-king.render.galaxy
   (:require [silent-king.camera :as camera]
-            [silent-king.render.commands :as commands])
+            [silent-king.render.commands :as commands]
+            [silent-king.color :as color])
   (:import [io.github.humbleui.skija Image]))
 
 (set! *warn-on-reflection* true)
@@ -58,7 +59,7 @@
   [screen-star-x screen-star-y screen-radius]
   [(commands/circle {:x screen-star-x :y screen-star-y}
                     screen-radius
-                    {:stroke-color 0x33FFFFFF
+                    {:stroke-color (color/hex 0x33FFFFFF)
                      :stroke-width 1.2})])
 
 (defn plan-selection-highlight
@@ -68,10 +69,10 @@
         glow-radius (* screen-size 0.65 pulse)]
     [(commands/circle {:x screen-x :y screen-y}
                       glow-radius
-                      {:fill-color 0x44FFD966})
+                      {:fill-color (color/hex 0x44FFD966)})
      (commands/circle {:x screen-x :y screen-y}
                       (* screen-size 0.45 pulse)
-                      {:stroke-color 0xFFFFE680
+                      {:stroke-color (color/hex 0xFFFFE680)
                        :stroke-width 3.0})]))
 
 (defn star-visible?

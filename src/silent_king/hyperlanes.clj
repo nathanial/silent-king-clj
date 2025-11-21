@@ -2,7 +2,8 @@
   "Hyperlane generation and rendering using Delaunay triangulation"
   (:require [silent-king.camera :as camera]
             [silent-king.render.commands :as commands]
-            [silent-king.state :as state])
+            [silent-king.state :as state]
+            [silent-king.color :as color])
   (:import [org.locationtech.jts.triangulate DelaunayTriangulationBuilder]
            [org.locationtech.jts.geom Coordinate GeometryFactory LineString]))
 
@@ -11,32 +12,30 @@
 ;; Hyperlane visual configuration
 (def ^:private hyperlane-config
   {:base-width 2.0
-   :color-start 0xFF6699FF
-   :color-end 0xFF3366CC
-   :glow-color 0x406699FF
+   :color-start (color/hex 0xFF6699FF)
+   :color-end (color/hex 0xFF3366CC)
+   :glow-color (color/hex 0x406699FF)
    :pulse-speed 0.5
    :pulse-amplitude 0.3
    :min-visible-length 1.0})
 
 (def ^:private color-schemes
-  {:blue {:start 0xFF6699FF
-          :end 0xFF3366CC
-          :glow 0x406699FF}
-   :red {:start 0xFFFF5D5D
-         :end 0xFFC0392B
-         :glow 0x40FF5D5D}
-   :green {:start 0xFF66FF99
-           :end 0xFF2ECC71
-           :glow 0x4066FF99}
-   :rainbow {:start 0xFFFFC857
-             :end 0xFF00C2FF
-             :glow 0x40FFC857}})
+  {:blue {:start (color/hex 0xFF6699FF)
+          :end (color/hex 0xFF3366CC)
+          :glow (color/hex 0x406699FF)}
+   :red {:start (color/hex 0xFFFF5D5D)
+         :end (color/hex 0xFFC0392B)
+         :glow (color/hex 0x40FF5D5D)}
+   :green {:start (color/hex 0xFF66FF99)
+           :end (color/hex 0xFF2ECC71)
+           :glow (color/hex 0x4066FF99)}
+   :rainbow {:start (color/hex 0xFFFFC857)
+             :end (color/hex 0xFF00C2FF)
+             :glow (color/hex 0x40FFC857)}})
 
 (defn- apply-opacity
   [color opacity]
-  (let [alpha (int (Math/round (* 255.0 (max 0.0 (min 1.0 opacity)))))
-        rgb (bit-and color 0x00FFFFFF)]
-    (unchecked-int (bit-or (bit-shift-left alpha 24) rgb))))
+  (color/set-opacity color opacity))
 
 (defn- build-neighbors
   "Compute adjacency map {:star-id [{:neighbor-id .. :hyperlane h} ...]}."
@@ -89,7 +88,9 @@
             (let [width-variation (+ 0.8 (* (rand) 0.4))
                   color-variation (int (* (rand) 40))
                   base-color (:color-start hyperlane-config)
-                  varied-color (bit-xor base-color (bit-shift-left color-variation 8))
+                  ;; Previously bit-xor 0-40 into 8th bit (Green channel). 
+                  ;; We'll just add variation to Green channel.
+                  varied-color (update base-color :g #(min 255 (+ % color-variation)))
                   hyperlane {:id (inc next-id)
                              :from-id from-id
                              :to-id to-id
