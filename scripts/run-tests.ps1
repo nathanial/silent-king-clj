@@ -10,6 +10,6 @@ $PLATFORM_ALIAS = "windows-x64"
 Write-Host "Running on Windows x64"
 
 # Combine platform alias and test alias
-Write-Host "Running tests with alias: $PLATFORM_ALIAS:test"
-clojure -M:$PLATFORM_ALIAS:test
-
+$aliasArg = "-M:windows-x64:test"
+Write-Host "Running tests with alias: $aliasArg"
+clojure -M:windows-x64:test
