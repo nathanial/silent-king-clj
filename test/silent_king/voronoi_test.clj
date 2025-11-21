@@ -1,7 +1,8 @@
 (ns silent-king.voronoi-test
   (:require [clojure.test :refer [deftest is testing]]
             [silent-king.state :as state]
-            [silent-king.voronoi :as voronoi]))
+            [silent-king.voronoi :as voronoi]
+            [silent-king.render.commands :as commands]))
 
 (defn- distance
   [{x1 :x y1 :y} {x2 :x y2 :y}]
@@ -94,3 +95,42 @@
     (is (= (:voronoi-cells base) (:voronoi-cells relaxed-nil)))
     (is (= 0 (get-in relaxed [:relax-meta :iterations-used])))
     (is (= 0 (get-in relaxed-nil [:relax-meta :iterations-used])))))
+
+(deftest plan-voronoi-cells-test
+  (let [game-state (atom (state/create-game-state))
+        star1 {:id 1 :x 0.0 :y 0.0}
+        star2 {:id 2 :x 100.0 :y 0.0}
+        star3 {:id 3 :x 50.0 :y 86.6}] ;; Equilateral triangle
+    (state/add-star! game-state star1)
+    (state/add-star! game-state star2)
+    (state/add-star! game-state star3)
+    (voronoi/generate-voronoi! game-state)
+    
+    (testing "generates polygon commands"
+      (let [width 800
+            height 600
+            zoom 1.0
+            pan-x 0.0
+            pan-y 0.0
+            time 0.0
+            plan (voronoi/plan-voronoi-cells width height zoom pan-x pan-y game-state time)
+            commands (:commands plan)]
+        (is (seq commands))
+        (let [fills (filter #(= :polygon-fill (:op %)) commands)
+              strokes (filter #(= :polygon-stroke (:op %)) commands)]
+          (is (seq fills))
+          (is (seq strokes))
+          (is (= (count fills) (count strokes))))))
+          
+    (testing "generates centroids when enabled"
+      (state/set-voronoi-setting! game-state :show-centroids? true)
+      (let [width 800
+            height 600
+            zoom 1.0
+            pan-x 0.0
+            pan-y 0.0
+            time 0.0
+            plan (voronoi/plan-voronoi-cells width height zoom pan-x pan-y game-state time)
+            commands (:commands plan)
+            circles (filter #(= :circle (:op %)) commands)]
+        (is (seq circles))))))
