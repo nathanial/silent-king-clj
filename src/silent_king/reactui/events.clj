@@ -173,6 +173,13 @@
   (voronoi/generate-voronoi! game-state)
   nil)
 
+(defmethod dispatch-event! :voronoi/set-jaggedness
+  [game-state [_ value]]
+  (when (number? value)
+    (state/set-voronoi-setting! game-state :jaggedness (clamp-range value 0.0 1.5)))
+  (voronoi/generate-voronoi! game-state)
+  nil)
+
 (defmethod dispatch-event! :voronoi/reset
   [game-state _]
   (state/reset-voronoi-settings! game-state)

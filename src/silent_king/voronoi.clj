@@ -545,15 +545,80 @@
                :elapsed-ms elapsed*}
               (recur iteration stars-relaxed envelope (conj iteration-stats stat) elapsed*))))))))
 
+(defn- coord-key
+  [{:keys [x y]}]
+  (str (format "%.3f" (double x)) "," (format "%.3f" (double y))))
+
+(defn- generate-noisy-edge
+  [{:keys [x y] :as start} end jaggedness]
+  (if (<= jaggedness 0.05)
+    [start end]
+    (let [iterations 5]
+      (loop [i 0
+             segments [start end]]
+        (if (>= i iterations)
+          segments
+          (let [next-segments
+                (vec (mapcat (fn [[p1 p2]]
+                               (let [mid-x (/ (+ (:x p1) (:x p2)) 2.0)
+                                     mid-y (/ (+ (:y p1) (:y p2)) 2.0)
+                                     dx (- (:x p2) (:x p1))
+                                     dy (- (:y p2) (:y p1))
+                                     dist (Math/sqrt (+ (* dx dx) (* dy dy)))
+                                     nx (/ (- dy) dist)
+                                     ny (/ dx dist)
+                                     scale (* jaggedness dist 0.3 (- (rand) 0.5))
+                                     displaced-x (+ mid-x (* nx scale))
+                                     displaced-y (+ mid-y (* ny scale))]
+                                 [p1 {:x displaced-x :y displaced-y}]))
+                             (partition 2 1 segments)))]
+            (recur (inc i) (conj next-segments end))))))))
+
+(defn- roughen-cells
+  [cells jaggedness]
+  (if (or (<= jaggedness 0.05) (empty? cells))
+    cells
+    (let [edge-cache (java.util.HashMap.)]
+      (reduce (fn [acc [id cell]]
+                (let [verts (:vertices cell)
+                      cnt (count verts)
+                      new-verts
+                      (loop [i 0
+                             out []]
+                        (if (= i cnt)
+                          out
+                          (let [p1 (nth verts i)
+                                p2 (nth verts (mod (inc i) cnt))
+                                k1 (coord-key p1)
+                                k2 (coord-key p2)
+                                key (if (neg? (compare k1 k2)) (str k1 "|" k2) (str k2 "|" k1))
+                                cached (.get edge-cache key)]
+                            (if cached
+                              ;; Found in cache
+                              (let [pts (if (= k1 (coord-key (first cached)))
+                                          cached
+                                          (vec (rseq cached)))
+                                    segment (butlast pts)]
+                                (recur (inc i) (into out segment)))
+                              ;; Not in cache
+                              (let [pts (generate-noisy-edge p1 p2 jaggedness)]
+                                (.put edge-cache key pts)
+                                (recur (inc i) (into out (butlast pts))))))))]
+                  (assoc acc id (assoc cell :vertices new-verts))))
+              {}
+              cells))))
+
 (defn generate-relaxed-voronoi
   "Generate Voronoi cells, optionally applying Lloyd relaxation to star sites."
   [stars relax-config]
   (let [{:keys [iterations] :as cfg} (normalize-relax-config relax-config)
+        jaggedness (double (:jaggedness relax-config 0.0))
         start (System/currentTimeMillis)
         cells-schema [:map-of schemas/PositiveId schemas/VoronoiCell]]
     (if (zero? iterations)
-      (let [base (generate-voronoi stars {:envelope (:envelope cfg)})]
-        (assoc base :stars-relaxed stars
+      (let [base (generate-voronoi stars {:envelope (:envelope cfg)})
+            roughened (update base :voronoi-cells roughen-cells jaggedness)]
+        (assoc roughened :stars-relaxed stars
                :relax-meta {:iterations-requested iterations
                             :iterations-used 0
                             :iteration-stats []
@@ -570,8 +635,9 @@
                                              :relaxed-site (select-keys relaxed [:x :y]))]
                                  [sid cell])))
                         voronoi-cells)
+            roughened-cells (roughen-cells cells jaggedness)
             total (- (System/currentTimeMillis) start)
-            result {:voronoi-cells cells
+            result {:voronoi-cells roughened-cells
                     :stars-relaxed stars-relaxed
                     :elapsed-ms total
                     :envelope envelope

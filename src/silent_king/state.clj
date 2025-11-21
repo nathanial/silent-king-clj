@@ -79,7 +79,8 @@
    :relax-iterations 0
    :relax-step 1.0
    :relax-max-displacement 250.0
-   :relax-clip-to-envelope? true})
+   :relax-clip-to-envelope? true
+   :jaggedness 0.0})
 
 (def default-performance-metrics
   {:fps-history []
@@ -407,11 +408,13 @@
                 (Math/abs ^double (:relax-max-displacement settings)))
         clip? (if (contains? settings :relax-clip-to-envelope?)
                 (boolean (:relax-clip-to-envelope? settings))
-                true)]
+                true)
+        jaggedness (double (:jaggedness settings 0.0))]
     {:iterations iterations
      :step-factor step
      :max-displacement max-d
-     :clip-to-envelope? clip?}))
+     :clip-to-envelope? clip?
+     :jaggedness jaggedness}))
 
 (defn set-hyperlane-setting!
   "Set a single hyperlane setting (e.g., :opacity, :line-width)."

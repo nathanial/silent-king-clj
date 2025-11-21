@@ -83,7 +83,7 @@
 (defn- settings-content
   [{:keys [enabled? opacity line-width color-scheme show-centroids?
            relax-iterations relax-step relax-max-displacement relax-clip-to-envelope?
-           hide-border-cells?]}
+           hide-border-cells? jaggedness]}
    {:keys [color-dropdown-expanded?]}]
   [:vstack {:gap 10}
    [:label {:text "Visibility"
@@ -116,6 +116,13 @@
                     "Hide Border Cells")
                   [:voronoi/set-hide-border-cells? (not hide-border-cells?)]
                   hide-border-cells?)
+   (slider-row {:label "Jaggedness"
+                :value jaggedness
+                :min 0.0
+                :max 1.5
+                :step 0.1
+                :event [:voronoi/set-jaggedness]
+                :formatter (fn [v] (format "%.1f" (double v)))})
    [:label {:text "Relaxation (Lloyd)"
             :color muted-color
             :padding {:top 4}}]

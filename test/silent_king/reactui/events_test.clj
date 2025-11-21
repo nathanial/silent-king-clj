@@ -80,6 +80,8 @@
     (is (= 500.0 (:relax-max-displacement (state/voronoi-settings game-state))))
     (events/dispatch-event! game-state [:voronoi/set-relax-clip? false])
     (is (false? (:relax-clip-to-envelope? (state/voronoi-settings game-state))))
+    (events/dispatch-event! game-state [:voronoi/set-jaggedness 1.2])
+    (is (= 1.2 (:jaggedness (state/voronoi-settings game-state))))
     (swap! game-state assoc-in [:voronoi-settings :opacity] 0.2)
     (events/dispatch-event! game-state [:voronoi/reset])
     (is (= state/default-voronoi-settings (:voronoi-settings @game-state)))))
