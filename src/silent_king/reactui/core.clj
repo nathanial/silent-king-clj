@@ -189,6 +189,14 @@
   [_ _ _ _]
   false)
 
+(defmulti scroll!
+  "Handle scroll events per node type. Coordinates are in logical UI space."
+  (fn [node _game-state _x _y _dx _dy] (:type node)))
+
+(defmethod scroll! :default
+  [_ _ _ _ _ _]
+  false)
+
 (defn handle-pointer-down!
   [game-state x y]
   (let [scale (scale-factor game-state)
@@ -217,3 +225,12 @@
         logical-y (/ (double y) scale)]
     (when-let [node (captured-node)]
       (pointer-drag! node game-state logical-x logical-y))))
+
+(defn handle-scroll!
+  [game-state x y dx dy]
+  (let [scale (scale-factor game-state)
+        logical-x (/ (double x) scale)
+        logical-y (/ (double y) scale)]
+    (when-let [layout-tree (current-layout)]
+      (when-let [node (interaction/node-at layout-tree logical-x logical-y)]
+        (scroll! node game-state logical-x logical-y dx dy)))))

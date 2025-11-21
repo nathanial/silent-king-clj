@@ -6,7 +6,7 @@
 (set! *warn-on-reflection* true)
 
 (def ^:private interactive-types
-  #{:button :slider :dropdown :minimap :window})
+  #{:button :slider :dropdown :minimap :window :galaxy})
 
 (declare dropdown-region)
 

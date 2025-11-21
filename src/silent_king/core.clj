@@ -4,7 +4,6 @@
             [silent-king.state :as state]
             [silent-king.reactui.app :as react-app]
             [silent-king.reactui.core :as reactui]
-            [silent-king.selection :as selection]
             [silent-king.galaxy :as galaxy]
             [silent-king.hyperlanes :as hyperlanes]
             [silent-king.voronoi :as voronoi]
@@ -73,7 +72,7 @@
     window))
 
 (defn setup-mouse-callbacks [window game-state]
-  (GLFW/glfwSetCursorPosCallback
+    (GLFW/glfwSetCursorPosCallback
    window
    (reify GLFWCursorPosCallbackI
      (invoke [_ win xpos ypos]
@@ -86,20 +85,8 @@
              scale-x (/ (aget fb-width-arr 0) (double (aget win-width-arr 0)))
              scale-y (/ (aget fb-height-arr 0) (double (aget win-height-arr 0)))
              fb-xpos (* xpos scale-x)
-             fb-ypos (* ypos scale-y)
-             input (state/get-input game-state)
-             old-x (:mouse-x input)
-             old-y (:mouse-y input)
-             dragging (:dragging input)
-             slider-handled? (boolean (reactui/handle-pointer-drag! game-state fb-xpos fb-ypos))]
-         (when (and dragging (not slider-handled?))
-           (let [dx (- fb-xpos old-x)
-                 dy (- fb-ypos old-y)]
-             (state/update-camera! game-state
-                                   (fn [cam]
-                                     (-> cam
-                                         (update :pan-x #(+ % dx))
-                                         (update :pan-y #(+ % dy)))))))
+             fb-ypos (* ypos scale-y)]
+         (reactui/handle-pointer-drag! game-state fb-xpos fb-ypos)
          (state/update-input! game-state assoc
                               :mouse-x fb-xpos
                               :mouse-y fb-ypos
@@ -123,14 +110,6 @@
                                     :mouse-down-y y))
              (do
                (reactui/handle-pointer-up! game-state x y)
-               (let [ui-active? (boolean (:ui-active? input))
-                     dx (- (double x) (double (:mouse-down-x input)))
-                     dy (- (double y) (double (:mouse-down-y input)))
-                     movement (Math/sqrt (+ (* dx dx) (* dy dy)))
-                     click? (and (not ui-active?)
-                                 (<= movement world-click-threshold))]
-                 (when click?
-                   (selection/handle-screen-click! game-state x y)))
                (state/update-input! game-state assoc
                                     :dragging false
                                     :ui-active? false))))))))
@@ -138,24 +117,11 @@
   (GLFW/glfwSetScrollCallback
    window
    (reify GLFWScrollCallbackI
-     (invoke [_ _win _xoffset yoffset]
+     (invoke [_ _win xoffset yoffset]
        (let [input (state/get-input game-state)
              mouse-x (:mouse-x input)
-             mouse-y (:mouse-y input)
-             camera (state/get-camera game-state)
-             old-zoom (:zoom camera)
-             zoom-factor (Math/pow 1.1 yoffset)
-             new-zoom (max 0.4 (min 10.0 (* old-zoom zoom-factor)))
-             old-pan-x (:pan-x camera)
-             old-pan-y (:pan-y camera)
-             world-x (inverse-transform-position mouse-x old-zoom old-pan-x)
-             world-y (inverse-transform-position mouse-y old-zoom old-pan-y)
-             new-pan-x (- mouse-x (* world-x (zoom->position-scale new-zoom)))
-             new-pan-y (- mouse-y (* world-y (zoom->position-scale new-zoom)))]
-         (state/update-camera! game-state assoc
-                               :zoom new-zoom
-                               :pan-x new-pan-x
-                               :pan-y new-pan-y)))))
+             mouse-y (:mouse-y input)]
+         (reactui/handle-scroll! game-state mouse-x mouse-y xoffset yoffset)))))
 
   (GLFW/glfwSetKeyCallback
    window

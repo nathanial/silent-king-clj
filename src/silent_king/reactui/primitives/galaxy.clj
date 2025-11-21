@@ -11,6 +11,7 @@
             [silent-king.regions :as regions]
             [silent-king.render.commands :as commands]
             [silent-king.render.galaxy :as render-galaxy]
+            [silent-king.selection :as selection]
             [silent-king.state :as state]
             [silent-king.voronoi :as voronoi]))
 
@@ -207,8 +208,39 @@
     true))
 
 (defmethod core/pointer-up! :galaxy
-  [_node _game-state _x _y]
-  ;; Could handle click selection here if dx/dy is small
-  ;; For now just release
-  true)
+  [node game-state x y]
+  (let [interaction (some-> (core/active-interaction) :value)
+        {:keys [start-pointer]} interaction
+        dx (- x (:x start-pointer))
+        dy (- y (:y start-pointer))
+        dist (Math/sqrt (+ (* dx dx) (* dy dy)))
+        click-threshold 5.0]
+    (when (and start-pointer (< dist click-threshold))
+      (let [local-x (:x (:local-pos interaction))
+            local-y (:y (:local-pos interaction))]
+        (selection/handle-screen-click! game-state local-x local-y)))
+    true))
+
+(defmethod core/scroll! :galaxy
+  [node game-state x y _dx dy]
+  (let [bounds (layout/bounds node)
+        local-x (- x (:x bounds))
+        local-y (- y (:y bounds))
+        camera (state/get-camera game-state)
+        old-zoom (:zoom camera)
+        zoom-factor (Math/pow 1.1 dy)
+        new-zoom (max 0.4 (min 10.0 (* old-zoom zoom-factor)))
+        old-pan-x (:pan-x camera)
+        old-pan-y (:pan-y camera)
+        ;; Calculate world point under cursor using old zoom/pan
+        world-x (camera/inverse-transform-position local-x old-zoom old-pan-x)
+        world-y (camera/inverse-transform-position local-y old-zoom old-pan-y)
+        ;; Calculate new pan so that world point projects to same cursor position
+        new-pan-x (- local-x (* world-x (camera/zoom->position-scale new-zoom)))
+        new-pan-y (- local-y (* world-y (camera/zoom->position-scale new-zoom)))]
+    (state/update-camera! game-state assoc
+                          :zoom new-zoom
+                          :pan-x new-pan-x
+                          :pan-y new-pan-y)
+    true))
 
