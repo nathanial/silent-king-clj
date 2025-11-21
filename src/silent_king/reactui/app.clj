@@ -308,4 +308,5 @@
                                           [(commands/restore)])))]
       (when canvas
         (skia/draw-commands! canvas scaled-commands))
-      layout-tree)))
+      {:layout-tree layout-tree
+       :commands scaled-commands})))

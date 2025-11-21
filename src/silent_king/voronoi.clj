@@ -1,10 +1,10 @@
 (ns silent-king.voronoi
   "Voronoi cell generation and rendering over the star field."
   (:require [silent-king.camera :as camera]
+            [silent-king.render.commands :as commands]
             [silent-king.state :as state])
   (:import [org.locationtech.jts.geom Coordinate Envelope GeometryFactory Polygon]
-           [org.locationtech.jts.triangulate VoronoiDiagramBuilder]
-           [io.github.humbleui.skija Canvas Paint PaintMode PaintStrokeCap Path]))
+           [org.locationtech.jts.triangulate VoronoiDiagramBuilder]))
 
 (set! *warn-on-reflection* true)
 
@@ -355,9 +355,9 @@
         ;; Default color for unregioned space (dark grey)
         0xFF303030)))
 
-(defn draw-voronoi-cells
-  "Draw Voronoi overlay with LOD and culling. Returns count of rendered cells."
-  [^Canvas canvas width height zoom pan-x pan-y game-state current-time]
+(defn plan-voronoi-cells
+  "Plan Voronoi overlay commands with LOD and culling. Returns {:commands [...] :rendered n}."
+  [width height zoom pan-x pan-y game-state _current-time]
   (let [settings (state/voronoi-settings game-state)
         enabled? (state/voronoi-enabled? game-state)
         cells (state/voronoi-cells game-state)
@@ -387,109 +387,74 @@
                               (sort (keys cells))))
 
         centroid-color (apply-opacity (:stroke (get cell-colors (first (keys cells)) (first palette))) 1.0)
-        stroke-paint (doto (Paint.)
-                       (.setMode PaintMode/STROKE)
-                       (.setStrokeCap PaintStrokeCap/ROUND)
-                       (.setAntiAlias true))
-        fill-paint (doto (Paint.)
-                     (.setMode PaintMode/FILL)
-                     (.setAntiAlias true))
-        centroid-paint (doto (Paint.)
-                         (.setColor (int centroid-color))
-                         (.setMode PaintMode/FILL)
-                         (.setAntiAlias true))
-        rendered (atom 0)
         stroke-width-screen (fn []
                               (max 1.5 (camera/transform-size line-width zoom)))]
-    (try
-      (if (and canvas (seq cells))
-        (let [visible-cells (keep (fn [[star-id {:keys [vertices centroid on-envelope?]}]]
-                                    (when (and (seq vertices)
-                                               (not (and hide-border? on-envelope?)))
-                                      (let [screen-verts (->> (transform-vertices vertices zoom pan-x pan-y)
-                                                              (filter valid-vertex?)
-                                                              vec)]
-                                        {:screen-verts screen-verts
-                                         :color (get cell-colors star-id (first palette))
-                                         :centroid centroid})))
-                                  cells)]
+    (if (and enabled? (seq cells))
+      (let [visible-cells (keep (fn [[star-id {:keys [vertices centroid on-envelope?]}]]
+                                  (when (and (seq vertices)
+                                             (not (and hide-border? on-envelope?)))
+                                    (let [screen-verts (->> (transform-vertices vertices zoom pan-x pan-y)
+                                                            (filter valid-vertex?)
+                                                            vec)]
+                                      {:screen-verts screen-verts
+                                       :color (get cell-colors star-id (first palette))
+                                       :centroid centroid})))
+                                cells)
+            {:keys [commands rendered]}
+            (reduce (fn [{:keys [commands rendered]} {:keys [screen-verts centroid color]}]
+                      (let [n (count screen-verts)
+                            stroke-color (apply-opacity (:stroke color) (max 0.7 opacity))
+                            fill-color (apply-opacity (:fill color) opacity)
+                            lw (stroke-width-screen)]
+                        (cond
+                          (>= n 3)
+                          (let [poly {:points screen-verts
+                                      :style {:fill-color fill-color}}]
+                            {:commands (into commands
+                                             [(commands/polygon-fill (:points poly) (:style poly))
+                                              (commands/polygon-stroke (:points poly)
+                                                                       {:stroke-color stroke-color
+                                                                        :stroke-width lw
+                                                                        :stroke-cap :round})])
+                             :rendered (inc rendered)})
 
-          ;; Pass 1: fills
-          (doseq [{:keys [screen-verts centroid color]} visible-cells]
-            (let [n (count screen-verts)]
-              (cond
-                (>= n 3)
-                (when-let [{:keys [x y]} (first screen-verts)]
-                  (let [path (Path.)]
-                    (.moveTo path (float x) (float y))
-                    (doseq [{:keys [x y]} (rest screen-verts)]
-                      (.lineTo path (float x) (float y)))
-                    (.closePath path)
-                    (.setColor fill-paint (int (apply-opacity (:fill color) opacity)))
-                    (.drawPath canvas path fill-paint)
-                    (.close path)
-                    (swap! rendered inc)))
+                          (= n 2)
+                          (let [[p0 p1] screen-verts
+                                mx (/ (+ (:x p0) (:x p1)) 2.0)
+                                my (/ (+ (:y p0) (:y p1)) 2.0)]
+                            {:commands (conj commands
+                                             (commands/circle {:x mx :y my} 4.5 {:fill-color fill-color})
+                                             (commands/line p0 p1 {:stroke-color stroke-color
+                                                                   :stroke-width lw
+                                                                   :stroke-cap :round}))
+                             :rendered (inc rendered)})
 
-                (= n 2)
-                (let [[p0 p1] screen-verts
-                      mx (/ (+ (:x p0) (:x p1)) 2.0)
-                      my (/ (+ (:y p0) (:y p1)) 2.0)]
-                  (.drawCircle canvas (float mx) (float my) 4.5 fill-paint)
-                  (swap! rendered inc))
-
-                :else
-                (when centroid
-                  (let [{cx :x cy :y} centroid
-                        sx (camera/transform-position (double cx) zoom pan-x)
-                        sy (camera/transform-position (double cy) zoom pan-y)]
-                    (.setColor fill-paint (int (apply-opacity (:fill color) opacity)))
-                    (.drawCircle canvas (float sx) (float sy) 6.0 fill-paint)
-                    (swap! rendered inc))))))
-
-          ;; Pass 2: strokes (after fills so borders stay visible)
-          (doseq [{:keys [screen-verts centroid color]} visible-cells]
-            (let [lw (stroke-width-screen)
-                  n (count screen-verts)]
-              (.setStrokeWidth stroke-paint (float lw))
-              (.setColor stroke-paint (int (apply-opacity (:stroke color) (max 0.7 opacity))))
-              (cond
-                (>= n 3)
-                (when-let [{:keys [x y]} (first screen-verts)]
-                  (let [path (Path.)]
-                    (.moveTo path (float x) (float y))
-                    (doseq [{:keys [x y]} (rest screen-verts)]
-                      (.lineTo path (float x) (float y)))
-                    (.closePath path)
-                    (.drawPath canvas path stroke-paint)
-                    (.close path)))
-
-                (= n 2)
-                (let [[p0 p1] screen-verts]
-                  (.drawLine canvas (float (:x p0)) (float (:y p0))
-                             (float (:x p1)) (float (:y p1)) stroke-paint))
-
-                :else
-                (when centroid
-                  (let [{cx :x cy :y} centroid
-                        sx (camera/transform-position (double cx) zoom pan-x)
-                        sy (camera/transform-position (double cy) zoom pan-y)]
-                    (.drawCircle canvas (float sx) (float sy) 7.0 stroke-paint))))))
-
-          ;; Optional centroid debug markers
-          (when show-centroids?
-            (doseq [{:keys [centroid]} visible-cells
-                    :when centroid]
-              (let [{cx :x cy :y} centroid
-                    sx (camera/transform-position (double cx) zoom pan-x)
-                    sy (camera/transform-position (double cy) zoom pan-y)]
-                (.drawCircle canvas (float sx) (float sy) 2.5 centroid-paint)))))
-        (when (and enabled? (seq cells) (= 0 @rendered))
-          (println "Voronoi draw: 0 cells rendered out of" (count cells))))
-      (finally
-        (.close stroke-paint)
-        (.close fill-paint)
-        (.close centroid-paint)))
-    @rendered))
+                          :else
+                          (if centroid
+                            (let [{cx :x cy :y} centroid
+                                  sx (camera/transform-position (double cx) zoom pan-x)
+                                  sy (camera/transform-position (double cy) zoom pan-y)]
+                              {:commands (conj commands
+                                               (commands/circle {:x sx :y sy} 6.0 {:fill-color fill-color})
+                                               (commands/circle {:x sx :y sy} 7.0 {:stroke-color stroke-color
+                                                                                    :stroke-width lw}))
+                               :rendered (inc rendered)})
+                            {:commands commands :rendered rendered}))))
+                    {:commands [] :rendered 0}
+                    visible-cells)
+            commands* (if (and show-centroids? centroid-color)
+                        (into commands
+                              (for [{:keys [centroid]} visible-cells
+                                    :when centroid]
+                                (let [{cx :x cy :y} centroid
+                                      sx (camera/transform-position (double cx) zoom pan-x)
+                                      sy (camera/transform-position (double cy) zoom pan-y)]
+                                  (commands/circle {:x sx :y sy} 2.5 {:fill-color centroid-color}))))
+                        commands)]
+        {:commands commands*
+         :rendered rendered})
+      {:commands []
+       :rendered 0})))
 
 (defn relax-sites-once
   "Run a single Lloyd-style relaxation step over the supplied stars.

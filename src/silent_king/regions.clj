@@ -1,9 +1,9 @@
 (ns silent-king.regions
   "Region generation using graph partitioning on the hyperlane network (Void Carver)."
   (:require [silent-king.state :as state]
-            [silent-king.camera :as camera])
-  (:import [java.util Random]
-           [io.github.humbleui.skija Canvas Paint Font Typeface PaintMode]))
+            [silent-king.camera :as camera]
+            [silent-king.render.commands :as commands])
+  (:import [java.util Random]))
 
 (set! *warn-on-reflection* true)
 
@@ -223,54 +223,47 @@
                      (count regions-map) elapsed threshold))
     regions-map))
 
-(defonce ^:private typeface (Typeface/makeDefault))
-(defonce ^:private font (Font. ^Typeface typeface (float 14.0)))
-
-(defn draw-regions
-  "Draw region names centered on their clusters. Also draws sector names if zoomed in."
-  [^Canvas canvas zoom pan-x pan-y game-state]
+(defn plan-regions
+  "Plan region and sector label draw commands. Returns {:commands [...] :rendered n}."
+  [zoom pan-x pan-y game-state]
   (let [regions (vals (state/regions game-state))
-        text-paint (doto (Paint.)
-                     (.setColor (unchecked-int 0xFFFFFFFF))
-                     (.setMode PaintMode/FILL)
-                     (.setAntiAlias true))
-        sector-paint (doto (Paint.)
-                       (.setColor (unchecked-int 0xDDCCCCCC))
-                       (.setMode PaintMode/FILL)
-                       (.setAntiAlias true))
-        shadow-paint (doto (Paint.)
-                       (.setColor (unchecked-int 0x80000000))
-                       (.setMode PaintMode/FILL)
-                       (.setAntiAlias true))]
-    (try
-      ;; Debug count
-      ;; (println "Drawing" (count regions) "regions")
-      (doseq [{:keys [name center color sectors]} regions]
-        (when (and name center)
-          (let [{:keys [x y]} center
-                screen-x (camera/transform-position (double x) zoom pan-x)
-                screen-y (camera/transform-position (double y) zoom pan-y)
-                ;; Scale text with zoom slightly, but clamp it
-                text-size (max 12.0 (min 48.0 (* 14.0 (Math/sqrt zoom))))]
-            (.setSize font (float text-size))
-            (.setColor text-paint (unchecked-int color))
-
-            (.drawString canvas name (float (+ screen-x 2)) (float (+ screen-y 2)) font shadow-paint)
-            (.drawString canvas name (float screen-x) (float screen-y) font text-paint)
-
-            ;; Draw sector names if zoomed in enough
-            (when (> zoom 0.8)
-              (doseq [{s-name :name s-center :center} (vals sectors)]
-                (when (and s-name s-center)
-                  (let [sx (:x s-center)
-                        sy (:y s-center)
-                        ssx (camera/transform-position (double sx) zoom pan-x)
-                        ssy (camera/transform-position (double sy) zoom pan-y)
-                        sector-size (max 10.0 (* 0.7 text-size))]
-                    (.setSize font (float sector-size))
-                    (.drawString canvas s-name (float (+ ssx 1)) (float (+ ssy 1)) font shadow-paint)
-                    (.drawString canvas s-name (float ssx) (float ssy) font sector-paint))))))))
-      (finally
-        (.close text-paint)
-        (.close sector-paint)
-        (.close shadow-paint)))))
+        {:keys [commands rendered]}
+        (reduce (fn [{:keys [commands rendered]} {:keys [name center color sectors]}]
+                  (if (and name center)
+                    (let [{:keys [x y]} center
+                          screen-x (camera/transform-position (double x) zoom pan-x)
+                          screen-y (camera/transform-position (double y) zoom pan-y)
+                          text-size (max 12.0 (min 48.0 (* 14.0 (Math/sqrt zoom))))
+                          shadow-color 0x80000000
+                          cmds (cond-> commands
+                                  true (conj (commands/text {:text name
+                                                             :position {:x (+ screen-x 2) :y (+ screen-y 2)}
+                                                             :font {:size text-size}
+                                                             :color shadow-color})
+                                             (commands/text {:text name
+                                                             :position {:x screen-x :y screen-y}
+                                                             :font {:size text-size}
+                                                             :color color}))
+                                  (> zoom 0.8)
+                                  (into (for [{s-name :name s-center :center} (vals sectors)
+                                              :when (and s-name s-center)]
+                                          (let [sx (:x s-center)
+                                                sy (:y s-center)
+                                                ssx (camera/transform-position (double sx) zoom pan-x)
+                                                ssy (camera/transform-position (double sy) zoom pan-y)
+                                                sector-size (max 10.0 (* 0.7 text-size))]
+                                            [(commands/text {:text s-name
+                                                             :position {:x (+ ssx 1) :y (+ ssy 1)}
+                                                             :font {:size sector-size}
+                                                             :color shadow-color})
+                                             (commands/text {:text s-name
+                                                             :position {:x ssx :y ssy}
+                                                             :font {:size sector-size}
+                                                             :color 0xDDCCCCCC})]))))]
+                      {:commands cmds
+                       :rendered (inc rendered)})
+                    {:commands commands :rendered rendered}))
+                {:commands [] :rendered 0}
+                regions)]
+    {:commands (into [] (mapcat #(if (sequential? %) % [%]) commands))
+     :rendered rendered}))

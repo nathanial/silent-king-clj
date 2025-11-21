@@ -1,10 +1,10 @@
 (ns silent-king.hyperlanes
   "Hyperlane generation and rendering using Delaunay triangulation"
   (:require [silent-king.camera :as camera]
+            [silent-king.render.commands :as commands]
             [silent-king.state :as state])
   (:import [org.locationtech.jts.triangulate DelaunayTriangulationBuilder]
-           [org.locationtech.jts.geom Coordinate GeometryFactory LineString]
-           [io.github.humbleui.skija Canvas Paint Shader PaintMode PaintStrokeCap]))
+           [org.locationtech.jts.geom Coordinate GeometryFactory LineString]))
 
 (set! *warn-on-reflection* true)
 
@@ -141,10 +141,10 @@
     ;; If mixed, line partially visible (we accept this case)
     (not (pos? (bit-and outcode0 outcode1)))))
 
-(defn draw-all-hyperlanes
-  "Draw all hyperlanes with LOD based on zoom level.
-  Renders hyperlanes BEFORE stars so they appear as background connections."
-  [^Canvas canvas width height zoom pan-x pan-y game-state current-time]
+(defn plan-all-hyperlanes
+  "Plan hyperlane draw commands with LOD based on zoom level.
+  Returns {:commands [...] :rendered n}."
+  [width height zoom pan-x pan-y game-state current-time]
   (let [hyperlane-data (state/hyperlanes game-state)
         settings (state/hyperlane-settings game-state)
         scheme (get color-schemes (:color-scheme settings) (:blue color-schemes))
@@ -159,75 +159,65 @@
                     (< zoom 0.8) :far
                     (< zoom 2.0) :medium
                     :else :close)
-        rendered (atom 0)
-        pulse-frequency (* (:pulse-speed hyperlane-config) animation-speed)]
-    (doseq [{:keys [from-id to-id base-width color-start color-end glow-color animation-offset]} hyperlane-data]
-      (let [from-star (state/star-by-id game-state from-id)
-            to-star (state/star-by-id game-state to-id)]
-        (when (and from-star to-star)
-          (let [from-x (camera/transform-position (:x from-star) zoom pan-x)
-                from-y (camera/transform-position (:y from-star) zoom pan-y)
-                to-x (camera/transform-position (:x to-star) zoom pan-x)
-                to-y (camera/transform-position (:y to-star) zoom pan-y)
-                dx (- to-x from-x)
-                dy (- to-y from-y)
-                screen-length (Math/sqrt (+ (* dx dx) (* dy dy)))]
-            (when (and (line-segment-visible? from-x from-y to-x to-y width height)
-                       (> screen-length (:min-visible-length hyperlane-config)))
-              (swap! rendered inc)
-              (let [line-width-base (camera/transform-size (* base-width width-scale) zoom)
-                    start (or color-start start-color)
-                    end (or color-end end-color)
-                    glow (or glow-color glow-color-applied)]
-                (case lod-level
-                  :far
-                  (let [paint (doto (Paint.)
-                                (.setColor (unchecked-int start))
-                                (.setStrokeWidth (float (max 1.0 (* width-scale 1.0))))
-                                (.setMode PaintMode/STROKE))]
-                    (.drawLine canvas (float from-x) (float from-y)
-                               (float to-x) (float to-y) paint)
-                    (.close paint))
-
-                  :medium
-                  (let [paint (doto (Paint.)
-                                (.setColor (unchecked-int start))
-                                (.setStrokeWidth (float line-width-base))
-                                (.setStrokeCap PaintStrokeCap/ROUND)
-                                (.setMode PaintMode/STROKE))]
-                    (.drawLine canvas (float from-x) (float from-y)
-                               (float to-x) (float to-y) paint)
-                    (.close paint))
-
-                  :close
-                  (let [animation-phase (+ (* current-time pulse-frequency Math/PI 2)
-                                           (or animation-offset 0.0))
-                        pulse (if animation? (Math/sin animation-phase) 0.0)
-                        width-multiplier (if animation?
-                                           (+ 1.0 (* pulse (:pulse-amplitude hyperlane-config)))
-                                           1.0)
-                        animated-width (* line-width-base width-multiplier)
-                        glow-width (* animated-width 3.0)
-                        glow-paint (doto (Paint.)
-                                     (.setColor (unchecked-int glow))
-                                     (.setStrokeWidth (float glow-width))
-                                     (.setStrokeCap PaintStrokeCap/ROUND)
-                                     (.setMode PaintMode/STROKE))
-                        colors (int-array [start end])
-                        shader (Shader/makeLinearGradient
-                                (float from-x) (float from-y)
-                                (float to-x) (float to-y)
-                                colors nil)
-                        main-paint (doto (Paint.)
-                                     (.setShader shader)
-                                     (.setStrokeWidth (float animated-width))
-                                     (.setStrokeCap PaintStrokeCap/ROUND)
-                                     (.setMode PaintMode/STROKE))]
-                    (.drawLine canvas (float from-x) (float from-y)
-                               (float to-x) (float to-y) glow-paint)
-                    (.close glow-paint)
-                    (.drawLine canvas (float from-x) (float from-y)
-                               (float to-x) (float to-y) main-paint)
-                    (.close shader)
-                    (.close main-paint)))))))))
-    @rendered))
+        pulse-frequency (* (:pulse-speed hyperlane-config) animation-speed)
+        {:keys [commands rendered]}
+        (reduce
+         (fn [{:keys [commands rendered]} {:keys [from-id to-id base-width color-start color-end glow-color animation-offset]}]
+           (let [from-star (state/star-by-id game-state from-id)
+                 to-star (state/star-by-id game-state to-id)]
+             (if (and from-star to-star)
+               (let [from-x (camera/transform-position (:x from-star) zoom pan-x)
+                     from-y (camera/transform-position (:y from-star) zoom pan-y)
+                     to-x (camera/transform-position (:x to-star) zoom pan-x)
+                     to-y (camera/transform-position (:y to-star) zoom pan-y)
+                     dx (- to-x from-x)
+                     dy (- to-y from-y)
+                     screen-length (Math/sqrt (+ (* dx dx) (* dy dy)))]
+                 (if (and (line-segment-visible? from-x from-y to-x to-y width height)
+                          (> screen-length (:min-visible-length hyperlane-config)))
+                   (let [line-width-base (camera/transform-size (* base-width width-scale) zoom)
+                         start (or color-start start-color)
+                         end (or color-end end-color)
+                         glow (or glow-color glow-color-applied)]
+                     (case lod-level
+                       :far {:commands (conj commands
+                                             (commands/line {:x from-x :y from-y}
+                                                            {:x to-x :y to-y}
+                                                            {:stroke-color start
+                                                             :stroke-width (max 1.0 (* width-scale 1.0))}))
+                             :rendered (inc rendered)}
+                       :medium {:commands (conj commands
+                                                 (commands/line {:x from-x :y from-y}
+                                                                {:x to-x :y to-y}
+                                                                {:stroke-color start
+                                                                 :stroke-width line-width-base
+                                                                 :stroke-cap :round}))
+                                :rendered (inc rendered)}
+                       :close (let [animation-phase (+ (* current-time pulse-frequency Math/PI 2)
+                                                       (or animation-offset 0.0))
+                                    pulse (if animation? (Math/sin animation-phase) 0.0)
+                                    width-multiplier (if animation?
+                                                       (+ 1.0 (* pulse (:pulse-amplitude hyperlane-config)))
+                                                       1.0)
+                                    animated-width (* line-width-base width-multiplier)]
+                                {:commands (conj commands
+                                                 (commands/line {:x from-x :y from-y}
+                                                                {:x to-x :y to-y}
+                                                                {:stroke-color start
+                                                                 :stroke-width animated-width
+                                                                 :stroke-cap :round
+                                                                 :gradient {:start start
+                                                                            :end end}
+                                                                 :glow {:color glow
+                                                                        :multiplier 3.0}
+                                                                 :animation {:phase animation-phase
+                                                                             :pulse-amplitude (:pulse-amplitude hyperlane-config)
+                                                                             :enabled? animation?}}))
+                                 :rendered (inc rendered)})
+                       {:commands commands :rendered rendered}))
+                   {:commands commands :rendered rendered}))
+               {:commands commands :rendered rendered})))
+         {:commands [] :rendered 0}
+         hyperlane-data)]
+    {:commands commands
+     :rendered rendered}))

@@ -10,6 +10,8 @@
             [silent-king.voronoi :as voronoi]
             [silent-king.regions :as regions]
             [silent-king.render.galaxy :as render-galaxy]
+            [silent-king.render.commands :as commands]
+            [silent-king.render.skia :as skia]
             [nrepl.server :as nrepl]
             [cider.nrepl :refer [cider-nrepl-handler]])
   (:import [org.lwjgl.glfw GLFW GLFWErrorCallback GLFWCursorPosCallbackI GLFWMouseButtonCallbackI GLFWScrollCallbackI GLFWKeyCallbackI]
@@ -193,10 +195,9 @@
 
 
 
-(defn draw-frame [^Canvas canvas width height time game-state]
-  ;; Clear background
-  (.clear canvas (unchecked-int 0xFF000000))
-
+(defn frame-world-plan
+  "Build world draw commands and metrics for a frame."
+  [width height time game-state]
   (let [camera (state/get-camera game-state)
         assets (state/get-assets game-state)
         zoom (:zoom camera)
@@ -206,15 +207,11 @@
         voronoi-enabled (state/voronoi-enabled? game-state)
         stars-and-planets-enabled (state/stars-and-planets-enabled? game-state)
         selected-star-id (state/selected-star-id game-state)
-
-        ;; 4-Level LOD system
         lod-level (cond
-                    (< zoom 0.5) :xs       ;; Far zoom: use xs atlas (64x64)
-                    (< zoom 1.5) :small    ;; Medium zoom: use small atlas (128x128)
-                    (< zoom 4.0) :medium   ;; Close zoom: use medium atlas (256x256)
-                    :else :full)           ;; Very close zoom: use full-resolution images
-
-        ;; Select atlas based on LOD level (or nil for full-res)
+                    (< zoom 0.5) :xs
+                    (< zoom 1.5) :small
+                    (< zoom 4.0) :medium
+                    :else :full)
         atlas-image (case lod-level
                       :xs (:atlas-image-xs assets)
                       :small (:atlas-image-small assets)
@@ -230,29 +227,19 @@
                      :small (:atlas-size-small assets)
                      :medium (:atlas-size-medium assets)
                      :full nil)
-
-        ;; Get star images for full-res rendering
         star-images (:star-images assets)
-
         planet-atlas-image (:planet-atlas-image-medium assets)
         planet-atlas-metadata (:planet-atlas-metadata-medium assets)
-
-        ;; Stars stored as pure data
         stars-by-id (state/stars game-state)
         stars (vals stars-by-id)
         planets (state/planet-seq game-state)
-
-        ;; Frustum culling: filter visible stars using non-linear transform
         visible-stars (if stars-and-planets-enabled
                         (filter (fn [{:keys [x y size]}]
                                   (render-galaxy/star-visible? x y size pan-x pan-y width height zoom))
                                 stars)
                         [])
-        visible-star-count (if stars-and-planets-enabled
-                             (count visible-stars)
-                             0)
+        visible-star-count (if stars-and-planets-enabled (count visible-stars) 0)
         total-star-count (count stars)
-
         render-planets? (and stars-and-planets-enabled
                              (>= zoom planet-visibility-zoom)
                              planet-atlas-image
@@ -275,113 +262,97 @@
                                          :star-screen-y star-screen-y
                                          :screen-radius screen-radius
                                          :ring-visible? ring-visible?
-                                         :planet-visible? planet-visible?
-                                         :screen-x screen-x
-                                         :screen-y screen-y
-                                         :screen-size screen-size}))))
+                                        :planet-visible? planet-visible?
+                                        :screen-x screen-x
+                                        :screen-y screen-y
+                                        :screen-size screen-size}))))
                                 planets))
         visible-planet-count (count visible-planets)
-        total-planet-count (count planets)]
+        total-planet-count (count planets)
+        hyper-plan (if hyperlanes-enabled
+                     (hyperlanes/plan-all-hyperlanes width height zoom pan-x pan-y game-state time)
+                     {:commands [] :rendered 0})
+        base-commands (vec (:commands hyper-plan))
+        world-commands (transient base-commands)
+        world-commands (reduce (fn [cmds {:keys [id x y size rotation-speed sprite-path]}]
+                                 (let [screen-x (transform-position x zoom pan-x)
+                                       screen-y (transform-position y zoom pan-y)
+                                       screen-size (transform-size size zoom)
+                                       rotation (* time 30 (double (or rotation-speed 0.0)))
+                                       star-cmds (cond
+                                                   (= lod-level :full) (render-galaxy/plan-full-res-star star-images sprite-path screen-x screen-y screen-size rotation)
+                                                   :else (render-galaxy/plan-star-from-atlas atlas-image atlas-metadata sprite-path screen-x screen-y screen-size rotation atlas-size))
+                                       star-cmds (cond-> (or star-cmds [])
+                                                   (= id selected-star-id) (into (render-galaxy/plan-selection-highlight screen-x screen-y screen-size time)))]
+                                   (reduce conj! cmds star-cmds)))
+                               world-commands
+                               visible-stars)
+        voronoi-plan (if (and voronoi-enabled (seq (state/voronoi-cells game-state)))
+                       (voronoi/plan-voronoi-cells width height zoom pan-x pan-y game-state time)
+                       {:commands [] :rendered 0})
+        world-commands (reduce conj! world-commands (:commands voronoi-plan))
+        region-plan (regions/plan-regions zoom pan-x pan-y game-state)
+        world-commands (reduce conj! world-commands (:commands region-plan))
+        world-commands (reduce (fn [cmds {:keys [screen-radius star-screen-x star-screen-y ring-visible?]}]
+                                 (if (and render-planets? ring-visible?)
+                                   (reduce conj! cmds (render-galaxy/plan-orbit-ring star-screen-x star-screen-y screen-radius))
+                                   cmds))
+                               world-commands
+                               visible-planets)
+        {:keys [commands planets-rendered]}
+        (reduce (fn [{:keys [commands planets-rendered]} {:keys [planet screen-x screen-y screen-size planet-visible?]}]
+                  (if (and render-planets? planet-visible? (some? (:sprite-path planet)))
+                    (let [planet-cmds (render-galaxy/plan-planet-from-atlas planet-atlas-image planet-atlas-metadata (:sprite-path planet) screen-x screen-y screen-size)]
+                      {:commands (into commands planet-cmds)
+                       :planets-rendered (inc planets-rendered)})
+                    {:commands commands :planets-rendered planets-rendered}))
+                {:commands (persistent! world-commands) :planets-rendered 0}
+                visible-planets)
+        metrics {:total-stars total-star-count
+                 :visible-stars visible-star-count
+                 :total-planets total-planet-count
+                 :visible-planets visible-planet-count
+                 :hyperlane-count (count (state/hyperlanes game-state))
+                 :visible-hyperlanes (:rendered hyper-plan)
+                 :voronoi-cells (count (state/voronoi-cells game-state))
+                 :visible-voronoi (:rendered voronoi-plan)
+                 :planets-rendered planets-rendered}]
+    {:commands commands
+     :metrics metrics}))
 
-    ;; Note: No canvas transform needed - we calculate screen positions per-star with non-linear scaling
-
-    ;; Draw hyperlanes BEFORE stars (so they appear as background connections)
-    (if hyperlanes-enabled
-      (let [hyperlanes-rendered (hyperlanes/draw-all-hyperlanes canvas width height zoom pan-x pan-y game-state time)]
-        ;; Store hyperlane count for UI display
-        (swap! game-state assoc-in [:debug :hyperlanes-rendered] hyperlanes-rendered))
-      (swap! game-state assoc-in [:debug :hyperlanes-rendered] 0))
-
-    ;; Draw visible stars using 4-level LOD
-    (doseq [{:keys [id x y size rotation-speed sprite-path]} visible-stars]
-      (let [world-x x
-            world-y y
-            base-size size
-            ;; Transform to screen coordinates with non-linear scaling
-            screen-x (transform-position world-x zoom pan-x)
-            screen-y (transform-position world-y zoom pan-y)
-            screen-size (transform-size base-size zoom)
-            rotation (* time 30 (double (or rotation-speed 0.0)))]
-        (when (= id selected-star-id)
-          (render-galaxy/draw-selection-highlight canvas screen-x screen-y screen-size time))
-        (if (= lod-level :full)
-          ;; Draw from full-resolution image
-          (render-galaxy/draw-full-res-star canvas star-images sprite-path screen-x screen-y screen-size rotation)
-          ;; Draw from texture atlas
-          (render-galaxy/draw-star-from-atlas canvas atlas-image atlas-metadata sprite-path screen-x screen-y screen-size rotation atlas-size))))
-
-    ;; Draw Voronoi overlay ON TOP of stars so it is always visible
-    (if (and voronoi-enabled (seq (state/voronoi-cells game-state)))
-      (let [voronoi-rendered (voronoi/draw-voronoi-cells canvas width height zoom pan-x pan-y game-state time)]
-        (swap! game-state assoc-in [:debug :voronoi-rendered] voronoi-rendered))
-      (swap! game-state assoc-in [:debug :voronoi-rendered] 0))
-
-    ;; Draw Region names
-    (when (seq (state/regions game-state))
-      (regions/draw-regions canvas zoom pan-x pan-y game-state))
-
-    ;; Draw orbit rings then planets (planets on top of rings)
-    (when render-planets?
-      (doseq [{:keys [screen-radius star-screen-x star-screen-y ring-visible?]} visible-planets]
-        (when ring-visible?
-          (render-galaxy/draw-orbit-ring canvas star-screen-x star-screen-y screen-radius))))
-
-    ;; Draw planets after stars and rings so they appear on top
-    (if render-planets?
-      (let [planets-drawn (reduce (fn [acc {:keys [planet screen-x screen-y screen-size planet-visible?]}]
-                                    (if (and planet-visible?
-                                             (some? (:sprite-path planet)))
-                                      (do
-                                        (render-galaxy/draw-planet-from-atlas canvas planet-atlas-image planet-atlas-metadata (:sprite-path planet) screen-x screen-y screen-size)
-                                        (inc acc))
-                                      acc))
-                                  0
-                                  visible-planets)]
-        (swap! game-state assoc-in [:debug :planets-rendered] planets-drawn))
-      (swap! game-state assoc-in [:debug :planets-rendered] 0))
-
-    ;; Calculate FPS and metrics
+(defn draw-frame [^Canvas canvas width height time game-state]
+  (let [{:keys [commands metrics]} (frame-world-plan width height time game-state)
+        ui-result (react-app/render! nil {:x 0.0
+                                          :y 0.0
+                                          :width width
+                                          :height height}
+                                     game-state)
+        ui-commands (:commands ui-result)
+        frame-commands (into [(commands/clear 0xFF000000)]
+                             (concat commands ui-commands))]
+    (skia/draw-commands! canvas frame-commands)
     (let [time-state (state/get-time game-state)
           frame-count (:frame-count time-state)
           current-time (:current-time time-state)
           fps (if (pos? current-time) (/ frame-count current-time) 0.0)
-          hyperlanes-count (get-in @game-state [:debug :hyperlanes-rendered] 0)
-          hyperlane-count (count (state/hyperlanes game-state))
-          voronoi-count (get-in @game-state [:debug :voronoi-rendered] 0)
-          total-voronoi (count (state/voronoi-cells game-state))
-
-          ;; Approximate frame time from FPS
+          hyperlanes-count (:visible-hyperlanes metrics 0)
           frame-time-ms (/ 1000.0 (max fps 0.0001))
-
-          ;; Compute memory usage
           runtime (Runtime/getRuntime)
           used-memory (- (.totalMemory runtime) (.freeMemory runtime))
           memory-mb (/ used-memory 1048576.0)
-
-          ;; Build metrics map
-          metrics {:fps fps
-                   :frame-time-ms frame-time-ms
-                   :total-stars total-star-count
-                   :visible-stars visible-star-count
-                   :total-planets total-planet-count
-                   :visible-planets visible-planet-count
-                   :hyperlane-count hyperlane-count
-                   :visible-hyperlanes (if hyperlanes-enabled hyperlanes-count 0)
-                   :draw-calls (+ visible-star-count visible-planet-count hyperlanes-count voronoi-count)
-                   :memory-mb memory-mb
-                   :voronoi-cells total-voronoi
-                   :visible-voronoi voronoi-count
-                   :current-time current-time}]
-
-      ;; Store latest metrics and append to history for overlay/chart usage
-      (state/record-performance-metrics! game-state metrics))
-
-    ;; Reactified UI overlay
-    (react-app/render! canvas {:x 0.0
-                               :y 0.0
-                               :width width
-                               :height height}
-                       game-state)))
+          metrics* (assoc metrics
+                         :fps fps
+                         :frame-time-ms frame-time-ms
+                         :draw-calls (+ (:visible-stars metrics 0)
+                                        (:planets-rendered metrics 0)
+                                        hyperlanes-count
+                                        (:visible-voronoi metrics 0))
+                         :memory-mb memory-mb
+                         :current-time current-time)]
+      (swap! game-state assoc-in [:debug :hyperlanes-rendered] hyperlanes-count)
+      (swap! game-state assoc-in [:debug :voronoi-rendered] (:visible-voronoi metrics 0))
+      (swap! game-state assoc-in [:debug :planets-rendered] (:planets-rendered metrics 0))
+      (state/record-performance-metrics! game-state (dissoc metrics* :planets-rendered)))))
 
 (defn render-loop [game-state render-state]
   (println "Starting render loop...")
