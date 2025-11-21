@@ -1,0 +1,157 @@
+# Context: solar sailer spaceship for a retro space strategy game
+# Style: Bold, cartoony, and highly artistic with exaggerated features that make it instantly recognizable. Use vibrant colors, clear visual details, and game-friendly art (like Stellaris or FTL). Make features OBVIOUS and READABLE at a glance - show distinctive details clearly. NOT photorealistic - use artistic stylization with bold outlines and saturated colors. Use orthographic top-down perspective. Emphasize the majestic beauty of solar sails catching starlight.
+#
+# Solar Sailer Generation Prompts
+# One prompt per line - customize freely without rebuilding!
+# Empty lines and lines starting with # (except Context/Style) are ignored
+
+# Classic Solar Sailers - Traditional Designs
+Create a elegant solar sailer with single enormous rectangular golden sail, minimal hull design, graceful proportions, and peaceful exploration aesthetic
+Create a traditional solar yacht with triangular reflective sail, sleek streamlined hull, chrome accents, and luxury cruiser appearance
+Create a butterfly solar ship with dual symmetrical wing-like sails, delicate framework, iridescent sail surfaces, and beautiful organic curves
+Create a kite-shaped solar sailer with diamond sail configuration, tension cables visible, lightweight frame, and aerial dancer elegance
+Create a classic square-rigger with multiple rectangular sails in sequence, nautical inspiration, tall ship aesthetic, and age of sail grandeur
+
+# Multi-Sail Configurations - Complex Arrays
+Create a triple-sail cruiser with three overlapping sails at different angles, complex rigging, optimal light capture, and technical sophistication
+Create a flower petal sailer with six sails radiating from central hub, blooming flower pattern, symmetrical beauty, and botanical inspiration
+Create a accordion-fold sailer with expandable pleated sails, compact storage form, deployment mechanism visible, and adaptive configuration
+Create a windmill solar ship with four perpendicular sails in cross formation, rotating configuration, pinwheel aesthetic, and dynamic rotation
+Create a fractal sail vessel with recursive sail-within-sail patterns, mathematical precision, infinite detail aesthetics, and complex geometry
+Create a layered sail stack with dozen thin parallel sails creating depth, venetian blind effect, and maximum surface area design
+
+# Luxury Solar Cruisers - Elegant Vessels
+Create a royal solar yacht with gilt-edged golden sails, ornate filigree framework, jeweled hull decorations, and imperial magnificence
+Create a art deco solar liner with geometric sail patterns, chrome and brass details, 1920s elegance, and sophisticated luxury travel
+Create a crystal palace sailer with transparent diamond sails, glass cathedral architecture, rainbow light refraction, and ethereal beauty
+Create a zen meditation ship with pure white minimalist sails, clean lines, peaceful proportions, and serene contemplative design
+Create a ballroom cruiser with illuminated sails showing party lights, champagne gold accents, celebration aesthetics, and festive elegance
+Create a honeymoon sailer with heart-shaped sail arrangement, rose gold surfaces, romantic lighting, and couples' retreat luxury
+
+# Racing Solar Yachts - Speed and Competition
+Create a racing speedster with ultra-thin high-performance sails, aerodynamic hull, racing stripes, and velocity-optimized design
+Create a regatta champion with massive oversized sail for maximum acceleration, trophy decorations, winner's laurels, and competitive glory
+Create a solar dragster with elongated needle-thin hull, minimal drag profile, speed record aesthetics, and extreme velocity focus
+Create a stunt performer with flexible articulated sails, acrobatic maneuvering capability, airshow decorations, and exhibition flying design
+Create a pursuit racer with asymmetric sail configuration, tactical positioning advantage, interceptor profile, and chase specialist design
+Create a endurance marathon sailer with efficient optimal sail shape, long-range fuel-free travel, minimalist durability, and distance record focus
+
+# Military Solar Ships - Tactical Applications
+Create a stealth solar infiltrator with matte black light-absorbing sails, radar-deflecting angles, reconnaissance profile, and covert operations design
+Create a solar patrol frigate with armored sail framework, defensive turrets at sail edges, border security role, and guardian vessel aesthetic
+Create a ambush predator with retractable sails for quick deployment, strike capability, hunter design, and tactical surprise specialist
+Create a siege mirror ship with reflective focusing sails directing concentrated starlight beams, solar weapon system, and energy warfare focus
+Create a decoy solar drone with minimal systems, expendable design, distraction tactics, and electronic warfare support role
+Create a solar command frigate with communication arrays on sail surface, fleet coordination systems, and tactical nerve center design
+
+# Industrial and Cargo - Commercial Applications
+Create a massive solar freighter with reinforced cargo sails doubling as storage surfaces, bulk hauler, and economical fuel-free transport
+Create a ice hauler with insulated silvered sails, frozen cargo containers, cold chain logistics, and refrigerated transport specialization
+Create a mining barge with ore collection nets attached to sail framework, resource extraction support, and industrial workhorse design
+Create a lumber carrier with wooden texture sails, timber cargo visible, construction material transport, and rustic industrial aesthetic
+Create a grain ship with canvas-textured sails, agricultural cargo holds, farming civilization supply, and harvest transport mission
+Create a container ship with modular cargo pods attached to sail framework, standardized shipping, and interstellar commerce design
+
+# Exploration and Science - Discovery Vessels
+Create a deep space explorer with enormous long-range sails, survey equipment arrays, stellar cartography focus, and pioneering mission design
+Create a stellar observatory with telescope integrated into sail framework, astronomical research vessel, science mission, and discovery focus
+Create a xenobiology research ship with specimen collection nets on sails, alien life study equipment, and scientific expedition aesthetic
+Create a radiation survey vessel with sensor-embedded sails measuring stellar emissions, data collection grids, and space weather monitoring
+Create a comet chaser with high-speed pursuit sails, sample collection equipment, astronomical phenomena study, and celestial investigation focus
+Create a nebula mapper with multi-spectrum sensing sails, cloud penetration capability, and hazardous environment research design
+
+# Cultural and Historical - Civilization Aesthetics
+Create a Egyptian solar barge with golden Ra sun disk sail, hieroglyphic decorations, pharaoh's ceremonial vessel, and ancient mythology theme
+Create a Chinese junk sailer with red traditional batten sails, dragon decorations, oriental maritime heritage, and dynasty elegance
+Create a Polynesian outrigger with tribal pattern sails, navigator star charts visible, Pacific Islander heritage, and wayfinding tradition
+Create a Viking longship with striped square sail, dragon figurehead, Norse exploration spirit, and raider aesthetic adapted to space
+Create a Venetian gondola with ornate decorative sail, carnival mask patterns, Renaissance luxury, and romantic Italian maritime culture
+Create a Japanese pleasure barge with cherry blossom decorated sails, pagoda architecture, serene gardens visible, and feudal elegance
+
+# Exotic Sail Materials - Unique Compositions
+Create a mirror sail ship with perfectly reflective chrome sails, blinding sunlight reflection, laser-like focus capability, and metallic brilliance
+Create a holographic sail vessel with rainbow iridescent shifting sails, spectral color display, and light-bending aesthetics
+Create a liquid metal ship with flowing mercury-like sails, shape-shifting surfaces, adaptive configuration, and exotic matter design
+Create a plasma sail cruiser with glowing ionized gas sails, electric purple and blue crackling energy, and exotic propulsion visible
+Create a crystal lattice sailer with geometric diamond structure sails, transparent faceted surfaces, and jewel-like prismatic beauty
+Create a gossamer web ship with ultra-thin spider silk texture sails, delicate ethereal appearance, and impossibly light construction
+
+# Hybrid Designs - Combined Technologies
+Create a solar-electric hybrid with photovoltaic panel sails, dual energy capture, battery storage visible, and self-sufficient power design
+Create a magnetic sail combo with charged particle deflection, solar wind and radiation pressure hybrid, and advanced propulsion fusion
+Create a solar-ion hybrid with engine nacelles at sail edges, combined propulsion systems, and technological integration design
+Create a warp sail vessel with FTL capability framework, space-folding equipment, sail-assisted jump drives, and exotic physics application
+Create a shield-sail ship with defensive barrier generation from sail energy, protective deployment, and dual-purpose tactical design
+Create a cloak-sail stealth ship with light-bending sail surfaces, invisibility capability, and advanced metamaterial construction
+
+# Atmospheric Solar Ships - Planetary Operations
+Create a cloud skimmer with atmospheric pressure sails, gas giant harvesting equipment, and float-in-sky design
+Create a thermal rider using planetary heat currents, volcanic exhaust sails, and hot air balloon hybrid aesthetics
+Create a aurora sailer with magnetic field interaction sails, polar region operations, and northern lights energy harvesting
+Create a stratospheric yacht with high-altitude cruise sails, thin atmosphere optimization, and sky palace luxury design
+Create a storm surfer with lightning-resistant sails, tempest energy capture, and extreme weather thrill-seeking vessel
+Create a sunset chaser with twilight zone operations, day-night terminator sailing, and eternal golden hour aesthetic
+
+# Swarm and Formation - Coordinated Groups
+Create a butterfly migration swarm with hundreds of small matching sails in formation, collective beauty, and synchronized fleet movement
+Create a solar flower garden with multiple ships arranged in bloom pattern, coordinated dancing formation, and artistic group choreography
+Create a mirror array fleet with focused light concentration from multiple reflective sails, combined beam weapon, and tactical coordination
+Create a wedding formation with bride and groom paired sailers, trailing ribbon sails, and ceremonial fleet procession
+Create a solar carousel with ships orbiting in merry-go-round pattern, carnival ride formation, and playful synchronized motion
+Create a sailing school convoy with student vessels in orderly lines, training exercise formation, and educational fleet maneuvers
+
+# Ancient and Derelict - Abandoned Vessels
+Create a ghost sailer with tattered weathered sails full of holes, spectral appearance, abandoned drifter, and haunted derelict aesthetic
+Create an ancient relic with corroded framework, sail remnants fluttering, archaeological find appearance, and lost civilization mystery
+Create a time capsule ship with preserved vintage sails, museum piece appearance, historical artifact design, and frozen-in-time aesthetic
+Create a battle-scarred veteran with burned sail edges, patched repairs, combat damage history, and proud warrior's retirement
+Create a overgrown wreck with space vines growing on sail framework, nature reclaiming, garden wilderness, and beautiful decay
+Create a frozen derelict with ice-covered sails, suspended animation appearance, cold storage preservation, and arctic tomb design
+
+# Experimental and Prototype - Cutting Edge
+Create a nano-sail ship with microscopic intelligent fabric sails, self-repairing surfaces, adaptive texture, and next-gen material science
+Create a programmable sail with digital display surface showing images and text, communication billboard, and adaptive appearance technology
+Create a gravity lens sail bending spacetime itself, impossible physics, reality-warping visual distortion, and theoretical propulsion test
+Create a dark matter sail interacting with invisible forces, mysterious unseen propulsion, exotic physics experiment, and cutting-edge theory
+Create a quantum entangled sail with paired particles, instantaneous coordination, spooky action aesthetics, and paradoxical technology
+Create a dimensional rift sail opening portals in fabric, reality tear propulsion, impossible geometry, and experimental space-folding
+
+# Ceremonial and Religious - Sacred Vessels
+Create a prayer wheel ship with mantra-inscribed rotating sails, Buddhist meditation vessel, spiritual journey focus, and sacred pilgrimage design
+Create a cathedral sailer with stained glass pattern sails, holy light filtering through, religious procession vessel, and divine radiance aesthetics
+Create a sun worship ship with golden solar deity symbols, ritual celebration sails, ancient star religion, and cosmic reverence design
+Create a meditation mandala with intricate geometric sacred pattern sails, spiritual symmetry, enlightenment journey vessel, and mystical focus
+Create a offering vessel with gift-laden sails for celestial gods, sacrifice mission, devotional purpose, and religious tribute carrier
+Create a prophecy ship with zodiac constellation pattern sails, divination equipment, oracle mission, and fate-reading mystical design
+
+# Artistic and Performance - Creative Expression
+Create a ballet dancer ship with graceful flowing ribbon-like sails, performance art vessel, elegant choreography motion, and artistic beauty focus
+Create a origami sailer with paper-folding pattern sails, geometric art design, Japanese paper craft aesthetics, and mathematical elegance
+Create a peacock display with iridescent multi-colored fan sails, showing off plumage, pride and beauty focus, and magnificent exhibition
+Create a aurora artist with light-painting sails leaving colorful trails, sky canvas creator, and cosmic artwork performance vessel
+Create a music box ship with sails showing musical notation, symphony performance theme, orchestral elegance, and harmonic motion design
+Create a sculpture gallery with three-dimensional art piece sails, mobile installation aesthetic, and floating museum exhibition vessel
+
+# Specialized Roles - Unique Missions
+Create a lighthouse beacon with reflective signal sails, navigation aid mission, safety beacon purpose, and guiding light design
+Create a message courier with communication relay sails, postal service vessel, information carrier, and diplomatic dispatch mission
+Create a weather station with meteorological sensor sails, climate monitoring equipment, and atmospheric research platform design
+Create a search and rescue ship with high-visibility orange sails, emergency beacon, life-saving mission, and humanitarian aid focus
+Create a time capsule carrier with archival storage sails, generational message delivery, and long-term preservation mission vessel
+Create a seed bank sailer with genetic archive containers, life preservation mission, biodiversity protection, and species salvation ark
+
+# Miniature and Massive - Size Extremes
+Create a pocket solar skiff with tiny personal sail, one-person vessel, minimalist efficiency, and personal watercraft scale adaptation
+Create a mega-sail titan with city-sized sail surface, colossal proportions, engineering marvel scale, and awe-inspiring magnitude
+Create a solar surfboard with rider-sized minimal sail, personal sport craft, extreme recreation vessel, and solo adventurer design
+Create a continental sailer with geography-scale sails visible from planets, migration ship magnitude, and civilization-moving colossus
+Create a fairy sail with butterfly-wing delicate tiny sails, magical creature scale, enchanted miniature vessel, and whimsical tiny craft
+Create a world-sail that eclipses planets, incomprehensible mega-structure, stellar engineering marvel, and reality-defying enormity
+
+# Environmental Adaptation - Specialized Conditions
+Create a pulsar sailor with rapidly flashing radiation sails, neutron star environment operations, and extreme stellar phenomena adaptation
+Create a black hole skimmer with gravity-resistant reinforced sails, event horizon proximity operations, and extreme physics survival design
+Create a nebula drifter with dust-catching gossamer sails, interstellar cloud harvesting, and beautiful cosmic fog navigation
+Create a asteroid belt navigator with impact-resistant armored sails, debris field operations, and collision-hardened mining zone design
+Create a binary star dancer with dual-sided different-colored sails, two-sun system optimization, and twin stellar radiation capture
+Create a red giant harvester with heat-resistant golden sails, dying star proximity operations, and stellar atmosphere skimming design

@@ -1,0 +1,124 @@
+# Context: spaceship for a retro space strategy game
+# Style: Bold, cartoony, and highly artistic with exaggerated features that make it instantly recognizable. Use vibrant colors, clear visual details, and game-friendly art (like Stellaris or FTL). Make features OBVIOUS and READABLE at a glance - show distinctive details clearly. NOT photorealistic - use artistic stylization with bold outlines and saturated colors. Use orthographic top-down perspective.
+#
+# Spaceship Generation Prompts
+# One prompt per line - customize freely without rebuilding!
+# Empty lines and lines starting with # (except Context/Style) are ignored
+
+# Classic Military Vessels
+Create a classic wedge-shaped battlecruiser with visible gun turrets and bright engine glow at the back
+Create a heavily armored dreadnought with thick hexagonal plating, multiple weapon mounts, and imposing massive size
+Create a fast interceptor with twin engines glowing bright cyan and ultra-streamlined arrow-like shape
+Create a torpedo bomber with prominent missile racks, chunky angular design, and heavy ordnance pods
+Create a heavy gunship bristling with cannons and turrets in a menacing cross formation
+Create an aircraft carrier with visible rectangular hangar bays, flight deck markings, and massive scale
+
+# Stealth and Recon
+Create a sleek stealth fighter with sharp angular black design, minimal lights, and razor-blade wings
+Create a small scout ship with compact teardrop design, oversized forward sensors, and nimble appearance
+Create a stealthy corvette with dark matte hexagonal panels, minimal emissions, and predatory silhouette
+Create a ninja assassin ship with obsidian black angular design, hidden blade protrusions, and deadly elegant curves
+Create a shadow infiltrator with cloaking device shimmer effects, whisper-quiet design, and ghostly translucence
+
+# Industrial and Civilian
+Create a massive cargo freighter with huge stacked storage containers visible on top and bulky industrial frame
+Create a mining vessel with large mechanical drilling arms, ore processors, and rugged yellow industrial appearance
+Create a salvage tug with heavy-duty mechanical claws, towing cables, and battle-scarred industrial hull
+Create a terraforming ship with visible atmosphere processors, biosphere domes, and world-building equipment
+Create a construction barge with cranes, welding equipment, fabrication modules, and bright orange safety colors
+Create a refinery ship with massive fuel tanks, chemical processing pipes, and industrial smokestacks
+
+# Alien and Organic Designs
+Create an alien organic bioship with tentacle appendages, pulsing bioluminescent veins, and living chitinous texture
+Create a crystalline alien ship made of glowing prismatic crystals in perfect geometric sacred patterns
+Create an insectoid alien ship with beetle-like carapace, multiple articulated legs, and compound eye sensors
+Create a fungal spore ship with mushroom-like caps, spreading tendrils, and spore-launching pods
+Create a coral reef ship with branching calcium structures, symbiotic organisms, and underwater aesthetic
+Create a jellyfish drifter with translucent bell dome, trailing tentacles, and bioluminescent pulses
+
+# Advanced Technology
+Create an AI automated warship with perfect geometric precision, glowing circuit patterns, and cold robotic design
+Create a dimensional rift ship with reality-warping visual distortions, impossible Escher geometry, and portal effects
+Create a quantum phase ship flickering between states, multiple overlapping silhouettes, and probability fields
+Create a nanobot swarm ship composed of millions of tiny visible particles in shifting metallic cloud formation
+Create a gravity well ship with visible spatial distortion rings, black hole aesthetic, and warped light effects
+Create a time paradox vessel with temporal trails, clock mechanisms visible, and past/future overlay effects
+
+# Unique Civilizations
+Create a pirate raider with asymmetrical scavenged parts, skull markings, rust, and makeshift weapon attachments
+Create a religious temple ship with ornate spires, golden holy symbols, stained glass sections, and cathedral architecture
+Create a royal flagship with majestic design, elaborate golden filigree, regal purple banners, and crown motif
+Create a tribal war canoe ship with primitive decorations, bone ornaments, war paint patterns, and ritual totems
+Create an elven craft with flowing organic curves, vine patterns, leaf motifs, and nature-harmonious design
+Create a dwarven forge ship with hammer and anvil iconography, dense armor plating, and industrial steam vents
+
+# Special Purpose Vessels
+Create a diplomatic cruiser with elegant swooping curves, white and gold colors, peaceful symbols, and ornate decorations
+Create a science vessel with enormous sensor arrays, satellite dishes, observation windows, and laboratory pods
+Create a medical hospital ship with red cross symbols, clean white hull, ambulance bays, and healing aesthetics
+Create a prison barge with reinforced cells visible, guard towers, spotlights, and maximum security appearance
+Create a luxury cruise yacht with chrome finish, swimming pool on deck, elegant curves, and ostentatious wealth display
+Create a racing speedster with sponsorship decals, ultra-aerodynamic fins, neon underglow, and velocity streaks
+
+# Combat Specialists
+Create a ramming ship with massive reinforced prow spike, thick frontal armor, and brutal melee-focused design
+Create a missile frigate with vertical launch silos covering the deck, targeting radars, and ordnance-heavy loadout
+Create a point-defense destroyer with countless small turrets, defensive grid pattern, and shield projectors
+Create a siege breaker with massive drill cannon, bunker-busting equipment, and fortress-cracking weaponry
+Create a sniper ship with one enormous main gun, stabilization fins, long barrel, and precision targeting systems
+Create a flak cruiser with rapid-fire AA batteries, explosive shell patterns, and anti-fighter specialization
+
+# Atmospheric and Environmental
+Create a solar sail ship with enormous reflective golden sails catching starlight and minimal engine design
+Create an ice breaker with reinforced bow, heated hull plating, and arctic expedition equipment
+Create a lava submarine for magma ocean diving with heat shielding, glowing red accents, and volcanic aesthetic
+Create a cloud harvester with gas collection scoops, balloon-like sections, and atmospheric mining equipment
+Create a radiation shielded vessel with lead plating, hazard symbols, and contamination zone survival design
+Create a deep space long-hauler with extended fuel tanks, long-range comms, and sparse minimal design
+
+# Exotic and Mystical
+Create a psychic ship with glowing psionic energy waves, third-eye symbols, mind-pattern decorations, and ethereal aura
+Create an energy being ship made of pure crackling plasma with electric arcs and non-solid wavering form
+Create a living metal ship with liquid mercury surface, flowing metallic patterns, and shape-morphing abilities
+Create a void reaper with skeletal bone structure, death's head design, soul-harvesting tendrils, and dark aura
+Create a phoenix vessel with flame patterns, bird-of-prey silhouette, rebirth symbols, and fire trail effects
+Create a celestial shrine ship with constellation patterns, zodiac symbols, starlight glow, and cosmic mysticism
+
+# Historical and Cultural
+Create a viking longship in space with dragon figurehead, shield-lined hull, oar-like thrusters, and Norse runes
+Create a samurai warship with katana blade motifs, rising sun emblem, honor symbols, and feudal Japanese aesthetic
+Create an Egyptian sun barge with golden Ra symbols, hieroglyphic decorations, pyramid shapes, and pharaoh design
+Create a steampunk ironclad with visible gears, brass fittings, smoke stacks, and Victorian-era industrial design
+Create a Aztec temple ship with stepped pyramid structure, feathered serpent carvings, and ancient Mesoamerican patterns
+Create a cyberpunk street racer with neon lights, graffiti tags, chrome exhaust, and underground urban aesthetic
+
+# Specialized Roles
+Create a bounty hunter ship with grappling hooks, target acquisition systems, weapon pods, and menacing predatory look
+Create a merchant trader with colorful advertisement banners, varied cargo containers, and commercial bazaar aesthetic
+Create a exploration vessel with wide sensor wings, sample collection bays, star charts visible, and discovery focus
+Create a support frigate with repair drone bays, medical symbols, shield generators, and non-combat utility design
+Create a generational ark ship with rotating habitat rings, forests visible inside, massive city scale, and civilization carrier
+Create a plague ship with biohazard symbols, quarantine seals, toxic green ooze, and contamination warnings
+
+# Unconventional Designs
+Create a modular transformer ship with reconfigurable detachable sections, connection ports, and puzzle-like assembly
+Create a sphere mothership perfectly round with weapons emerging from surface panels and symmetrical design
+Create a multi-hull catamaran ship with parallel hulls connected by bridge, naval-inspired space design
+Create a flying saucer classic UFO with rotating lights, retro 1950s alien aesthetic, and dome cockpit
+Create a crescent moon ship in half-circle arc shape with inner curve weapons and celestial motif
+Create a cube freighter perfectly geometric with docking bays on each face and Borg-like industrial grid
+
+# Damaged and Derelict
+Create an ancient derelict ship with rusted corroded hull, missing hull sections, flickering lights, and ghostly appearance
+Create a war-scarred veteran with battle damage, scorch marks, hasty repairs, kill tally marks, and proud history
+Create a junker vessel assembled from mismatched scrap parts, exposed wiring, improvised patches, and barely-functional look
+Create a crash survivor with bent frame, emergency repairs, survival modifications, and desperate refugee aesthetic
+Create a abandoned colony ship overgrown with space vines, nature reclaiming, garden growing wild, and desolate beauty
+
+# Unique Concepts
+Create a drone carrier mothership launching visible swarms of tiny attack drones in cloud formations
+Create a festival party barge with disco lights, celebration decorations, confetti launchers, and joyous revelry theme
+Create a corporate executive yacht with clean professional lines, company logo prominent, business-class luxury, and board room windows
+Create a prototype experimental testbed with exposed experimental weapons, unstable technology, warning labels, and cutting-edge chaos
+Create a refugee transport packed with civilian additions, makeshift living quarters, hope symbols, and humanitarian mission
+Create a beast tamer ship with creature cages visible, xenobiology labs, and monster hunter equipment

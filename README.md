@@ -46,6 +46,44 @@ The run script automatically detects your operating system and launches the appl
 ./run.sh
 ```
 
+## Asset Generation
+
+The project includes a tool for generating game assets (stars, planets, ships) using the OpenRouter API (Gemini 2.5 Flash Image).
+
+### Prerequisites for Generation
+
+1.  Obtain an **OpenRouter API Key**.
+2.  Set it in your environment or create a `.env` file in the project root:
+    ```
+    OPENROUTER_API_KEY=your_key_here
+    ```
+
+### Running the Generator
+
+Use the provided helper scripts to generate assets based on prompt files.
+
+**Windows (PowerShell):**
+```powershell
+./scripts/generate-images.ps1 `
+  --prompts prompts/star_prompts.txt `
+  --reference-images assets/star.png `
+  --output assets/star_variations
+```
+
+**Linux / macOS:**
+```bash
+./scripts/generate-images.sh \
+  --prompts prompts/star_prompts.txt \
+  --reference-images assets/star.png \
+  --output assets/star_variations
+```
+
+**Options:**
+*   `--prompts <file>`: Path to the prompts file (required).
+*   `--reference-images <files>`: One or more reference images for style transfer.
+*   `--output <dir>`: Output directory for generated images.
+*   `--size <pixels>`: Image size (default: 1024).
+
 ## Controls
 
 *   **Pan**: Click and drag with the **Left Mouse Button** to move around the galaxy.

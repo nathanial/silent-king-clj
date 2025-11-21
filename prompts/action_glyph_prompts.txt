@@ -1,0 +1,39 @@
+# Context: minimalist geometric tactical icon glyph for a strategy game
+# Style: Minimalist geometric shapes with clean lines and simple forms. Color: Light mint/seafoam green (#8FD8B8 or similar pastel green). Background: Very dark gray or black (#1a1d23 or similar). Iconic and symbolic (NOT detailed or realistic). Strategic board game aesthetic (like Stellaris, FTL, or Paradox games). Instantly recognizable at small sizes (64x64 to 128x128). Centered composition with negative space. Use orthographic view.
+#
+# Action Glyph Prompts
+# One prompt per line - customize freely without rebuilding!
+# Empty lines and lines starting with # (except Context/Style) are ignored
+# Generates minimalist tactical command/action icons in mint/seafoam green
+
+# Combat Commands
+Create a minimalist attack icon - crossed swords or targeting reticle
+Create a minimalist defend icon - shield or defensive position symbol
+Create a minimalist retreat icon - backward arrow or escape symbol
+Create a minimalist hold position icon - anchor or stationary symbol
+Create a minimalist patrol icon - circular arrow or patrol route
+
+# Movement Commands
+Create a minimalist move icon - forward arrow or directional indicator
+Create a minimalist jump icon - warp or FTL travel symbol
+Create a minimalist dock icon - ship entering station symbol
+Create a minimalist orbit icon - circular path around object
+
+# Construction & Building
+Create a minimalist build icon - hammer and wrench or construction symbol
+Create a minimalist repair icon - wrench or repair tool symbol
+Create a minimalist upgrade icon - upward arrow or improvement symbol
+Create a minimalist demolish icon - explosive or destruction symbol
+
+# Exploration & Science
+Create a minimalist scan icon - radar sweep or sensor pulse
+Create a minimalist explore icon - magnifying glass or discovery symbol
+Create a minimalist colonize icon - flag or settlement symbol
+Create a minimalist survey icon - mapping or analysis symbol
+
+# Status Effects
+Create a minimalist damaged icon - crack or broken symbol
+Create a minimalist disabled icon - X or shutdown symbol
+Create a minimalist cloaked icon - stealth or invisibility symbol
+Create a minimalist shielded icon - protective barrier or energy shield
+Create a minimalist boosted icon - upward arrows or enhancement symbol

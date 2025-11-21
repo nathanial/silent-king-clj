@@ -41,3 +41,5 @@ assets/planet-atlas-medium.png
 assets/planet-atlas-medium.json
 
 scripts/__pycache__/
+.env
+legacy/

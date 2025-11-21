@@ -1,0 +1,53 @@
+# Context: celestial stars for a 4X space strategy game
+# Style: Bold, cartoony, and highly artistic with exaggerated features that make it instantly recognizable. Use vibrant colors, clear visual details, and game-friendly art (like Stellaris or FTL). Make features OBVIOUS and READABLE at a glance - show distinctive details clearly. NOT photorealistic - use artistic stylization with bold outlines and saturated colors. Use orthographic view.
+#
+# Stellaris Star Generation Prompts
+# One prompt per line - customize freely without rebuilding!
+# Empty lines and lines starting with # (except Context/Style) are ignored
+
+# Normal Stellar Classes
+Create a Class B bright blue main-sequence star with high energy output and brilliant blue coloring
+Create a Class A white main-sequence star with bluish-white appearance and clean bright glow
+Create a Class F yellow-white dwarf with wide habitable zone glow and warm yellow-white tones
+Create a Class F yellow-white dwarf with subtle surface detail and warm inviting glow
+Create a Class F yellow-white dwarf with clean bright appearance and yellowish corona
+Create a Class F yellow-white dwarf with pale yellow glow and smooth surface
+Create a Class F yellow-white dwarf with butter-yellow coloring and steady luminosity
+Create a Class F yellow-white dwarf with creamy yellow-white appearance and moderate corona
+Create a Class F yellow-white dwarf with soft yellow radiance and clear edges
+Create a Class G yellow dwarf star like the Sun with golden-yellow color and stable appearance
+Create a Class G yellow dwarf star with warm golden tones and subtle surface granulation
+Create a Class G yellow dwarf star with bright yellow core and gentle corona
+Create a Class G yellow dwarf star with honey-yellow color and even luminosity
+Create a Class G yellow dwarf star with rich golden glow and visible photosphere
+Create a Class G yellow dwarf star with amber-yellow coloring and warm radiance
+Create a Class G yellow dwarf star with sunflower-yellow brightness and moderate size
+Create a Class G yellow dwarf star with vibrant yellow appearance and subtle surface features
+Create a Class G yellow dwarf star with lemon-yellow core and diffuse outer glow
+Create a Class G yellow dwarf star with marigold-yellow color and steady brightness
+Create a Class G yellow dwarf star with bright golden-yellow surface and thin corona
+Create a Class G yellow dwarf star with warm yellow luminosity and clean appearance
+Create a Class K orange dwarf star with peachy-orange glow and long-lived steady luminosity
+Create a Class K orange dwarf star with soft amber tones and moderate brightness
+Create a Class K orange dwarf star with warm orange coloring and compact appearance
+Create a Class M red dwarf star that is small and dim with deep red coloring
+Create a Class M red dwarf star with dark crimson glow and tiny size
+Create a Class M red dwarf star with ruby-red color and low luminosity
+Create a Class M red giant with evolved massive size, cool reddish surface, and expanded radius
+Create a Class M red giant with enormous bloated appearance and deep orange-red coloring
+Create a Class M red giant with irregular surface patterns and massive corona
+Create a Class M red giant with mottled reddish surface and visible convection cells
+Create a red supergiant with massive scale, deep red color, and unstable surface activity
+Create a red supergiant with enormous size, crimson-red tones, and visible turbulent surface
+Create a red hypergiant with colossal size, deep red-orange color, and spectacular corona
+Create a yellow hypergiant with gigantic scale, golden-yellow brilliance, and powerful stellar winds
+Create a Class T brown dwarf failed star with barely visible dull reddish-brown glow and substellar appearance
+
+# Exotic and Remnant Objects
+Create a pulsar neutron star with rapid rotation, intense magnetic field lines, and beaming radiation jets
+Create a black hole with event horizon, accretion disk, gravitational lensing effect, and dark center
+Create a neutron star that is extremely dense and compact with incredibly bright white surface
+
+# Special and Unique Stars
+Create a Viridescent Lightbringer modified G-type star with eerie green luminous glow and unnatural appearance
+Create an Astral Star with reality-warping rift appearance, purple-blue otherworldly coloring, and dimensional distortion effects

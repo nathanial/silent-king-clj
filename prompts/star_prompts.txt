@@ -1,0 +1,58 @@
+# Context: celestial star for a retro space strategy game
+# Style: Bold, cartoony, and highly artistic with exaggerated features that make it instantly recognizable. Use vibrant colors, clear visual details, and game-friendly art (like Stellaris or FTL). Make features OBVIOUS and READABLE at a glance - show distinctive details clearly. NOT photorealistic - use artistic stylization with bold outlines and saturated colors. Use orthographic view.
+#
+# Star Generation Prompts
+# One prompt per line - customize freely without rebuilding!
+# Empty lines and lines starting with # (except Context/Style) are ignored
+
+Create a yellow main sequence star like our Sun with a bright glowing core and subtle corona
+Create a red giant star with deep orange-red coloring and irregular surface patterns
+Create a blue-white hot star with intense luminosity and slight lens flare effect
+Create a white dwarf star that is very bright and compact with sharp edges
+Create an orange K-type star with warm tones and moderate glow
+Create a red supergiant star with massive size, deep red color, and visible surface details
+Create a blue supergiant star with brilliant blue-white color and strong radiance
+Create a yellow-orange subgiant star slightly larger than the Sun with warmer hues
+Create a binary star system with two distinct stars close together, one yellow and one orange
+Create a pulsating variable star that appears to have uneven brightness with brighter and dimmer regions
+Create a young hot blue star with a diffuse outer glow
+Create an aging red star with darker reddish-brown tones and mottled surface
+Create a white-yellow F-type star with clean bright appearance
+Create a cool red M-dwarf star that is small and dimly glowing
+Create a neutron star that is extremely small, incredibly bright white, and very compact
+Create a brown dwarf that is barely glowing with dark red-brown coloring
+Create a massive O-type blue star with brilliant blue coloring and strong stellar winds
+Create a Sun-like G-type star with yellow coloring and subtle surface granulation
+Create an ancient metal-poor Population II star with slightly bluish-white color
+Create a yellow hypergiant star that is enormous with golden-yellow tones and visible corona
+Create a cool orange dwarf star with soft peachy-orange glow
+Create a hot white A-type star with pure white color and clean luminosity
+Create a variable Cepheid star with pulsing brightness and yellowish glow
+Create a red dwarf flare star with darker red base and bright flare spots
+Create a blue-white B-type star with electric blue tones and intense brightness
+Create a yellow giant star with golden color and expanded corona
+Create a carbon star with deep ruby red color and sooty appearance
+Create a Wolf-Rayet star with bright blue-white core and ejected material
+Create a T Tauri young star with irregular brightness and protoplanetary disk glow
+Create a subdwarf star with bluish tint and compact appearance
+Create a red clump giant with orange-red coloring and helium-burning core glow
+Create a blue straggler star that looks younger with bright blue color
+Create a carbon-enhanced metal-poor star with reddish color and ancient appearance
+Create a horizontal branch star with bluish-white color transitioning phases
+Create a Mira variable star with deep red pulsating appearance
+Create a yellow-white supergiant with massive size and brilliant glow
+Create a helium star with unusual bluish-white appearance and intense heat
+Create a magnetic Ap star with peculiar bright white-blue color and spots
+Create a chemically peculiar star with unusual coloring mixing blue and yellow tones
+Create a post-AGB star transitioning with golden-white color and expanding shell
+Create a luminous blue variable star with brilliant blue color and unstable appearance
+Create a yellow-white F-type dwarf with moderate glow and clean appearance
+Create a contact binary system with two stars touching, one blue and one yellow
+Create an eclipsing binary showing two stars with one partially hidden
+Create a blue horizontal branch star with intense blue color
+Create a metal-rich Population I star with slight yellow-orange tint
+Create an S-type star with orange-red color and zirconium oxide bands
+Create a Be star with blue color and equatorial gas disk
+Create a shell star with blue-white core surrounded by expelled material ring
+Create a subdwarf B star with very hot blue-white appearance
+Create a red supergiant nearing supernova with unstable deep red surface

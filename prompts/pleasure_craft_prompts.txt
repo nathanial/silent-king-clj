@@ -1,0 +1,110 @@
+# Context: luxury pleasure craft for a retro space strategy game
+# Style: Bold, cartoony, and highly artistic with exaggerated features that make it instantly recognizable. Use vibrant colors, clear visual details, and game-friendly art (like Stellaris or FTL). Make features OBVIOUS and READABLE at a glance - show distinctive details clearly. NOT photorealistic - use artistic stylization with bold outlines and saturated colors. Use orthographic top-down perspective. Emphasize opulence, comfort, and leisure.
+#
+# Pleasure Craft Generation Prompts
+# One prompt per line - customize freely without rebuilding!
+# Empty lines and lines starting with # (except Context/Style) are ignored
+
+# Luxury Yachts
+Create a sleek luxury space yacht with chrome finish, panoramic viewing windows, champagne gold accents, and elegant flowing curves
+Create an ultra-modern billionaire's yacht with infinity pool on deck, holographic sails, crystal champagne flutes visible, and ostentatious wealth
+Create a classic mahogany-style space yacht with polished wood-grain hull texture, brass fittings, and old-money elegance
+Create a minimalist designer yacht with clean geometric lines, matte white surfaces, modern art sculptures, and understated luxury
+Create a party mega-yacht with rooftop disco ball, neon dance floor lighting, DJ booth visible, and celebration aesthetics
+Create a celebrity VIP yacht with paparazzi-proof tinted windows, helipad landing zone, red carpet entrance, and exclusive glamour
+
+# Cruise Liners
+Create a massive space cruise liner with multiple stacked decks, swimming pools visible on top, colorful deck chairs, and vacation resort scale
+Create a romantic honeymoon cruiser with heart-shaped viewing dome, couples' balconies, rose gold decorations, and love-themed design
+Create a family cruise ship with waterslide tubes visible on exterior, kids' play areas, bright primary colors, and fun recreational focus
+Create a luxury casino cruiser with glowing slot machine lights visible through windows, roulette wheel motif, and Las Vegas aesthetic
+Create an adventure expedition cruise with rock climbing walls on hull, zip line cables, extreme sports equipment, and thrill-seeker design
+Create a wellness spa cruise ship with meditation gardens visible, zen fountains, healing crystal decorations, and tranquil spa aesthetics
+
+# Entertainment Vessels
+Create a floating nightclub with massive subwoofer speakers, laser light show projectors, VIP bottle service sections, and rave party energy
+Create a concert venue ship with stadium seating visible, giant screens, stage lighting rigs, and rock festival atmosphere
+Create a theater cruise with dramatic masks symbol, red velvet curtains visible, spotlight towers, and Broadway show elegance
+Create a comedy club yacht with spotlight stage, brick wall comedy backdrop, laughing face decorations, and intimate venue feel
+Create a karaoke party barge with disco ball, rainbow stage lights, microphone symbols, and sing-along fun aesthetic
+Create a movie screening yacht with outdoor cinema screen, comfortable recliners visible, popcorn stand, and premiere night glamour
+
+# Sports and Recreation
+Create a golf course ship with visible putting greens on deck, sand trap textures, country club flags, and leisurely sport focus
+Create a tennis court yacht with net visible spanning deck, lime green tennis ball accents, and athletic club elegance
+Create a sailing regatta racer with enormous colorful spinnaker sails, racing stripes, trophy symbols, and competitive sport design
+Create a fishing charter yacht with deep sea fishing rods mounted on sides, live well tanks, and sportfishing tournament aesthetic
+Create a scuba diving yacht with dive platform at stern, wetsuit storage, oxygen tank racks, and underwater exploration theme
+Create a surfing safari ship with surfboard racks on deck, tiki bar decorations, beach culture symbols, and wave-chasing adventure
+
+# Dining and Culinary
+Create a Michelin star restaurant ship with chef's hat symbol, wine cellar visible, elegant table settings, and gourmet dining luxury
+Create a sushi bar yacht with conveyor belt visible through windows, neon Japanese characters, fresh fish displays, and culinary artistry
+Create a barbecue pit master ship with visible smokers, flame grill effects, rustic wood design, and mouth-watering BBQ theme
+Create a vineyard wine tasting cruiser with grape vine decorations, wine barrel storage, tasting room windows, and sommelier elegance
+Create a craft brewery yacht with copper fermentation tanks visible, hop decorations, beer tap handles, and artisanal brewing aesthetic
+Create a patisserie dessert ship with cupcake tower displays, pastel pink and mint colors, candy decorations, and sweet confection charm
+
+# Wellness and Relaxation
+Create a yoga retreat ship with outdoor mat spaces visible, lotus flower symbols, incense aesthetics, and peaceful meditation focus
+Create a massage spa yacht with serene water fountain features, hot stone symbols, bamboo decorations, and therapeutic relaxation
+Create a flotation therapy ship with sensory deprivation pod chambers, calming blue lights, zen minimalism, and inner peace theme
+Create a crystal healing vessel with enormous amethyst geodes visible, chakra color spectrum, mystical energy aesthetics, and spiritual wellness
+Create a aromatherapy garden ship with visible herb gardens, essential oil diffusers, lavender purple accents, and natural remedy focus
+Create a detox cleanse yacht with juice bar visible, organic vegetable gardens, pure white clean design, and health purification theme
+
+# Social and Lifestyle
+Create a speed dating cruise with heart symbols, intimate booth seating visible, romantic lighting, and matchmaking connection theme
+Create a book club literary yacht with cozy reading nook windows, library bookshelves visible, steaming tea cups, and intellectual gathering
+Create a art gallery floating museum with sculpture displays on deck, canvas paintings visible through windows, and cultural exhibition elegance
+Create a fashion show runway ship with catwalk visible on deck, spotlight arrays, haute couture mannequins, and high fashion glamour
+Create a photography safari yacht with enormous camera lens decorations, scenic viewing platforms, and picture-perfect moment focus
+Create a wedding venue ship with white chapel architecture, flower arch decorations, bride and groom symbols, and matrimony celebration
+
+# Adventure Tourism
+Create a aurora viewing ship with planetarium dome, constellation decorations, stargazing telescope arrays, and celestial wonder theme
+Create a whale watching yacht with underwater viewing windows, marine life symbols, binocular decorations, and ocean conservation aesthetic
+Create a hot air balloon cruise (hybrid design) with colorful balloon envelope above ship, wicker basket textures, and sky adventure charm
+Create a ice hotel cruise with crystalline ice architecture, northern lights hologram effects, warm fireplace contrasts, and arctic luxury
+Create a desert oasis ship with palm tree decorations, mirage shimmer effects, Moroccan tile patterns, and exotic expedition theme
+Create a volcano viewing yacht with heat-resistant plating, lava flow observation decks, geological survey equipment, and nature spectacle focus
+
+# Themed Entertainment
+Create a medieval banquet hall ship with castle turret architecture, knight armor displays, feast table visible, and Renaissance faire theme
+Create a pirate treasure adventure yacht with wooden ship wheel, treasure chest props, Jolly Roger flag, and swashbuckling roleplay
+Create a space age retro-futurist cruiser with 1950s atomic age design, chrome fins, ray gun decorations, and nostalgic sci-fi charm
+Create a underwater Atlantis themed ship with seashell decorations, mermaid figureheads, coral reef textures, and mythical ocean kingdom
+Create a fairy tale castle cruise with Disney-like spires, magical sparkle effects, storybook decorations, and enchanted fantasy aesthetic
+Create a cyberpunk neon city yacht with holographic billboards, matrix code rain effects, industrial grit meets luxury, and futuristic urban culture
+
+# Extreme Luxury
+Create a private island yacht with palm tree mini-ecosystem on deck, beach sand visible, tropical paradise in miniature, and ultimate escape
+Create a aquarium observation ship with floor-to-ceiling fish tanks, exotic sea life visible, bioluminescent creatures, and underwater luxury viewing
+Create a zero-gravity pleasure dome with transparent spherical chambers, floating furniture inside, and exclusive weightless experience
+Create a time traveler's luxury cruiser with clock mechanism decorations, temporal portal effects, Victorian and future design fusion, and chrono-tourism
+Create a cloud palace ship with fluffy cumulus decorations, sky kingdom aesthetics, angelic white and gold, and heavenly vacation theme
+Create a dragon rider's luxury mount (living ship hybrid) with scales, comfortable saddle seating, majestic wings, and fantasy creature elegance
+
+# Boutique Experiences
+Create a perfume atelier ship with giant fragrance bottle shapes, flower essence gardens visible, luxe cosmetic gold, and scent crafting elegance
+Create a chocolate factory yacht with cocoa bean decorations, melted chocolate waterfalls visible, Wonka-inspired whimsy, and confection indulgence
+Create a music recording studio ship with soundproof booth windows, mixing board controls visible, gold record decorations, and artist creative retreat
+Create a pottery studio yacht with spinning wheel visible, ceramic kiln, artisan clay works, and hands-on creative crafting focus
+Create a dance academy ship with mirrored studio walls visible, ballet barre, various dance style symbols, and performance art elegance
+Create a magic academy yacht with wand symbols, spell book decorations, mystical orb displays, and wizarding school whimsy
+
+# Seasonal Celebrations
+Create a winter wonderland holiday ship with snow-covered decks, Christmas lights, ice skating rink visible, and festive season joy
+Create a cherry blossom spring festival yacht with pink sakura petals, paper lantern decorations, hanami party theme, and seasonal beauty
+Create a summer beach party barge with tiki torches, tropical drink bars, sand volleyball court, and endless summer vacation vibes
+Create a autumn harvest festival ship with pumpkin decorations, falling maple leaves, cozy sweater aesthetics, and seasonal comfort
+Create a carnival celebration cruise with Mardi Gras masks, colorful bead decorations, parade float aesthetic, and festival revelry
+Create a fireworks show yacht with pyrotechnic launch tubes, sparkler trails, celebration burst patterns, and spectacular sky show theme
+
+# Exclusive Clubs
+Create a gentleman's club yacht with leather wingback chairs visible, cigar lounge, dark wood paneling, and old-world sophistication
+Create a country club cruiser with polo match decorations, golf bag storage, blazer and ascot aesthetic, and elite social gathering
+Create a social butterfly networking ship with mingles space visible, cocktail bar, business card motifs, and high-society connection hub
+Create a collector's showcase yacht with rare artifact display cases, museum lighting, velvet rope barriers, and exclusive exhibition luxury
+Create a astronomer's society ship with observatory dome, antique brass telescopes, star chart decorations, and scientific gentleman explorer theme
+Create a writer's retreat cruiser with typewriter decorations, wall of famous quotes, cozy writing desk windows, and literary inspiration sanctuary

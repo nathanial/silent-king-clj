@@ -1,0 +1,57 @@
+# Context: planet for a retro space strategy game
+# Style: Bold, cartoony, and highly artistic with exaggerated features that make it instantly recognizable. Use vibrant colors, clear visual details, and game-friendly art (like Stellaris or FTL). Make features OBVIOUS and READABLE at a glance - show distinctive details clearly. NOT photorealistic - use artistic stylization with bold outlines and saturated colors. Use orthographic view.
+#
+# Planet Generation Prompts
+# One prompt per line - customize freely without rebuilding!
+# Empty lines and lines starting with # (except Context/Style) are ignored
+
+Create a lush Earth-like planet with exaggerated green continents, bright blue oceans, and fluffy white clouds
+Create a red desert planet with bold orange-red sand dunes and occasional dust devils swirling
+Create a gas giant with vibrant swirling colorful bands in purple, orange, and teal with a giant storm eye
+Create an ice planet with bright white and cyan ice formations, visible cracks, and floating icebergs
+Create a volcanic planet with obvious bright red-orange lava flows, erupting volcanoes, and dark ash clouds
+Create a frozen tundra planet with sparkly white snow, blue ice patches, and visible blizzards
+Create a jungle planet completely covered in vibrant emerald green vegetation with visible tree canopies
+Create an ocean water world with deep blue seas, white foam waves, and tiny tropical islands
+Create a toxic planet with sickly neon green toxic gas clouds, bubbling acid pools, and warning colors
+Create a barren moon with exaggerated gray craters, visible impact marks, and rocky surface
+Create a ringed planet with spectacular colorful rings made of ice and rock debris
+Create an alien purple planet with bizarre violet terrain, strange pink clouds, and otherworldly features
+Create a crystal planet with giant colorful gemstones protruding from surface, sparkling and reflective
+Create a storm planet wrapped in dramatic white and gray storm clouds with visible lightning bolts
+Create a lava world with molten red-orange surface, visible lava rivers, and glowing hot spots
+Create a sand desert planet with golden-yellow dunes, sandstorms, and no water visible
+Create a radioactive planet with eerie green glow, warning symbols aesthetic, and hazardous appearance
+Create a metal-rich planet with shiny silver-gray metallic surface and visible ore deposits
+Create a dying planet with cracked dry surface, fading colors, and visible decay
+Create a paradise planet with lush greenery, turquoise waters, waterfalls, and vibrant life
+Create a candy-colored planet with pastel pinks and blues like cotton candy atmosphere
+Create a stormy gas giant with massive swirling hurricanes, dark storm clouds, and wind streaks
+Create an ash-covered planet with gray volcanic ash, smoke plumes, and dormant volcanoes
+Create a neon planet with glowing bright colors like pink, cyan, and yellow in artificial-looking patterns
+Create a fungal planet covered in giant colorful mushrooms, spores, and alien vegetation
+Create a coral reef planet with underwater coral structures visible through clear shallow seas
+Create a magma planet with visible lava chambers, glowing cracks, and intense heat distortion
+Create a swamp planet with murky green-brown water, fog, and gnarled twisted vegetation
+Create an aurora planet with spectacular colorful northern lights wrapping around the whole sphere
+Create a bioluminescent planet glowing with ethereal blue-green light from living organisms
+Create a mechanical planet that looks artificially constructed with panels, grids, and technological features
+Create a rainbow planet with visible spectrum of colors across its surface in bands
+Create a molten metal planet with liquid gold and silver pools, metallic sheen everywhere
+Create a cloudy gas planet with soft pastel cloud layers in pink, purple, and white
+Create a dead volcanic planet with cooled black lava rock and extinct volcano peaks
+Create a prismatic ice planet with rainbow refraction effects through ice crystals
+Create a sulfur planet with bright yellow sulfur deposits, geysers, and volcanic vents
+Create a binary-toned planet split between fire and ice hemispheres with stark contrast
+Create a tropical planet with visible palm trees, beaches, and warm ocean currents
+Create a dusty brown planet with constant dust storms and hazy atmosphere
+Create a banded planet with horizontal colored stripes like Jupiter but more exaggerated and colorful
+Create a cracked planet showing glowing magma through surface fissures like broken eggshell
+Create a foggy planet shrouded in mysterious gray-white mist with barely visible terrain
+Create a fertile farming planet with visible crop fields in green, gold, and brown patterns
+Create an electric planet with constant lightning storms, plasma arcs, and electrical phenomena
+Create a bubble planet with large visible gas bubbles rising through thick atmosphere
+Create a rocky mountain planet with exaggerated tall peaks, valleys, and dramatic terrain
+Create a frozen methane planet with orange-tinted ice and visible methane lakes
+Create a patchwork planet with visible distinct biomes - desert, forest, ice, ocean in clear sections
+Create a glowing ember planet like a dying coal with red-orange glow and dark patches

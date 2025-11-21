@@ -1,0 +1,211 @@
+# Context: exotic and specialized spaceship types for a retro space strategy game
+# Style: Bold, cartoony, and highly artistic with exaggerated features that make it instantly recognizable. Use vibrant colors, clear visual details, and game-friendly art (like Stellaris or FTL). Make features OBVIOUS and READABLE at a glance - show distinctive details clearly. NOT photorealistic - use artistic stylization with bold outlines and saturated colors. Use orthographic top-down perspective. Emphasize unique propulsion systems and distinctive visual characteristics.
+#
+# Exotic Ship Types Generation Prompts
+# One prompt per line - customize freely without rebuilding!
+# Empty lines and lines starting with # (except Context/Style) are ignored
+
+# Ramscoop Ships - Hydrogen Collectors
+Create a Bussard ramjet with enormous magnetic funnel scoop at front, glowing field lines visible, interstellar medium harvesting, and massive collection cone
+Create a ramscoop cruiser with dual side-mounted collection fields, streamlined central hull, hydrogen fuel processing glow, and deep space exploration design
+Create a compact ramscoop fighter with oversized front scoop for its size, aggressive hunter aesthetic, and fuel-as-you-go independence
+
+# Ion Drive Cruisers - Efficient Blue Glow
+Create an elegant ion drive yacht with twin blue-glowing engines, ultra-efficient design, graceful streamlined hull, and peaceful exploration aesthetic
+Create a long-range ion freighter with multiple small blue thruster arrays, economical operation, endurance fuel tanks, and commercial hauler efficiency
+Create an ion reconnaissance ship with whisper-quiet blue drives, minimal emissions, stealth-optimized profile, and silent running capability
+
+# Pulse Drive Vessels - Nuclear Explosion Propulsion
+Create an Orion-class pulse ship with massive rear blast plate, bomb ejection mechanism visible, explosive propulsion aesthetic, and brutal acceleration design
+Create a military pulse destroyer with armored pusher plate, nuclear charge magazines, devastating speed capability, and aggressive strike vessel appearance
+Create a pulse drive freighter with reinforced shock absorber systems, heavy-duty blast plate, and industrial workhorse ruggedness
+
+# Gravity Slingshot Racers - Momentum Navigation
+Create a slingshot racer with minimal engines, ultra-lightweight frame, trajectory calculation displays, and orbital mechanics specialist design
+Create a gravity whip courier with heat-resistant solar proximity hull, planet-skimming profile, and extreme velocity mail delivery aesthetic
+Create a pendulum patrol ship with gravitational mapping sensors, efficient fuel-free patrol routes, and perpetual motion elegance
+
+# Warp Bubble Ships - Reality Warping FTL
+Create a warp cruiser with glowing nacelles creating visible spacetime distortion, reality-bending field effects, and faster-than-light capability aesthetic
+Create a warp fighter with compact FTL field generators, impossible speed for its size, and strategic jump assault specialization
+Create a experimental warp testbed with prototype nacelle configurations, unstable field effects, cutting-edge physics research, and dangerous bleeding-edge technology
+
+# Antimatter Torch Ships - Extreme Acceleration
+Create an antimatter torch with blindingly bright exhaust plume, maximum acceleration design, extreme performance aesthetic, and rapid response vessel
+Create a torch interceptor with massive engine relative to hull size, pursuit specialist design, and catch-anything speed capability
+Create a torch courier with elongated needle-thin hull, record-breaking delivery times, and urgent dispatch priority vessel
+
+# Spinning Habitat Ships - Rotating Artificial Gravity
+Create a rotating ring ship with visible spinning habitat section, windows showing interior forests, city-scale living quarters, and generation ship design
+Create a dual-ring station with counter-rotating sections, docking hub at center, permanent settlement vessel, and mobile colony aesthetic
+Create a cylinder habitat with O'Neill colony rotation, agricultural sections visible through windows, and self-sufficient ecosystem ship
+
+# Crystalline Ships - Geometric Alien Technology
+Create a geometric crystal ship with perfect faceted surfaces, prismatic light refraction, glowing internal energy, and alien technology aesthetics
+Create a grown crystal vessel with organic branching structures, natural geometric formation, living mineral appearance, and exotic matter composition
+Create a shattered crystal ship with fragmented sections held together by energy fields, broken-but-functional aesthetic, and mysterious ancient technology
+
+# Modular Constructor Ships - Reconfigurable Design
+Create a LEGO-style modular ship with visible connection ports, detachable sections in different colors, puzzle-piece aesthetic, and mission-adaptable configuration
+Create a transformer vessel with reconfiguring hull sections, mechanical articulation visible, shape-shifting capability, and multi-mode operation design
+Create a constructor swarm with multiple independent modules flying in formation, collective assembly capability, and distributed ship architecture
+
+# Tentacle Ships - Flexible Appendages
+Create a mechanical tentacle ship with multiple articulated grasping arms, industrial manipulation capability, salvage operations design, and octopus-inspired aesthetics
+Create an organic tentacle vessel with living appendages, pulsing bioluminescent suckers, alien creature appearance, and predatory grasping hunter
+Create a cable-whip ship with electrified tentacle weapons, stunning capture capability, entanglement tactics, and aggressive subduing design
+
+# Living Bioships - Organic Vessels
+Create a whale-like bioship with breathing spiracles, organic hull texture, living creature appearance, and symbiotic pilot relationship
+Create a insectoid bioship with chitinous carapace, compound eye sensors, articulated legs, and hive mind coordination aesthetic
+Create a plant bioship with photosynthetic hull panels, vine-like tendrils, seed pod weapons, and botanical organism design
+
+# Swarm Vessels - Collective Units
+Create a nanobot swarm ship composed of millions of visible tiny particles, metallic cloud formation, shape-shifting mass, and programmable matter aesthetic
+Create a drone cloud carrier deploying thousands of micro-units, overwhelming numbers tactics, coordinated collective intelligence, and dispersed consciousness
+Create a modular cell swarm with hexagonal units connecting and separating, adaptive formation, and hive architecture design
+
+# Asteroid Miners - Industrial Extraction
+Create a mining ship with enormous rotating drill bits, ore processing refineries, rock-cutter lasers, and heavy industrial extraction equipment
+Create an asteroid tugboat with grappling claws, towing cables, claim stake markers, and prospector frontier aesthetic
+Create a mobile refinery with ore crushers visible, molten metal flows, smelting furnaces, and floating factory processing design
+
+# Terraform Ships - World Builders
+Create a terraforming vessel with atmosphere processor towers, biosphere deployment pods, planetary modification equipment, and world-engineering capability
+Create an ecosystem seeder with genetic archive vaults, flora and fauna deployment systems, life-spreading mission, and garden world creation focus
+Create a climate modification ship with weather control arrays, orbital mirror systems, temperature regulation equipment, and planetary engineering design
+
+# Generation Ships - Multi-Century Voyages
+Create a massive generation ark with rotating habitat rings, visible forests and cities inside, multi-generational civilization carrier, and thousand-year journey design
+Create a sleeper ship with cryogenic suspension pods visible, frozen colonist storage, automated caretaker systems, and suspended animation voyage aesthetic
+Create a worldship with entire ecosystems contained, mountain ranges visible through windows, mobile planet-scale, and perpetual wandering civilization
+
+# Prison Ships - Detention Facilities
+Create a maximum security barge with reinforced cell blocks visible, guard tower surveillance, spotlight arrays, and floating penitentiary design
+Create a prisoner transport with individual isolation pods, heavy restraint systems, convict transfer mission, and armored containment vessel
+Create a penal colony ship with work camp facilities, hard labor equipment, reform through service aesthetic, and correctional institution vessel
+
+# Hospital Ships - Medical Vessels
+Create a trauma center ship with emergency operating theaters visible, ambulance shuttle bays, medical cross symbols everywhere, and battlefield rescue capability
+Create a plague quarantine vessel with isolation wards, biohazard containment, sterilization systems, and infectious disease treatment specialization
+Create a genetic therapy ship with DNA helix decorations, cloning facilities, regeneration tanks, and advanced medical research vessel
+
+# Spy Ships - Intelligence Gathering
+Create a stealth reconnaissance ship with passive sensor arrays, minimal emissions profile, signal intelligence equipment, and covert observation mission design
+Create an electronic warfare vessel with massive listening dishes, data interception arrays, cyber warfare systems, and information dominance focus
+Create a infiltration ship with cloaking device shimmer, agent deployment pods, sabotage mission equipment, and special operations insertion craft
+
+# Deep Space Haulers - Extreme Range
+Create a bare-bones long hauler with minimal life support, maximum fuel capacity, sparse utilitarian design, and months-long voyage endurance
+Create a lonely freighter with extended range tanks, isolated crew quarters, deep void operations, and frontier route specialist aesthetic
+Create a exploration tender with supply caches, repair depot capabilities, remote outpost support mission, and self-sufficient isolation vessel
+
+# Stellar Divers - Star Skimming
+Create a corona harvester with heat-resistant golden armor, solar fuel scooping equipment, stellar atmosphere operations, and extreme temperature survival design
+Create a flare rider with magnetic field deflectors, radiation shielding, solar storm navigation, and stellar phenomena exploitation vessel
+Create a photosphere miner with plasma collection systems, star-grazing trajectory, stellar material extraction, and furnace-proximity operations
+
+# Gas Giant Harvesters - Atmospheric Mining
+Create a Jovian skimmer with buoyant gas bags, atmospheric scooping equipment, cloud city aesthetics, and floating factory processing design
+Create a storm chaser with hurricane-resistant hull, turbulence navigation systems, extreme weather operations, and tempest energy harvesting
+Create a deuterium harvester with fuel extraction refineries, gas giant diving capability, fusion feedstock collection, and atmospheric industrial operations
+
+# Ice Ships - Frozen Environment Specialists
+Create a comet miner with ice-cutting lasers, frozen water extraction, cryogenic storage tanks, and deep-freeze prospecting equipment
+Create an ice hauler with insulated cargo holds, frozen goods transport, cold chain logistics, and refrigerated shipping specialization
+Create a cryovolcano explorer with thermal drilling equipment, ice geyser research, frozen moon operations, and glacial environment adaptation
+
+# Nebula Cruisers - Interstellar Cloud Operations
+Create a nebula navigator with enhanced sensor arrays, dust particle deflectors, low-visibility operations equipment, and cosmic fog specialization
+Create a cloud harvester with gas collection scoops, interstellar medium processing, molecular cloud mining, and diffuse matter extraction
+Create a stellar nursery researcher with radiation-resistant hull, star formation observation equipment, and cosmic cloud science mission
+
+# Black Hole Researchers - Extreme Gravity Operations
+Create a event horizon observer with maximum radiation shielding, gravitational wave sensors, relativistic time dilation effects visible, and singularity proximity science
+Create a accretion disk harvester with extreme gravity field navigation, energy extraction systems, black hole farming operations, and exotic physics exploitation
+Create a hawking radiation collector with quantum vacuum equipment, exotic particle capture, and theoretical physics experimental vessel
+
+# Stealth Ships - Covert Operations
+Create a shadow infiltrator with matte black radar-absorbent hull, heat masking systems, silent running capability, and invisible predator aesthetics
+Create a ninja assassin ship with active camouflage panels, adaptive coloring, target elimination mission, and deadly silent approach design
+Create a ghost reconnaissance with sensor-deflecting angles, minimal emissions profile, phantom appearance, and undetectable observation platform
+
+# Drone Carriers - Automated Warfare
+Create a swarm mothership with automated launch tubes, AI coordination arrays, thousands of visible drone fighters, and robotic fleet command vessel
+Create a unmanned strike carrier with remote piloting stations, autonomous combat systems, zero-casualty warfare focus, and machine army deployment
+Create a robot factory ship with drone fabrication assembly lines, self-replicating fighter production, and exponential force multiplication capability
+
+# Jump Gate Constructors - Portal Infrastructure
+Create a wormhole builder with spacetime manipulation equipment, portal frame assembly systems, FTL network expansion mission, and gateway engineering vessel
+Create a quantum tunnel digger with dimensional boring equipment, shortcut creation capability, and space-folding construction design
+Create a stargate deployment ship with massive ring structures being assembled, interstellar highway construction, and cosmic infrastructure development
+
+# Time Ships - Temporal Manipulation
+Create a chrononautic vessel with clock mechanism decorations, temporal field generators, past and future overlay effects, and time travel capability aesthetics
+Create a paradox engine with recursive timeline effects, impossible causality violations visible, and reality-breaking temporal experimentation
+Create a time loop ship existing in multiple moments simultaneously, temporal echo trails, and fourth-dimensional navigation design
+
+# Dimension Hoppers - Reality Jumping
+Create a phase-shift vessel flickering between dimensions, translucent alternate reality overlap, parallel universe access capability, and multiverse exploration design
+Create a reality breacher with dimensional rift generators, barrier-penetrating equipment, between-worlds navigation, and plane-hopping capability
+Create a mirror universe ship with reversed symmetry, antimatter aesthetics, opposite dimension twin appearance, and alternative reality operations
+
+# Nanotech Fabricators - Mobile Factories
+Create a constructor ship with visible 3D printing arrays, matter assembly beams, on-demand manufacturing capability, and floating factory design
+Create a molecular assembler with atom-by-atom construction, programmable matter production, and nanoscale fabrication equipment visible as shimmer effects
+Create a self-replicating factory ship with von Neumann machine capability, exponential production growth, and autonomous expansion design
+
+# Pirate Raiders - Outlaw Vessels
+Create a scavenged raider with asymmetric mismatched parts, skull and crossbones markings, jury-rigged weapons, and lawless marauder aesthetic
+Create a boarding corsair with grappling hooks, breaching equipment, treasure hunter appearance, and aggressive ship-seizure specialist design
+Create a smuggler runner with hidden cargo compartments, customs evasion modifications, blockade runner profile, and contraband hauler aesthetic
+
+# Religious Temple Ships - Sacred Vessels
+Create a cathedral ship with gothic spire architecture, stained glass observation windows, holy symbols everywhere, and divine crusade mission design
+Create a pilgrimage vessel with prayer wheel decorations, sacred relic storage, spiritual journey focus, and devotional passage carrier
+Create a missionary ship with conversion broadcast arrays, faith-spreading equipment, evangelical mission aesthetic, and religious outreach vessel
+
+# Royal Flagships - Imperial Majesty
+Create a emperor's flagship with golden filigree everywhere, crown motif decorations, massive ornate throne room visible, and ultimate authority symbol
+Create a royal yacht with purple velvet textures, jeweled hull accents, regal elegance, and sovereign luxury travel vessel
+Create a coronation ship with ceremonial parade decorations, state occasion grandeur, majestic procession design, and imperial celebration platform
+
+# Tribal War Canoes - Warrior Culture
+Create a ritualistic warship with tribal pattern decorations, bone and feather ornaments, war paint hull markings, and honor-bound combat vessel
+Create a totem carrier with ancestor spirit carvings, shamanic symbols, cultural heritage pride, and tradition-respecting battle design
+Create a blood oath raider with ritual scarification patterns, warrior code aesthetics, savage nobility appearance, and tribal honor combat
+
+# Corporate Fleet - Business Operations
+Create a executive yacht with clean professional lines, prominent company logo, business-class luxury, and corporate VIP transport elegance
+Create a commercial freighter with brand advertising, efficient profit-focused design, standardized shipping container aesthetic, and bottom-line optimization
+Create a merger acquisition ship with hostile takeover equipment, corporate warfare systems, business battle vessel, and market dominance mission
+
+# Nomad Caravans - Wandering Peoples
+Create a refugee convoy ship with makeshift living quarters, humble survival modifications, displaced peoples carrier, and desperate journey aesthetic
+Create a gypsy trader with colorful fabric decorations, mobile bazaar markets, wandering merchant culture, and perpetual traveler lifestyle vessel
+Create a exodus ark with entire civilization's possessions aboard, fleeing homeland appearance, permanent migration vessel, and homeless nation carrier
+
+# Probability Ships - Quantum Uncertainty
+Create a superposition vessel existing in multiple configurations simultaneously, quantum blur effects, uncertainty principle aesthetics, and paradoxical maybe-ship
+Create a Schrödinger's ship both there and not-there, observer-dependent existence, quantum mechanics visualization, and probability cloud appearance
+Create a wave function ship with particle-wave duality, quantum foam texture, and subatomic physics manifestation design
+
+# Consciousness Vessels - Psychic Ships
+Create a psionic command ship with third-eye symbols, thought-controlled navigation, telepathic crew interface, and mind-over-matter operation aesthetics
+Create a dream weaver with ethereal translucent appearance, subconscious realm navigation, psychic energy waves visible, and mental projection vessel
+Create a hive mind ship with neural network patterns, collective consciousness coordination, shared thoughts aesthetic, and unified mental control
+
+# Dark Matter Ships - Invisible Mass
+Create a shadow matter vessel with mostly-invisible hull outline, gravitational lensing effects, mysterious unseen substance, and exotic physics exploitation
+Create a dark energy cruiser with cosmic expansion force propulsion, universe-accelerating power, and theoretical physics application design
+Create a negative mass ship with gravity-repelling effects, antigravity propulsion, and impossible physics violation aesthetics
+
+# Photonic Vessels - Light-Based Ships
+Create a laser construct ship made of coherent light beams, holographic solidity, pure energy composition, and electromagnetic being vessel
+Create a rainbow cruiser with prismatic spectrum decomposition, color-separated sections, optical phenomenon aesthetics, and light-wave sailing
+Create a photon torpedo with pure light-speed travel, no mass acceleration, and electromagnetic radiation embodiment design
+
+# Gravity Manipulators - Spacetime Control
+Create a gravity well generator with visible spacetime curvature distortion, artificial black hole effects, reality-warping technology, and mass manipulation capability
+Create a tidal force ship with differential gravity weapons, spaghettification beams, and extreme curvature control systems
+Create an anti-gravity vessel with repulsor field effects, weightless levitation appearance, and gravitational immunity design

@@ -1,0 +1,17 @@
+# Context: ecumenopolis city planet for a retro space strategy game
+# Style: Bold, cartoony, and highly artistic with exaggerated features that make it instantly recognizable. Use vibrant colors, clear visual details, and game-friendly art (like Stellaris or FTL). Make features OBVIOUS and READABLE at a glance. NOT photorealistic - use artistic stylization with bold outlines and saturated colors. Use orthographic view. IMPORTANT: Suggest "city planet" through ABSTRACTION - use lighting patterns, color washes, and large-scale geometric features rather than depicting individual buildings (which makes it too busy). Think grid patterns of lights, glowing regions, broad color zones, and simple geometric shapes to evoke urbanization. Avoid hundreds of tiny detailed structures.
+#
+# Ecumenopolis Generation Prompts
+# One prompt per line - customize freely without rebuilding!
+# Empty lines and lines starting with # (except Context/Style) are ignored
+
+Create a classic ecumenopolis with bright golden grid pattern of lights covering the entire surface like Trantor or Coruscant
+Create a neon cyberpunk ecumenopolis with glowing pink, cyan, and purple light patterns in abstract geometric zones
+Create a tiered ecumenopolis with visible broad horizontal layers in different shades suggesting stacked city levels
+Create a dark gothic ecumenopolis with black surface and scattered dim amber lights in cathedral-window patterns
+Create a garden ecumenopolis with patches of vibrant green interspersed with warm city-light regions showing nature integration
+Create a honeycomb ecumenopolis with large hexagonal light patterns creating abstract geometric city districts
+Create a radial ecumenopolis with concentric circular rings of lights emanating from a bright central point
+Create a brutalist ecumenopolis with large angular gray geometric regions and stark utilitarian color blocking
+Create a bioluminescent ecumenopolis glowing with soft organic blue-green light like a living organism planet
+Create a war-scarred ecumenopolis with dim flickering lights, dark damaged patches, and orange fire-glow regions

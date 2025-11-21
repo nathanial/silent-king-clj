@@ -1,0 +1,52 @@
+# Context: minimalist geometric tactical icon glyph for a strategy game
+# Style: Minimalist geometric shapes with clean lines and simple forms. Color: Light mint/seafoam green (#8FD8B8 or similar pastel green). Background: Very dark gray or black (#1a1d23 or similar). Iconic and symbolic (NOT detailed or realistic). Strategic board game aesthetic (like Stellaris, FTL, or Paradox games). Instantly recognizable at small sizes (64x64 to 128x128). Centered composition with negative space. Use orthographic view.
+#
+# Ship Glyph Prompts
+# One prompt per line - customize freely without rebuilding!
+# Empty lines and lines starting with # (except Context/Style) are ignored
+# Generates minimalist tactical ship icons in mint/seafoam green
+
+# Small Craft
+Create a minimalist fighter icon - small agile spacecraft with pointed nose and swept wings
+Create a minimalist interceptor icon - ultra-fast ship with streamlined aerodynamic profile
+Create a minimalist bomber icon - heavy ordinance craft with visible weapon bays
+Create a minimalist scout icon - small ship with prominent sensor dish or array
+Create a minimalist gunship icon - attack craft bristling with visible gun ports
+
+# Light Ships
+Create a minimalist corvette icon - small warship with compact efficient design
+Create a minimalist frigate icon - light escort vessel with balanced proportions
+Create a minimalist patrol ship icon - border security vessel with sensors and light weapons
+Create a minimalist raider icon - fast attack ship with aggressive asymmetric design
+
+# Medium Ships
+Create a minimalist destroyer icon - anti-fighter specialist with many small turrets
+Create a minimalist cruiser icon - versatile medium warship with balanced armament
+Create a minimalist heavy cruiser icon - powerful mid-size vessel with large guns
+Create a minimalist battle cruiser icon - fast heavy ship combining speed and firepower
+
+# Capital Ships
+Create a minimalist battleship icon - massive gun platform with heavy armor and turrets
+Create a minimalist dreadnought icon - super-heavy warship with imposing blocky design
+Create a minimalist titan icon - ultra-massive flagship with overwhelming presence
+Create a minimalist juggernaut icon - colossal siege ship with fortress-like appearance
+
+# Specialized Combat
+Create a minimalist carrier icon - flat deck design with small fighters launching from it
+Create a minimalist missile ship icon - vessel covered in vertical launch tubes
+Create a minimalist artillery ship icon - long-range bombardment platform with large barrel
+Create a minimalist siege ship icon - planet-attack specialist with bombardment weapons
+
+# Support Ships
+Create a minimalist support ship icon - repair vessel with mechanical arms and tools
+Create a minimalist medical ship icon - hospital ship with red cross symbol
+Create a minimalist supply ship icon - cargo vessel with supply crates or containers
+Create a minimalist tanker icon - fuel ship with large storage tanks
+Create a minimalist constructor icon - engineering ship with building equipment
+
+# Civilian & Special
+Create a minimalist colony ship icon - civilian transport with habitat modules
+Create a minimalist transport icon - troop carrier with bay doors
+Create a minimalist science vessel icon - research ship with sensor arrays and lab modules
+Create a minimalist exploration ship icon - long-range scout with mapping equipment
+Create a minimalist mining ship icon - industrial vessel with drills and ore processors

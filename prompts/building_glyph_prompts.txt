@@ -1,0 +1,38 @@
+# Context: minimalist geometric tactical icon glyph for a strategy game
+# Style: Minimalist geometric shapes with clean lines and simple forms. Color: Light mint/seafoam green (#8FD8B8 or similar pastel green). Background: Very dark gray or black (#1a1d23 or similar). Iconic and symbolic (NOT detailed or realistic). Strategic board game aesthetic (like Stellaris, FTL, or Paradox games). Instantly recognizable at small sizes (64x64 to 128x128). Centered composition with negative space. Use orthographic view.
+#
+# Building Glyph Prompts
+# One prompt per line - customize freely without rebuilding!
+# Empty lines and lines starting with # (except Context/Style) are ignored
+# Generates minimalist tactical building/structure icons in mint/seafoam green
+
+# Military Structures
+Create a minimalist starbase icon - central hub station with defensive platforms
+Create a minimalist fortress icon - heavily armed defense station with thick armor
+Create a minimalist citadel icon - ultimate defensive structure with massive guns
+Create a minimalist defense platform icon - weapon satellite with turrets
+Create a minimalist missile battery icon - launch platform with multiple missile tubes
+Create a minimalist shield generator icon - protective station with energy dome effect
+
+# Production Structures
+Create a minimalist shipyard icon - construction facility with ship frame in cradle
+Create a minimalist factory icon - industrial production building with smokestacks
+Create a minimalist foundry icon - metal smelting facility with furnace symbol
+Create a minimalist assembly plant icon - manufacturing complex with mechanical arms
+
+# Economic Structures
+Create a minimalist mining station icon - asteroid harvester with drills and conveyors
+Create a minimalist refinery icon - resource processing facility with pipes
+Create a minimalist trade hub icon - commerce station with shipping containers
+Create a minimalist market icon - trading post with merchant symbols
+
+# Research & Science
+Create a minimalist research station icon - laboratory facility with scientific equipment
+Create a minimalist observatory icon - sensor array with large telescope or dish
+Create a minimalist data center icon - information processing hub with server symbols
+
+# Infrastructure
+Create a minimalist power plant icon - energy generation facility with power symbol
+Create a minimalist habitat icon - living quarters with residential modules
+Create a minimalist farm icon - food production facility with agriculture symbols
+Create a minimalist warehouse icon - storage depot with stacked containers

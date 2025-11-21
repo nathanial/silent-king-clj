@@ -1,0 +1,120 @@
+# Context: aircraft carrier spaceship for a retro space strategy game
+# Style: Bold, cartoony, and highly artistic with exaggerated features that make it instantly recognizable. Use vibrant colors, clear visual details, and game-friendly art (like Stellaris or FTL). Make features OBVIOUS and READABLE at a glance - show distinctive details clearly. NOT photorealistic - use artistic stylization with bold outlines and saturated colors. Use orthographic top-down perspective.
+#
+# Carrier Generation Prompts
+# One prompt per line - customize freely without rebuilding!
+# Empty lines and lines starting with # (except Context/Style) are ignored
+
+# Traditional Military Carriers
+Create a massive fleet carrier with rectangular flight deck, multiple visible hangar bays, catapult launch tracks, and arresting wires
+Create a super carrier with angled flight deck, island command tower on the side, aircraft parking areas, and elevator platforms
+Create a light carrier with compact design, single runway strip, smaller hangar capacity, and escort vessel proportions
+Create a heavy assault carrier with armored flight deck plating, defensive turrets along edges, and fortified hangar doors
+Create a escort carrier with narrow elongated deck, minimal superstructure, convoy protection design, and economical build
+Create a strike carrier with weapon systems integrated into hull, missile silos flanking the deck, and offensive loadout
+
+# Futuristic Designs
+Create a shield carrier with energy barrier generators visible, protected flight operations zone, and glowing shield emitters
+Create a stealth carrier with angular radar-deflecting surfaces, dark matte finish, concealed hangar bays, and low signature
+Create a gravity carrier with vertical launch tubes, artificial gravity catapults, and ships launching upward from deck
+Create a modular carrier with detachable flight deck sections, reconfigurable layout, and plug-and-play hangar modules
+Create a dual-deck carrier with two stacked flight levels, upper and lower runways, and double capacity design
+Create a rotating carrier with spinning flight deck sections, centrifugal launch assistance, and dynamic configuration
+
+# Alien Carriers
+Create an organic bio-carrier with living tissue flight deck, symbiotic fighter organisms, and pulsing biomechanical hangars
+Create a crystalline carrier with translucent gemstone structure, light-based catapults, and prismatic hangar chambers
+Create a hive carrier with hexagonal cell structure, insectoid fighters emerging from honeycomb bays, and swarm coordination
+Create a tentacle carrier with flexible appendage launch arms, creature-like movement, and organic grasping mechanisms
+Create a coral carrier with reef-like branching structure, calcium formations, and underwater aesthetic adapted to space
+Create a fungal carrier with mushroom cap flight deck, spore-launching bays, and spreading mycelium network design
+
+# Specialized Carriers
+Create a bomber carrier specialized for heavy ordnance craft, reinforced loading bays, missile storage, and arsenal ship design
+Create a fighter carrier optimized for small interceptors, rapid launch tubes, high-speed catapults, and swarm deployment
+Create a scout carrier for launching reconnaissance drones, sensor arrays covering deck, intelligence gathering focus
+Create a repair carrier with maintenance bays visible, mechanical arms for recovery, and floating drydock functionality
+Create a mining carrier deploying industrial craft, ore processing facilities, resource extraction support, and refinery sections
+Create a rescue carrier with medical bays, ambulance ship hangars, triage facilities, and humanitarian mission design
+
+# Multi-Role Carriers
+Create a battlecarrier hybrid with heavy guns integrated into carrier hull, dual-purpose design, and balanced armament
+Create a command carrier with massive communications array, fleet coordination center, and admiral flagship features
+Create a siege carrier launching specialized assault craft, planetary bombardment support, and invasion operation focus
+Create a patrol carrier for border security, long-range endurance design, frontier deployment, and picket duty optimization
+Create a rapid response carrier with high-speed engines, quick scramble bays, emergency deployment capability, and crisis reaction
+Create a experimental carrier testing new fighter designs, prototype bays, research facilities, and cutting-edge technology
+
+# Size Variations
+Create a super-massive carrier the size of a small city, hundreds of hangar bays, multiple flight decks, and overwhelming scale
+Create a pocket carrier with minimal size, single squadron capacity, compact efficiency, and destroyer-sized hull
+Create a titan carrier with gargantuan proportions, entire battle groups in hangar, flying fortress scale, and dreadnought size
+Create a corvette carrier with frigate-scale hull, a few fighter berths, patrol boat size, and agile operations
+
+# Launch System Variations
+Create a catapult carrier with visible steam/magnetic launch tracks, acceleration systems, and assisted takeoff design
+Create a VTOL carrier with vertical landing pads, no runway needed, helicopter-style operations, and hover craft focus
+Create a slingshot carrier with mechanical launch arms, trebuchet-style deployment, and kinetic acceleration systems
+Create a railgun carrier with electromagnetic launch rails, ultra-high-speed deployment, and linear acceleration design
+Create a tube carrier with enclosed launch tunnels, submarine-style fighter deployment, and protected launch operations
+Create a portal carrier with dimensional gates as hangars, instant teleportation deployment, and reality-warping launch
+
+# Environmental Adaptations
+Create an ice carrier with frozen hull plating, cold-weather operations, arctic camouflage, and subzero design
+Create a solar carrier with reflective golden panels, star-powered systems, heat-resistant deck, and stellar operations
+Create a nebula carrier designed for gas cloud operations, sensor-heavy for low visibility, and hazardous environment adaptation
+Create a asteroid carrier built into/around space rock, natural armor integration, and mining base conversion
+Create a deep space carrier with extended range facilities, generational support systems, and long-voyage design
+Create a planetary carrier designed for atmospheric entry, aerodynamic profile, and surface-to-orbit operations
+
+# Defensive Carriers
+Create a fortress carrier with maximum armor plating, defensive turrets everywhere, point-defense systems, and tank-like durability
+Create a shield wall carrier projecting defensive barriers for allied fleet, protective formation center, and guardian role
+Create a flak carrier with anti-fighter batteries covering all angles, swarm defense specialist, and screening design
+Create a jamming carrier with electronic warfare arrays, signal disruption equipment, and cyber-defense operations
+Create a cloaking carrier with stealth field generators, invisible operations, and covert fighter deployment
+Create a minelayer carrier deploying defensive mines around flight operations, area denial, and fortified position
+
+# Exotic Designs
+Create a time-displaced carrier with temporal technology, fighters from different eras, and anachronistic design mix
+Create a dimensional carrier existing in multiple realities simultaneously, phase-shifted sections, and parallel universe access
+Create a living ship carrier that's actually a massive creature, symbiotic fighter relationship, and biological organism
+Create a ghost carrier appearing ethereal and translucent, spectral aesthetic, haunted appearance, and otherworldly design
+Create a nanobot carrier made of programmable matter, shape-shifting deck configuration, and adaptive structure
+Create a energy carrier constructed from pure plasma and force fields, non-solid appearance, and exotic matter composition
+
+# Cultural Carriers
+Create a pirate carrier converted from captured ships, scavenged parts, skull and crossbones markings, and raider aesthetic
+Create a royal carrier with ornate golden decorations, majestic design, ceremonial purpose, and imperial flagship grandeur
+Create a tribal carrier with primitive decorations over advanced tech, ritual markings, warrior culture aesthetic, and honor symbols
+Create a corporate carrier with company branding, sleek professional design, privateer operations, and business fleet asset
+Create a religious carrier with temple architecture, sacred symbols, holy crusade purpose, and cathedral ship design
+Create a revolutionary carrier with resistance markings, improvised construction, rebellion symbols, and freedom fighter design
+
+# Damaged/Veteran Carriers
+Create a battle-scarred carrier with visible hull damage, hasty repairs, burn marks, and veteran combat history
+Create a derelict carrier abandoned and drifting, missing sections, rusted decay, and ghostly wreckage appearance
+Create a retrofitted carrier with old hull updated with new tech, patchwork upgrades, and vintage modernization
+Create a salvaged carrier rebuilt from wreckage, mixed parts from different ships, and Frankenstein reconstruction
+
+# Unique Concepts
+Create a swarm carrier launching thousands of micro-fighters, drone cloud deployment, and overwhelming numbers strategy
+Create a seed carrier deploying self-replicating fighters, von Neumann machine deployment, and exponential force multiplication
+Create a prison carrier with captured enemy fighters in bays, trophy collection, and war prize display
+Create a museum carrier displaying historical fighters, flying museum, preserved vessels, and heritage fleet showcase
+Create a training carrier with practice facilities, student pilots, academy ship, and educational mission focus
+Create a racing carrier hosting competitive events, sponsor decorations, sport operations, and entertainment venue
+
+# Multi-Species Carriers
+Create a human carrier with practical industrial design, utilitarian aesthetic, and familiar naval influence
+Create an elven carrier with elegant flowing lines, nature motifs, graceful curves, and artistic harmonious design
+Create a dwarven carrier with heavy industrial build, forge-like hangars, dense armor, and sturdy construction
+Create an insectoid carrier with chitinous exoskeleton, hive structure, organic launch tubes, and arthropod aesthetic
+Create a robotic carrier with perfect geometric precision, automated systems, AI operations, and mechanical efficiency
+Create a aquatic species carrier with water-dwelling design, submarine aesthetic, and oceanic civilization influence
+
+# Atmospheric Carriers
+Create a cloud carrier harvesting gases while deploying fighters, atmospheric mining operations, and dual-purpose design
+Create a storm carrier operating in hurricane conditions, weather-resistant build, and tempest environment adaptation
+Create a stratospheric carrier at extreme altitude, thin-air operations, and high-altitude specialization
+Create a ground-effect carrier skimming planetary surfaces, low-altitude design, and surface-hugging operations

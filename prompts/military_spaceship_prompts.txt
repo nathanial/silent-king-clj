@@ -1,0 +1,118 @@
+# Context: military spaceship for a retro space strategy game, viewed from top-down perspective
+# Style: Bold, cartoony, and highly artistic with exaggerated features that make it instantly recognizable. Use vibrant colors, clear visual details, and game-friendly art (like Stellaris or FTL). Make features OBVIOUS and READABLE at a glance - show distinctive details clearly. NOT photorealistic - use artistic stylization with bold outlines and saturated colors. Use orthographic top-down perspective. ALWAYS show from top-down view with engines ONLY at the back (rear) of the ship creating clear front-to-back orientation. Engines should glow brightly at the rear.
+#
+# Military Spaceship Generation Prompts
+# One prompt per line - customize freely without rebuilding!
+# Empty lines and lines starting with # (except Context/Style) are ignored
+
+# Capital Ships - Heavy Firepower & Armor
+Create a massive dreadnought battleship with thick hexagonal armor plating, multiple heavy turret batteries, and imposing fortress-like superstructure
+Create a fleet carrier with prominent rectangular hangar bays, launch catapults, multiple flight decks, and visible fighter squadrons
+Create a heavy battlecruiser with wedge-shaped hull, massive spinal railgun, layered armor plates, and bright engine arrays
+Create a titan-class flagship with cathedral-scale architecture, enormous command tower, devastating weapon batteries, and regal command presence
+Create a siege dreadnought with orbital bombardment cannons, planetary assault pods, reinforced armor, and unstoppable fortress-breaker design
+
+# Carriers - Fighter & Bomber Deployment
+Create a fleet carrier with symmetrical hangar bays on both sides, visible launch tubes, fighter racks, and command bridge tower
+Create a light carrier with compact design, rotating launch carousel, nimble appearance, and fast deployment systems
+Create a supercarrier with massive scale, multiple flight deck levels, hundreds of visible hangar doors, and enormous fighter complement
+Create an assault carrier with armored hangar bays, marine drop pods, close-combat weapons, and invasion support role
+Create a drone carrier mothership with automated launch systems, swarm coordination arrays, and robotic fighter clouds
+
+# Cruisers - Versatile Mid-Weight Combatants
+Create a heavy cruiser with balanced weapon loadout, thick armor belt, command antennas, and multi-role combat capability
+Create a light cruiser with sleek design, rapid-fire turrets, speed-focused engines, and patrol vessel appearance
+Create a missile cruiser with vertical launch cell arrays covering the deck, targeting radars, and long-range strike capability
+Create a command cruiser with advanced sensor arrays, communication towers, tactical displays visible, and fleet coordination role
+Create a battle cruiser with aggressive forward design, heavy frontal weapons, speed-over-armor philosophy, and predatory silhouette
+
+# Destroyers - Fast Attack & Screening
+Create a fleet destroyer with dual main turrets, torpedo tubes, anti-ship missiles, and escort combat role
+Create a point-defense destroyer with countless small rapid-fire turrets, shield generators, and fighter interception specialization
+Create a torpedo destroyer with prominent forward torpedo bays, streamlined hull, ambush predator design, and heavy alpha strike
+Create a missile destroyer with modular launch cells, reload systems visible, saturation fire capability, and ordnance-heavy loadout
+Create an anti-fighter destroyer with flak cannon batteries, tracking radars, defensive screen role, and protective escort design
+
+# Frigates - Light Escorts & Specialist Roles
+Create a patrol frigate with balanced design, general-purpose weapons, sensor arrays, and border security appearance
+Create a stealth frigate with angular radar-deflecting panels, minimal emissions, electronic warfare pods, and reconnaissance role
+Create an anti-submarine frigate with depth charge launchers, sonar arrays, hunter-killer design, and specialist tracking systems
+Create a missile frigate with compact vertical launch systems, agile frame, hit-and-run tactics design, and precision strike role
+Create an escort frigate with point-defense focus, convoy protection weapons, endurance fuel tanks, and guardian vessel aesthetic
+
+# Corvettes - Small Fast Attack Craft
+Create a corvette gunship with oversized weapons for its size, aggressive design, pack hunter tactics, and fierce appearance
+Create a stealth corvette with black angular hull, minimal profile, infiltration equipment, and shadow operations design
+Create a patrol corvette with sensor-heavy design, interception speed, border patrol role, and law enforcement aesthetic
+Create a torpedo corvette with disproportionately large torpedo tubes, fast attack profile, and asymmetric warfare focus
+Create a picket corvette with early warning sensors, communication relay equipment, screening role, and vigilant watchdog design
+
+# Fighters & Bombers - Small Craft
+Create a space superiority fighter with twin engines, streamlined interceptor design, dogfighting maneuverability, and aggressive posture
+Create a heavy fighter with dual-seat cockpit, thick armor, multiple weapon hardpoints, and ground attack capability
+Create a torpedo bomber with prominent missile racks, reinforced assault frame, heavy ordnance payload, and strike craft role
+Create a stealth bomber with angular black design, minimal heat signature, precision strike weapons, and deep penetration mission profile
+Create an interceptor with ultra-streamlined design, maximum speed engines, lightweight frame, and rapid response scramble role
+
+# Support Vessels - Force Multipliers
+Create a fleet tender with repair arms, ammunition transfer systems, refueling booms, and logistics support role
+Create an electronic warfare ship with massive sensor dishes, jamming arrays, signal intelligence equipment, and information warfare focus
+Create a hospital ship with red cross markings, medical bay windows, ambulance shuttles, and battlefield rescue capability
+Create a command ship with advanced tactical displays, communication arrays, fleet coordination systems, and strategic nerve center role
+Create a minelayer vessel with mine deployment rails, defensive barrier creation, area denial weapons, and strategic positioning focus
+
+# Siege & Assault - Specialized Attack
+Create a siege breaker with massive drill cannon, fortress-busting equipment, heavy frontal armor, and planetary assault role
+Create a boarding assault ship with breaching pods, marine deployment bays, grappling equipment, and ship-to-ship combat focus
+Create a orbital bombardment platform with huge downward-facing cannons, planetary targeting systems, and surface strike mission
+Create a ramming ship with reinforced prow spike, massive frontal ram, collision-focused design, and brutal melee tactics
+Create a line breaker with thick wedge-shaped armor, formation disruption weapons, breakthrough assault role, and shield-splitting design
+
+# Reconnaissance & Intelligence - Information Gathering
+Create a scout frigate with oversized sensor arrays, minimal weapons, fast engines, and intelligence gathering mission
+Create a stealth reconnaissance ship with cloaking device shimmer, passive sensors, minimal emissions, and deep space observation role
+Create a ELINT cruiser with signal intelligence dishes, electronic surveillance equipment, cyber warfare systems, and information dominance
+Create a fast scout with teardrop streamlined hull, early warning sensors, rapid escape engines, and advance screening role
+Create a picket ship with long-range detection arrays, patrol endurance, communication relay, and perimeter watch duty
+
+# Specialized Combat Roles - Unique Tactics
+Create a sniper ship with one enormous main railgun, stabilization systems, long-range targeting, and precision elimination focus
+Create a flak cruiser with rapid-fire anti-fighter batteries, explosive shell patterns, fighter screen denial, and area suppression
+Create a missile boat with maximum launch cells, saturation strike capability, minimal armor, and alpha strike doctrine
+Create a energy weapon cruiser with beam weapon arrays, power generation visible, sustained fire capability, and direct energy warfare
+Create a mine warfare vessel with mine laying rails, minesweeping equipment, defensive barrier tactics, and area control specialization
+
+# Fast Attack - Hit and Run
+Create a strike corvette with heavy frontal weapons, maximum speed engines, rapid assault design, and quick strike withdrawal tactics
+Create a raider frigate with asymmetric weapons, pirate hunter role, pursuit engines, and aggressive interception capability
+Create a fast attack craft with minimal profile, oversized engines, torpedo armament, and guerrilla warfare design
+Create a picket destroyer with rapid response focus, interception weapons, patrol speed, and first contact engagement role
+Create a commerce raider with long-range capability, raiding weapons, endurance systems, and supply line disruption mission
+
+# Defensive Specialists - Protection & Screening
+Create a shield frigate with visible energy shield generators, protective barrier projection, escort screening role, and defensive aura
+Create a point-defense platform with maximum turret density, fighter interception focus, umbrella coverage, and protective screen
+Create a armor tank with extreme thick plating, damage absorption role, fleet protection focus, and bulletproof guardian design
+Create a countermeasure ship with chaff launchers, decoy projectors, missile defense systems, and electronic protection role
+Create a barrier corvette with shield wall projection, formation defense, protective screen deployment, and guardian escort mission
+
+# Long Range Strike - Standoff Weapons
+Create a missile battleship with hundreds of launch cells, saturation bombardment capability, standoff range weapons, and overwhelming firepower
+Create a railgun cruiser with spinal electromagnetic cannon, extreme range engagement, precision targeting, and kinetic strike focus
+Create a torpedo frigate with heavy torpedo armament, long-range strike, anti-capital ship mission, and standoff assault role
+Create a strategic bomber with heavy ordnance bays, deep strike capability, planetary bombardment weapons, and long-range mission profile
+Create a artillery ship with massive turret batteries, indirect fire capability, bombardment support role, and sustained barrage mission
+
+# Close Combat - Brawler Designs
+Create a brawler cruiser with heavy frontal armor, close-range plasma weapons, aggressive forward design, and knife-fight tactics
+Create a assault destroyer with boarding equipment, close-quarters weapons, marine deployment, and ship seizure mission
+Create a shotgun frigate with spread-fire weapons, close-range devastating firepower, point-blank combat focus, and aggressive approach
+Create a knife-fighter corvette with extreme maneuverability, close-combat weapons, dogfighting capability, and brawling specialization
+Create a melee battleship with ramming prow, close-range broadsides, armor-over-range philosophy, and close-quarters dominance
+
+# Multi-Role - Flexible Combatants
+Create a general-purpose destroyer with balanced weapons mix, moderate armor, versatile capability, and all-around combat readiness
+Create a modular cruiser with interchangeable weapon modules, mission-configurable loadout, adapter design, and flexible role assignment
+Create a patrol frigate with endurance systems, multi-mission capability, peacetime and wartime roles, and versatile platform
+Create a fleet escort with anti-ship and anti-fighter weapons, protection focus, formation support, and mixed threat response
+Create a multi-role fighter with hardpoint variety, mission flexibility, equipment options, and adaptable combat profile
