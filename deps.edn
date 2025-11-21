@@ -53,7 +53,8 @@
 
   :test
   {:extra-paths ["test"]
-   :main-opts ["-m" "silent-king.test-runner"]}
+   :extra-deps {lambdaisland/kaocha {:mvn/version "1.87.1366"}}
+   :main-opts ["-m" "kaocha.runner"]}
 
   :lint
   {:extra-deps {clj-kondo/clj-kondo {:mvn/version "2023.09.07"}}
