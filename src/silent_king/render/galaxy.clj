@@ -59,7 +59,7 @@
   [screen-star-x screen-star-y screen-radius]
   [(commands/circle {:x screen-star-x :y screen-star-y}
                     screen-radius
-                    {:stroke-color (color/hex 0x33FFFFFF)
+                    {:stroke-color (color/hsv 0 0 100 0.2)
                      :stroke-width 1.2})])
 
 (defn plan-selection-highlight
@@ -69,10 +69,10 @@
         glow-radius (* screen-size 0.65 pulse)]
     [(commands/circle {:x screen-x :y screen-y}
                       glow-radius
-                      {:fill-color (color/hex 0x44FFD966)})
+                      {:fill-color (color/hsv 45.1 60 100 0.27)})
      (commands/circle {:x screen-x :y screen-y}
                       (* screen-size 0.45 pulse)
-                      {:stroke-color (color/hex 0xFFFFE680)
+                      {:stroke-color (color/hsv 48.2 49.8 100)
                        :stroke-width 3.0})]))
 
 (defn star-visible?

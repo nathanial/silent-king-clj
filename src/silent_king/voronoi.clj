@@ -26,24 +26,24 @@
 
 (def ^:private color-schemes
   ;; Palettes are vectors so we can graph-color neighboring cells differently.
-  {:monochrome [{:stroke (color/hex 0xFF7FA5FF) :fill (color/hex 0x33FFFFFF)}
-                {:stroke (color/hex 0xFF5FD7FF) :fill (color/hex 0x33E9FBFF)}
-                {:stroke (color/hex 0xFF7FE5B5) :fill (color/hex 0x33E4FFE1)}
-                {:stroke (color/hex 0xFFDBA7FF) :fill (color/hex 0x33F4E1FF)}
-                {:stroke (color/hex 0xFFFFC36F) :fill (color/hex 0x33FFE7C0)}
-                {:stroke (color/hex 0xFFFF8A7A) :fill (color/hex 0x33FFD7CF)}]
-   :by-density [{:stroke (color/hex 0xFF3ED8A2) :fill (color/hex 0x333ED8A2)}
-                {:stroke (color/hex 0xFF21A6F3) :fill (color/hex 0x3321A6F3)}
-                {:stroke (color/hex 0xFF7A6BFF) :fill (color/hex 0x337A6BFF)}
-                {:stroke (color/hex 0xFFF27CC2) :fill (color/hex 0x33F27CC2)}
-                {:stroke (color/hex 0xFFFFB347) :fill (color/hex 0x33FFB347)}
-                {:stroke (color/hex 0xFF4BD6C0) :fill (color/hex 0x334BD6C0)}]
-   :by-degree [{:stroke (color/hex 0xFFE86F4F) :fill (color/hex 0x33E86F4F)}
-               {:stroke (color/hex 0xFFF2B14C) :fill (color/hex 0x33F2B14C)}
-               {:stroke (color/hex 0xFF7CC86B) :fill (color/hex 0x337CC86B)}
-               {:stroke (color/hex 0xFF5BC0EB) :fill (color/hex 0x335BC0EB)}
-               {:stroke (color/hex 0xFF9A7FFB) :fill (color/hex 0x339A7FFB)}
-               {:stroke (color/hex 0xFFD86FFF) :fill (color/hex 0x33D86FFF)}]
+  {:monochrome [{:stroke (color/hsv 222.2 50.2 100) :fill (color/hsv 0 0 100 0.2)}
+                {:stroke (color/hsv 195 62.7 100) :fill (color/hsv 190.9 8.6 100 0.2)}
+                {:stroke (color/hsv 151.8 44.5 89.8) :fill (color/hsv 114 11.8 100 0.2)}
+                {:stroke (color/hsv 275.5 34.5 100) :fill (color/hsv 278 11.8 100 0.2)}
+                {:stroke (color/hsv 35 56.5 100) :fill (color/hsv 37.1 24.7 100 0.2)}
+                {:stroke (color/hsv 7.2 52.2 100) :fill (color/hsv 10 18.8 100 0.2)}]
+   :by-density [{:stroke (color/hsv 159.0 71.3 84.7) :fill (color/hsv 159.0 71.3 84.7 0.2)}
+                {:stroke (color/hsv 202 86.4 95.3) :fill (color/hsv 202 86.4 95.3 0.2)}
+                {:stroke (color/hsv 246.1 58.0 100) :fill (color/hsv 246.1 58.0 100 0.2)}
+                {:stroke (color/hsv 324.4 48.8 94.9) :fill (color/hsv 324.4 48.8 94.9 0.2)}
+                {:stroke (color/hsv 35.2 72.2 100) :fill (color/hsv 35.2 72.2 100 0.2)}
+                {:stroke (color/hsv 170.5 65.0 83.9) :fill (color/hsv 170.5 65.0 83.9 0.2)}]
+   :by-degree [{:stroke (color/hsv 12.5 65.9 91.0) :fill (color/hsv 12.5 65.9 91.0 0.2)}
+               {:stroke (color/hsv 36.5 68.6 94.9) :fill (color/hsv 36.5 68.6 94.9 0.2)}
+               {:stroke (color/hsv 109.0 46.5 78.4) :fill (color/hsv 109.0 46.5 78.4 0.2)}
+               {:stroke (color/hsv 197.9 61.3 92.2) :fill (color/hsv 197.9 61.3 92.2 0.2)}
+               {:stroke (color/hsv 253.1 49.4 98.4) :fill (color/hsv 253.1 49.4 98.4 0.2)}
+               {:stroke (color/hsv 283.8 56.5 100) :fill (color/hsv 283.8 56.5 100 0.2)}]
    :by-region []}) ;; Empty vector acts as a flag for region-based coloring
 
 (defn- clamp
@@ -346,7 +346,7 @@
                   nil))
               regions)
         ;; Default color for unregioned space (dark grey)
-        (color/hex 0xFF303030))))
+        (color/hsv 0 0 18.8))))
 
 (defn plan-voronoi-cells
   "Plan Voronoi overlay commands with LOD and culling. Returns {:commands [...] :rendered n}."

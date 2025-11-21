@@ -9,7 +9,7 @@
         region {:id :region-1
                 :name "Test Region"
                 :center {:x 100.0 :y 100.0}
-                :color (color/hex 0xFF00FF00)
+                :color (color/hsv 120 100 100)
                 :sectors {:sector-1 {:name "Sector Alpha"
                                      :center {:x 120.0 :y 120.0}}}}]
     (state/set-regions! game-state {:region-1 region})
@@ -26,11 +26,11 @@
               main (second commands)]
           (is (= :text (:op shadow)))
           (is (= "Test Region" (:text shadow)))
-          (is (= (color/hex 0x80000000) (:color shadow))) ;; Shadow color
+          (is (= (color/hsv 0 0 0 0.5) (:color shadow))) ;; Shadow color
 
           (is (= :text (:op main)))
           (is (= "Test Region" (:text main)))
-          (is (= (color/hex 0xFF00FF00) (:color main))))))
+          (is (= (color/hsv 120 100 100) (:color main))))))
 
     (testing "generates sector labels at high zoom"
       (let [zoom 2.0 ;; High zoom

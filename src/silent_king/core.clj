@@ -318,7 +318,7 @@
                                           :height height}
                                      game-state)
         ui-commands (:commands ui-result)
-        frame-commands (into [(commands/clear (color/hex 0xFF000000))]
+        frame-commands (into [(commands/clear (color/hsv 0 0 0))]
                              (concat commands ui-commands))]
     (skia/draw-commands! canvas frame-commands)
     (let [time-state (state/get-time game-state)

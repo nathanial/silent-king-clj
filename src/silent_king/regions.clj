@@ -228,7 +228,7 @@
                           screen-x (camera/transform-position (double x) zoom pan-x)
                           screen-y (camera/transform-position (double y) zoom pan-y)
                           text-size (max 12.0 (min 48.0 (* 14.0 (Math/sqrt zoom))))
-                          shadow-color (color/hex 0x80000000)
+                          shadow-color (color/hsv 0 0 0 0.5)
                           cmds (cond-> commands
                                  true (conj (commands/text {:text name
                                                             :position {:x (+ screen-x 2) :y (+ screen-y 2)}
@@ -253,7 +253,7 @@
                                             (commands/text {:text s-name
                                                             :position {:x ssx :y ssy}
                                                             :font {:size sector-size}
-                                                            :color (color/hex 0xDDCCCCCC)})]))))]
+                                                            :color (color/hsv 0 0 80 0.87)})]))))]
                       {:commands cmds
                        :rendered (inc rendered)})
                     {:commands commands :rendered rendered}))

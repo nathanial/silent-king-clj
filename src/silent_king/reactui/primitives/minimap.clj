@@ -86,8 +86,8 @@
   [node]
   (let [{:keys [stars world-bounds viewport-rect background-color viewport-color]} (:props node)
         {:keys [x y width height]} (layout/bounds node)
-        bg-color (or (color/ensure background-color) (color/hex 0xFF000000))
-        viewport-color (or (color/ensure viewport-color) (color/hex 0xFF00FF00))
+        bg-color (or (color/ensure background-color) (color/hsv 0 0 0))
+        viewport-color (or (color/ensure viewport-color) (color/hsv 120 100 100))
         widget-bounds {:x x :y y :width width :height height}
         cell-size (render/heatmap-cell-size width height)
         heatmap (when world-bounds
@@ -118,7 +118,7 @@
       viewport-bounds
       (conj (commands/rect viewport-bounds {:stroke-color viewport-color
                                             :stroke-width 1.0}))
-      true (conj (commands/rect widget-bounds {:stroke-color (color/hex 0xFF444444)
+      true (conj (commands/rect widget-bounds {:stroke-color (color/hsv 0 0 26.7)
                                                :stroke-width 1.0})))))
 
 (defmethod render/plan-node :minimap

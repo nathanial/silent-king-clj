@@ -48,7 +48,7 @@
     [(commands/text {:text (or text "")
                      :position {:x x :y baseline}
                      :font {:size size}
-                     :color (or (color/ensure color) (color/hex 0xFFFFFFFF))})]))
+                     :color (or (color/ensure color) (color/hsv 0 0 100))})]))
 
 (defmethod render/plan-node :label
   [_ node]

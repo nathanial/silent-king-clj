@@ -12,26 +12,26 @@
 ;; Hyperlane visual configuration
 (def ^:private hyperlane-config
   {:base-width 2.0
-   :color-start (color/hex 0xFF6699FF)
-   :color-end (color/hex 0xFF3366CC)
-   :glow-color (color/hex 0x406699FF)
+   :color-start (color/hsv 220 60 100)
+   :color-end (color/hsv 220 75 80)
+   :glow-color (color/hsv 220 60 100 0.25)
    :pulse-speed 0.5
    :pulse-amplitude 0.3
    :min-visible-length 1.0})
 
 (def ^:private color-schemes
-  {:blue {:start (color/hex 0xFF6699FF)
-          :end (color/hex 0xFF3366CC)
-          :glow (color/hex 0x406699FF)}
-   :red {:start (color/hex 0xFFFF5D5D)
-         :end (color/hex 0xFFC0392B)
-         :glow (color/hex 0x40FF5D5D)}
-   :green {:start (color/hex 0xFF66FF99)
-           :end (color/hex 0xFF2ECC71)
-           :glow (color/hex 0x4066FF99)}
-   :rainbow {:start (color/hex 0xFFFFC857)
-             :end (color/hex 0xFF00C2FF)
-             :glow (color/hex 0x40FFC857)}})
+  {:blue {:start (color/hsv 220 60 100)
+          :end (color/hsv 220 75 80)
+          :glow (color/hsv 220 60 100 0.25)}
+   :red {:start (color/hsv 0 63.5 100)
+         :end (color/hsv 5.6 77.6 75.3)
+         :glow (color/hsv 0 63.5 100 0.25)}
+   :green {:start (color/hsv 140 60 100)
+           :end (color/hsv 145.4 77.5 80)
+           :glow (color/hsv 140 60 100 0.25)}
+   :rainbow {:start (color/hsv 40.4 65.9 100)
+             :end (color/hsv 194.4 100 100)
+             :glow (color/hsv 40.4 65.9 100 0.25)}})
 
 (defn- apply-opacity
   [color opacity]
@@ -89,8 +89,8 @@
                   color-variation (int (* (rand) 40))
                   base-color (:color-start hyperlane-config)
                   ;; Previously bit-xor 0-40 into 8th bit (Green channel). 
-                  ;; We'll just add variation to Green channel.
-                  varied-color (update base-color :g #(min 255 (+ % color-variation)))
+                  ;; We'll just add variation to Hue in HSV (0-360).
+                  varied-color (update base-color :h #(mod (+ % color-variation) 360.0))
                   hyperlane {:id (inc next-id)
                              :from-id from-id
                              :to-id to-id

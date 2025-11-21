@@ -42,8 +42,8 @@
   [node]
   (let [{:keys [label background-color text-color font-size]} (:props node)
         {:keys [x y width height]} (layout/bounds node)
-        bg-color (or (color/ensure background-color) (color/hex 0xFF2D2F38))
-        txt-color (or (color/ensure text-color) (color/hex 0xFFFFFFFF))
+        bg-color (or (color/ensure background-color) (color/hsv 229.1 19.6 22.0))
+        txt-color (or (color/ensure text-color) (color/hsv 0 0 100))
         hovered? (render/pointer-over-node? node)
         active? (active-button? node)
         shade (cond active? 0.9

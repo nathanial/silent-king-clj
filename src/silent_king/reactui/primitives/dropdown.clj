@@ -104,11 +104,11 @@
                 option-selected-text-color
                 border-color]} (:props node)
         {:keys [header options expanded? all-options]} (get-in node [:layout :dropdown])
-        header-bg (or (color/ensure background-color) (color/hex 0xFF2D2F38))
-        option-bg (or (color/ensure option-background) (color/hex 0xFF1E2230))
-        selected-bg (or (color/ensure option-selected-background) (color/hex 0xFF3C4456))
-        txt-color (or (color/ensure text-color) (color/hex 0xFFCBCBCB))
-        selected-txt-color (or (color/ensure option-selected-text-color) (color/hex 0xFF0F111A))
+        header-bg (or (color/ensure background-color) (color/hsv 229.1 19.6 22.0))
+        option-bg (or (color/ensure option-background) (color/hsv 226.7 37.5 18.8))
+        selected-bg (or (color/ensure option-selected-background) (color/hsv 221.5 30.2 33.7))
+        txt-color (or (color/ensure text-color) (color/hsv 0 0 79.6))
+        selected-txt-color (or (color/ensure option-selected-text-color) (color/hsv 229.1 42.3 10.2))
         caret (if expanded? "▼" "▲")
         caret-color txt-color
         padding 10.0

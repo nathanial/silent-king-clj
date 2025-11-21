@@ -35,8 +35,8 @@
   [color-a color-b t]
   (color/lerp color-a color-b t))
 
-(def heatmap-low-color (color/hex 0x1A08244A))
-(def heatmap-high-color (color/hex 0xFFF1C232))
+(def heatmap-low-color (color/hsv 214.5 89.2 29.0 0.1))
+(def heatmap-high-color (color/hsv 45.2 79.3 94.5))
 
 (defn heatmap-cell-size
   [width height]
