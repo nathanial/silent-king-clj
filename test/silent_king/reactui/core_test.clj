@@ -94,11 +94,11 @@
                        :world-bounds minimap-world-bounds
                        :viewport-rect minimap-viewport-rect
                        :stars []}
-                      overrides)]
-     (let [{:keys [layout-tree]} (reactui/render-ui-tree {:canvas nil
-                                                          :tree [:minimap props]
-                                                          :viewport {:x 0 :y 0 :width 400 :height 400}})]
-       layout-tree))))
+                      overrides)
+         {:keys [layout-tree]} (reactui/render-ui-tree {:canvas nil
+                                                        :tree [:minimap props]
+                                                        :viewport {:x 0 :y 0 :width 400 :height 400}})]
+     layout-tree)))
 
 (deftest minimap-window-header-drag-still-works
   (reactui/release-capture!)

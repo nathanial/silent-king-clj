@@ -1,8 +1,7 @@
 (ns silent-king.hyperlanes-test
   (:require [clojure.test :refer [deftest is testing]]
             [silent-king.hyperlanes :as hyperlanes]
-            [silent-king.state :as state]
-            [silent-king.render.commands :as commands]))
+            [silent-king.state :as state]))
 
 (deftest plan-all-hyperlanes-test
   (let [game-state (atom (state/create-game-state))

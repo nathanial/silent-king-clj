@@ -5,8 +5,9 @@
 
 (set! *warn-on-reflection* true)
 
-(defn load-star-images []
+(defn load-star-images
   "Load all preprocessed star images (with transparency) as Skija Images"
+  []
   (println "Loading star images...")
   (let [star-files (sort (.listFiles (File. "assets/stars-processed")))]
     (vec (for [^File file star-files
@@ -14,8 +15,9 @@
            {:path (.getName file)
             :image (Image/makeFromEncoded (.getBytes (Data/makeFromFileName (.getPath file))))}))))
 
-(defn load-atlas-metadata [metadata-path]
+(defn load-atlas-metadata
   "Load atlas metadata from JSON file"
+  [metadata-path]
   (println (format "Loading atlas metadata from %s..." metadata-path))
   (let [metadata-file (File. metadata-path)
         json-data (json/read-str (slurp metadata-file) :key-fn keyword)]
@@ -26,14 +28,16 @@
                       :size (:size entry)}])
                   json-data))))
 
-(defn load-atlas-image [image-path]
+(defn load-atlas-image
   "Load the atlas texture"
+  [image-path]
   (println (format "Loading atlas texture from %s..." image-path))
   (let [atlas-file (File. image-path)]
     (Image/makeFromEncoded (.getBytes (Data/makeFromFileName (.getPath atlas-file))))))
 
-(defn load-all-assets []
+(defn load-all-assets
   "Load texture atlases (xs, small, medium) for LOD rendering and full-res images for high zoom"
+  []
   (println "Loading all assets...")
   {:atlas-image-xs (load-atlas-image "assets/star-atlas-xs.png")
    :atlas-metadata-xs (load-atlas-metadata "assets/star-atlas-xs.json")

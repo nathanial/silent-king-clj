@@ -17,16 +17,7 @@
   (:import [org.lwjgl.glfw GLFW GLFWErrorCallback GLFWCursorPosCallbackI GLFWMouseButtonCallbackI GLFWScrollCallbackI GLFWKeyCallbackI]
            [org.lwjgl.opengl GL GL11 GL30]
            [org.lwjgl.system MemoryUtil]
-           [io.github.humbleui.skija Canvas Color4f Paint PaintMode Surface DirectContext BackendRenderTarget FramebufferFormat ColorSpace SurfaceOrigin SurfaceColorFormat Font Typeface Image Data]
-           [io.github.humbleui.types Rect]
-           [java.io File]))
-
-(set! *warn-on-reflection* true)
-
-;; =============================================================================
-;; Global State
-;; =============================================================================
-
+           [io.github.humbleui.skija Canvas Surface DirectContext BackendRenderTarget FramebufferFormat ColorSpace SurfaceOrigin SurfaceColorFormat Image]))
 (defonce game-state (atom (state/create-game-state)))
 (defonce render-state (atom (state/create-render-state)))
 (def ^:const world-click-threshold 6.0)
@@ -116,7 +107,7 @@
   (GLFW/glfwSetMouseButtonCallback
    window
    (reify GLFWMouseButtonCallbackI
-     (invoke [_ win button action mods]
+     (invoke [_ _win button action _mods]
        (when (= button GLFW/GLFW_MOUSE_BUTTON_LEFT)
          (let [input (state/get-input game-state)
                x (:mouse-x input)
@@ -146,12 +137,12 @@
   (GLFW/glfwSetScrollCallback
    window
    (reify GLFWScrollCallbackI
-     (invoke [_ win xoffset yoffset]
+     (invoke [_ _win _xoffset yoffset]
        (let [input (state/get-input game-state)
              mouse-x (:mouse-x input)
-             mouse-y (:mouse-y input)]
-         (let [camera (state/get-camera game-state)
-               old-zoom (:zoom camera)
+             mouse-y (:mouse-y input)
+             camera (state/get-camera game-state)
+             old-zoom (:zoom camera)
                zoom-factor (Math/pow 1.1 yoffset)
                new-zoom (max 0.4 (min 10.0 (* old-zoom zoom-factor)))
                old-pan-x (:pan-x camera)
@@ -163,12 +154,12 @@
            (state/update-camera! game-state assoc
                                  :zoom new-zoom
                                  :pan-x new-pan-x
-                                 :pan-y new-pan-y))))))
+                                 :pan-y new-pan-y)))))
 
   (GLFW/glfwSetKeyCallback
    window
    (reify GLFWKeyCallbackI
-     (invoke [_ win key scancode action mods]
+     (invoke [_ _win key _scancode action _mods]
        (when (and (= action GLFW/GLFW_PRESS)
                   (= key GLFW/GLFW_KEY_H))
          (state/toggle-hyperlanes! game-state))))))
@@ -438,12 +429,12 @@
     ;; Terminate GLFW
     (GLFW/glfwTerminate)))
 
-(defn -main [& args]
+(defn -main [& _args]
   (println "Starting Silent King...")
 
   ;; Start nREPL server for interactive development
   (let [nrepl-port 7888
-        nrepl-server (nrepl/start-server :port nrepl-port :handler cider-nrepl-handler)]
+        _nrepl-server (nrepl/start-server :port nrepl-port :handler cider-nrepl-handler)]
     (println (format "nREPL server started on port %d" nrepl-port))
     (spit ".nrepl-port" nrepl-port))
 

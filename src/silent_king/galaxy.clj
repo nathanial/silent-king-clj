@@ -55,8 +55,8 @@
 
 (declare clamp)
 
-(defn- ^Random star->rng
-  [{:keys [id]}]
+(defn- star->rng
+  ^Random [{:keys [id]}]
   (let [base (long (or id 0))
         seed (-> (unchecked-multiply 6364136223846793005 base)
                  (unchecked-add 1442695040888963407))]
@@ -359,7 +359,7 @@
            :planets planets
            :next-star-id last-id
            :next-planet-id next-id})
-        (let [{:keys [x y density] :as sample}
+        (let [{:keys [density] :as sample}
               (if (< (rand) core-prob)
                 (sample-core-star noise-gen)
                 (sample-spiral-star noise-gen))

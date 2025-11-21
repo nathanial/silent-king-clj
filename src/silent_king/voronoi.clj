@@ -182,7 +182,7 @@
             sites)))
 
 (defn- polygon->cell
-  [^Polygon polygon {:keys [coord star] :as site}]
+  [^Polygon polygon {:keys [_coord star] :as site}]
   (let [raw-ring (strip-duplicate-last (vec (.getCoordinates (.getExteriorRing polygon))))
         center (or (some-> site :coord coord->map)
                    (let [centroid (.getCentroid polygon)]
@@ -357,7 +357,7 @@
 
 (defn plan-voronoi-cells
   "Plan Voronoi overlay commands with LOD and culling. Returns {:commands [...] :rendered n}."
-  [width height zoom pan-x pan-y game-state _current-time]
+  [_width _height zoom pan-x pan-y game-state _current-time]
   (let [settings (state/voronoi-settings game-state)
         enabled? (state/voronoi-enabled? game-state)
         cells (state/voronoi-cells game-state)

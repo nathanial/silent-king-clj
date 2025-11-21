@@ -1,5 +1,5 @@
 (ns silent-king.planet-test
-  (:require [clojure.test :refer :all]
+  (:require [clojure.test :refer [deftest is]]
             [silent-king.galaxy :as galaxy]))
 
 (defn- close?

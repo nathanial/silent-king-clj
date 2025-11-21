@@ -154,8 +154,9 @@
    :voronoi-generated? false
    :metrics {:performance default-performance-metrics}})
 
-(defn create-render-state []
+(defn create-render-state
   "Create initial render state structure"
+  []
   {:window nil
    :context nil
    :surface nil})

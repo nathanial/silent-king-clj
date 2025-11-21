@@ -114,8 +114,9 @@
     result))
 
 ;; Line segment frustum culling using Cohen-Sutherland algorithm
-(defn- compute-outcode [x y width height]
+(defn- compute-outcode
   "Compute outcode for Cohen-Sutherland line clipping"
+  [x y width height]
   (let [code 0
         code (if (< y 0) (bit-or code 1) code)        ; TOP
         code (if (>= y height) (bit-or code 2) code)  ; BOTTOM
