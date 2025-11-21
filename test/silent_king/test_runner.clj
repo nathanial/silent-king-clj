@@ -10,7 +10,9 @@
             [silent-king.voronoi-test]
             [silent-king.render.galaxy-test]
             [silent-king.hyperlanes-test]
-            [silent-king.regions-test]))
+            [silent-king.regions-test]
+            [silent-king.camera-test]
+            [silent-king.galaxy-test]))
 
 (defn -main
   "Run all Reactified UI unit tests."
@@ -25,7 +27,9 @@
                                     silent-king.voronoi-test
                                     silent-king.render.galaxy-test
                                     silent-king.hyperlanes-test
-                                    silent-king.regions-test])
+                                    silent-king.regions-test
+                                    silent-king.camera-test
+                                    silent-king.galaxy-test])
         failures (+ (:fail result 0) (:error result 0))]
     (when (pos? failures)
       (System/exit 1))))
