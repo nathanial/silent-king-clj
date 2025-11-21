@@ -230,6 +230,11 @@
   (state/update-camera! game-state assoc :pan-x (double x) :pan-y (double y))
   nil)
 
+(defmethod dispatch-event! :ui.control-panel/set-tab
+  [game-state [_ tab-id]]
+  (swap! game-state assoc :control-panel-tab tab-id)
+  nil)
+
 (defmethod dispatch-event! :default
   [_ event]
   (println "Unhandled UI event" event)

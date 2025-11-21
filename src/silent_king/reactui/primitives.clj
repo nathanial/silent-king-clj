@@ -8,6 +8,7 @@
             [silent-king.reactui.primitives.minimap]
             [silent-king.reactui.primitives.slider]
             [silent-king.reactui.primitives.stack]
+            [silent-king.reactui.primitives.tabbed-window]
             [silent-king.reactui.primitives.window]))
 
 (set! *warn-on-reflection* true)
