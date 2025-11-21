@@ -21,7 +21,7 @@
   [value]
   (float (double (or value 0.0))))
 
-(defn- rect->Rect
+(defn- ^Rect rect->Rect
   [{:keys [x y width height]}]
   (Rect/makeXYWH (->float x) (->float y) (->float width) (->float height)))
 
@@ -32,12 +32,12 @@
     :square PaintStrokeCap/SQUARE
     PaintStrokeCap/BUTT))
 
-(defn- with-fill
+(defn- ^Paint with-fill
   [color]
   (doto ^Paint (Paint.)
     (.setColor (->int-color color color))))
 
-(defn- with-stroke
+(defn- ^Paint with-stroke
   [color width cap]
   (doto ^Paint (Paint.)
     (.setColor (->int-color color color))
@@ -108,7 +108,7 @@
             (.setShader paint shader)))
         (.drawLine canvas fx fy tx ty paint)))))
 
-(defn- path-from-points
+(defn- ^Path path-from-points
   [points]
   (let [path (Path.)]
     (when-let [first-point (first points)]
@@ -155,8 +155,8 @@
 (defn- draw-image-rect!
   [^Canvas canvas {:keys [^Image image src dst transform]}]
   (when (and image src dst)
-    (let [src-rect (rect->Rect src)
-          dst-rect (rect->Rect dst)]
+    (let [^Rect src-rect (rect->Rect src)
+          ^Rect dst-rect (rect->Rect dst)]
       (if transform
         (do
           (.save canvas)
