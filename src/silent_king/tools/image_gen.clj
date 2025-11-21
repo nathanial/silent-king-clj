@@ -295,19 +295,19 @@
                 batches (partition-all 10 (map-indexed vector (:prompts prompts-data)))]
             
             (doseq [batch batches]
-              (let [futures (for [[i prompt] batch]
-                              (future
-                                (let [idx (inc i)
-                                      filename (str (pad-number idx 3) ".png")
-                                      path (io/file output-dir filename)]
-                                  (try
-                                    (let [img-data (generate-variation api-key ref-images-b64 prompt (:context prompts-data) (:style prompts-data) size)]
-                                      (save-image img-data path)
-                                      (log (str "✓ " filename))
-                                      {:index idx :prompt prompt :status "success" :filename filename})
-                                    (catch Exception e
-                                      (error (str "✗ " filename " - " (.getMessage e)))
-                                      {:index idx :prompt prompt :status "error" :error (.getMessage e)})))))]
+              (let [futures (doall (for [[i prompt] batch]
+                                     (future
+                                       (let [idx (inc i)
+                                             filename (str (pad-number idx 3) ".png")
+                                             path (io/file output-dir filename)]
+                                         (try
+                                           (let [img-data (generate-variation api-key ref-images-b64 prompt (:context prompts-data) (:style prompts-data) size)]
+                                             (save-image img-data path)
+                                             (log (str "✓ " filename))
+                                             {:index idx :prompt prompt :status "success" :filename filename})
+                                           (catch Exception e
+                                             (error (str "✗ " filename " - " (.getMessage e)))
+                                             {:index idx :prompt prompt :status "error" :error (.getMessage e)}))))))]
                 (run! (fn [f] (swap! results conj @f)) futures)))
             
             ;; Save metadata

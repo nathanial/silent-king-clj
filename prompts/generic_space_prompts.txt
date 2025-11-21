@@ -1,0 +1,73 @@
+# Context: generic space background tile for a retro space strategy game map
+# Style: Atmospheric, deep, and colorful. Use rich, vibrant deep colors for the void (blues, purples, teals, crimsons) to create variety. Focus on "ambient" space variations rather than distinct features like planets or sharp nebulas. NOT photorealistic - use artistic stylization with smooth gradients. Full canvas image, no borders.
+#
+# Generic Space Background Prompts
+# One prompt per line - customize freely without rebuilding!
+# Empty lines and lines starting with # (except Context/Style) are ignored
+
+# Deep Blue & Indigo Ambience
+Create a deep midnight blue space background with glittering stars
+Create a rich indigo void background with subtle blue ambient light and scattered stars
+Create a dark royal blue cosmic background with a dense field of faint stars
+Create a cold steel-blue space background with a smooth gradient
+Create a vibrant deep azure space background that fades into black
+Create a navy blue deep space background with bright distinct stars
+Create a dark sapphire colored space background with a velvety texture
+Create a gloom deep blue background with faint cyan starlight
+Create a dark electric blue space background with intense star points
+Create a calm deep ocean blue cosmic void with sparse stars
+
+# Purple & Violet Variations
+Create a deep purple space background with gold stars
+Create a rich violet-black void background with subtle swirling gradients
+Create a dark magenta space background with a heavy feel
+Create a plum-colored deep space background with scattered white stars
+Create a vibrant dark purple cosmic background with faint pink starlight
+Create a deep grape-purple void background with soft ambient glow
+Create a mysterious amethyst dark space background with distinct stars
+Create a royal purple background with a smooth color wash
+Create a dark lavender-tinted black space background
+Create a deep cosmic purple background with a dense starfield
+
+# Warm Tones (Red, Orange, Brown)
+Create a deep crimson red space background with dark shadows
+Create a dark maroon void background with faint orange stars
+Create a warm rusty-black space background with a subtle glow
+Create a deep burnt orange cosmic background fading to black
+Create a dark amber space background with golden starlight
+Create a rich mahogany dark space background with scattered stars
+Create a deep wine-red void background with soft ambient light
+Create a copper-tinted dark space background
+Create a fiery dark red background with subtle heat gradients
+Create a deep brown-gold cosmic background with bright stars
+
+# Teal & Green Tints
+Create a deep teal space background with a dark void
+Create a rich emerald-black background with faint green stars
+Create a dark turquoise cosmic background with subtle gradients
+Create a deep sea-green void background with scattered starlight
+Create a cold viridian deep space background
+Create a dark cyan space background with bright white stars
+Create a forest-green tinted black background with soft texture
+Create a deep aquamarine void background with a smooth wash
+Create a dark jade cosmic background with faint glittering stars
+Create a mysterious teal-black background with ambient glow
+
+# Colorful Starfields (on Dark Backgrounds)
+Create a black background with a vibrant multicolor starfield
+Create a deep dark void with intense golden and blue stars
+Create a dark background with clouds of tiny pink and blue stars
+Create a pitch black background with a dense field of bright cyan stars
+Create a dark space background with sparkling red and orange stars
+Create a deep void background filled with colorful micro-stars
+Create a black background with a river of faint colorful stars
+Create a dark cosmic background with varied star colors and sizes
+Create a deep space background with intense white and blue star clusters
+Create a dark background with a subtle rainbow of distant starlight
+
+# Mixed Deep Gradients
+Create a space background blending deep blue and purple
+Create a dark cosmic background fading from teal to black
+Create a deep void background mixing crimson and dark blue tones
+Create a dark space background with subtle gold and purple gradients
+Create a rich multicolored dark background with a smooth blended look
