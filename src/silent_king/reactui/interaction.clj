@@ -6,7 +6,7 @@
 (set! *warn-on-reflection* true)
 
 (def ^:private interactive-types
-  #{:button :slider :dropdown :minimap :window :galaxy})
+  #{:button :slider :dropdown :minimap :window :tabbed-window :galaxy})
 
 (declare dropdown-region)
 
@@ -49,7 +49,7 @@
 
 (defn- window-overlay-hit
   [node px py]
-  (when (= (:type node) :window)
+  (when (or (= (:type node) :window) (= (:type node) :tabbed-window))
     (when (window-region node px py)
       node)))
 

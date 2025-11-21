@@ -19,8 +19,6 @@
 (def ^:const inspector-margin 24.0)
 
 (def ^:private control-panel-window-id :ui/control-panel)
-(def ^:private hyperlane-window-id :ui/hyperlane-settings)
-(def ^:private voronoi-window-id :ui/voronoi-settings)
 (def ^:private performance-window-id :ui/performance-overlay)
 (def ^:private star-inspector-window-id :ui/star-inspector)
 (def ^:private minimap-window-id :ui/minimap)
@@ -37,7 +35,8 @@
      :ui-scale (state/ui-scale game-state)
      :metrics {:fps (double (or (:fps metrics) 0.0))
                :visible-stars (long (or (:visible-stars metrics) 0))
-               :draw-calls (long (or (:draw-calls metrics) 0))}}))
+               :draw-calls (long (or (:draw-calls metrics) 0))}
+     :active-tab (or (:control-panel-tab @game-state) :main)}))
 
 (defn hyperlane-settings-props
   [game-state]
@@ -124,34 +123,23 @@
    :width (:width control-panel/default-panel-bounds)
    :height (:height control-panel/default-panel-bounds)})
 
-(defn- hyperlane-default-bounds
-  []
-  (let [margin 24.0
-        control-width (:width control-panel/default-panel-bounds)]
-    {:x (+ margin control-width margin)
-     :y margin
-     :width (:width hyperlane-settings/default-panel-bounds)
-     :height (:height hyperlane-settings/default-panel-bounds)}))
 
-(defn- voronoi-default-bounds
-  []
-  (let [margin 24.0
-        control-width (:width control-panel/default-panel-bounds)
-        hyperlane-height (:height hyperlane-settings/default-panel-bounds)]
-    {:x (+ margin control-width margin)
-     :y (+ margin hyperlane-height 12.0)
-     :width (:width voronoi-settings/default-panel-bounds)
-     :height (:height voronoi-settings/default-panel-bounds)}))
 
 (defn control-panel-window
   [game-state]
   (let [props (control-panel-props game-state)
+        hyperlane-props (hyperlane-settings-props game-state)
+        voronoi-props (voronoi-settings-props game-state)
         default-bounds (control-panel-default-bounds)
         bounds (state/window-bounds game-state control-panel-window-id default-bounds)
         minimized? (state/window-minimized? game-state control-panel-window-id)
         content (when-not minimized?
-                  (control-panel/control-panel props))]
-    {:type :window
+                  (case (:active-tab props)
+                    :main (control-panel/control-panel props)
+                    :hyperlanes (hyperlane-settings/hyperlane-settings-panel hyperlane-props)
+                    :voronoi (voronoi-settings/voronoi-settings-panel voronoi-props)
+                    (control-panel/control-panel props)))]
+    {:type :tabbed-window
      :props {:title "Controls"
              :bounds bounds
              :minimized? minimized?
@@ -159,47 +147,12 @@
              :min-width (:width control-panel/default-panel-bounds)
              :min-height (:height control-panel/default-panel-bounds)
              :on-change-bounds [:ui.window/set-bounds control-panel-window-id]
-             :on-toggle-minimized [:ui.window/toggle-minimized control-panel-window-id]}
-     :children (cond-> []
-                 content (conj content))}))
-
-(defn hyperlane-settings-window
-  [game-state]
-  (let [props (hyperlane-settings-props game-state)
-        default-bounds (hyperlane-default-bounds)
-        bounds (state/window-bounds game-state hyperlane-window-id default-bounds)
-        minimized? (state/window-minimized? game-state hyperlane-window-id)
-        content (when-not minimized?
-                  (hyperlane-settings/hyperlane-settings-panel props))]
-    {:type :window
-     :props {:title "Hyperlane Settings"
-             :bounds bounds
-             :minimized? minimized?
-             :resizable? true
-             :min-width (:width hyperlane-settings/default-panel-bounds)
-             :min-height (:height hyperlane-settings/default-panel-bounds)
-             :on-change-bounds [:ui.window/set-bounds hyperlane-window-id]
-             :on-toggle-minimized [:ui.window/toggle-minimized hyperlane-window-id]}
-     :children (cond-> []
-                 content (conj content))}))
-
-(defn voronoi-settings-window
-  [game-state]
-  (let [props (voronoi-settings-props game-state)
-        default-bounds (voronoi-default-bounds)
-        bounds (state/window-bounds game-state voronoi-window-id default-bounds)
-        minimized? (state/window-minimized? game-state voronoi-window-id)
-        content (when-not minimized?
-                  (voronoi-settings/voronoi-settings-panel props))]
-    {:type :window
-     :props {:title "Voronoi Settings"
-             :bounds bounds
-             :minimized? minimized?
-             :resizable? true
-             :min-width (:width voronoi-settings/default-panel-bounds)
-             :min-height (:height voronoi-settings/default-panel-bounds)
-             :on-change-bounds [:ui.window/set-bounds voronoi-window-id]
-             :on-toggle-minimized [:ui.window/toggle-minimized voronoi-window-id]}
+             :on-toggle-minimized [:ui.window/toggle-minimized control-panel-window-id]
+             :tabs [{:id :main :label "Main"}
+                    {:id :hyperlanes :label "Hyperlanes"}
+                    {:id :voronoi :label "Voronoi"}]
+             :active-tab (:active-tab props)
+             :on-change-tab [:ui.control-panel/set-tab]}
      :children (cond-> []
                  content (conj content))}))
 
@@ -290,8 +243,6 @@
   [:vstack {:key :ui-root}
    (galaxy-window game-state)
    (control-panel-window game-state)
-   (hyperlane-settings-window game-state)
-   (voronoi-settings-window game-state)
    (performance-overlay-window game-state)
     ;; Render last so it stacks on the right side without overlapping other panels.
    (when-let [window (star-inspector-window game-state)]
