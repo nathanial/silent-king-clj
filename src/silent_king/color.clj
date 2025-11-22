@@ -197,12 +197,17 @@
     (assoc color :a (clamp01 (double opacity)))))
 
 (defn ensure
-  "Ensure value is a color map. Handles hex strings, integers, or existing maps.
+  "Ensure value is a color map. Handles hex strings, integers, normalized RGBA vectors, or existing maps.
    Returns nil if value is nil."
   [v]
   (cond
     (nil? v) nil
     (map? v) v
+    (vector? v) (let [[r g b a] v]
+                  (rgb (long (* (double (or r 0.0)) 255.0))
+                       (long (* (double (or g 0.0)) 255.0))
+                       (long (* (double (or b 0.0)) 255.0))
+                       (long (* (double (or a 1.0)) 255.0))))
     :else (hex v)))
 
 (defn lighten

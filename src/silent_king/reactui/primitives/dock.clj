@@ -146,9 +146,19 @@
         
         ;; Splitter Visual
         splitter-rect (get-splitter-rect bounds side)
-        splitter-cmd (commands/rect {:rect splitter-rect :color splitter-color})]
+        splitter-cmd (commands/rect {:rect splitter-rect :color splitter-color})
+        
+        ;; Content
+        content-bounds (get-in node [:layout :content-bounds])
+        child-commands (mapcat #(render/plan-node context %) (:children node))]
     
-    (into (conj cmds splitter-cmd) tab-cmds)))
+    (cond-> (conj cmds splitter-cmd)
+      true (into tab-cmds)
+      (and (seq (:children node)) content-bounds)
+      (into (concat [(commands/save)
+                     (commands/clip-rect content-bounds)]
+                    child-commands
+                    [(commands/restore)])))))
 
 (defmethod render/plan-node :dock-container
   [context node]
