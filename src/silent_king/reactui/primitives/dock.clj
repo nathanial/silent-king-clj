@@ -17,10 +17,10 @@
 (def ^:const splitter-size 6.0)
 (def ^:const tab-padding 8.0)
 
-(def active-tab-color 0xFF303030)
-(def inactive-tab-color 0xFF202020)
+(def active-tab-color 0xFF454545)
+(def inactive-tab-color 0xFF2A2A2A)
 (def bg-color 0xFF181818)
-(def border-color 0xFF404040)
+(def border-color 0xFF505050)
 (def splitter-color 0xFF505050)
 (def splitter-hover-color 0xFF707070)
 (def text-color 0xFFCCCCCC)
@@ -223,8 +223,9 @@
         (when (> dist 5.0)
           ;; Threshold exceeded -> UNDOCK
           (let [tab-id (:tab-id (:value interaction))]
-            ;; We place the window slightly offset from mouse so it feels like we are holding the tab/header
-            (ui-events/dispatch-event! game-state [:ui.window/undock tab-id {:x (- x 20.0) :y (- y 15.0)}])
+            ;; Place window centered on mouse cursor effectively
+            ;; Assuming title bar grab, offset by ~10px
+            (ui-events/dispatch-event! game-state [:ui.window/undock tab-id {:x (- x 10.0) :y (- y 10.0)}])
             (core/clear-active-interaction!)
             (core/release-capture!)))
         true)

@@ -54,7 +54,7 @@
          :size 200.0}
    :center {:windows []
             :active nil
-            :size 0.0}}) ;; Size ignored for center, fills space
+            :size 0.0}})
 
 (defn next-planet-id!
   "Generate and store the next planet id. Starts at 1."
@@ -811,13 +811,26 @@
                    current-order (or (get-in state [:ui :window-order]) [])
                    new-order (if (some #{window-id} current-order)
                                current-order
-                               (conj current-order window-id))]
+                               (conj current-order window-id))
+                   
+                   ;; Ensure safe bounds (clamp to viewport roughly)
+                   viewport (get-in state [:ui :viewport])
+                   vp-w (double (or (:width viewport) 1280.0))
+                   vp-h (double (or (:height viewport) 720.0))
+                   scale (double (get-in state [:ui :scale] 1.0))
+                   logical-w (/ vp-w scale)
+                   logical-h (/ vp-h scale)
+                   
+                   safe-x (max 0.0 (min (- logical-w 50.0) (double (or (:x at-position) 0.0))))
+                   safe-y (max 0.0 (min (- logical-h 50.0) (double (or (:y at-position) 0.0))))
+                   safe-pos (assoc at-position :x safe-x :y safe-y)]
+               
                (-> state
                    (assoc-in [:ui :docking] new-docking)
                    (assoc-in [:ui :window-order] new-order)
                    ;; Update bounds if position provided
                    (cond-> at-position
-                     (update-in [:ui :windows window-id :bounds] merge at-position))))))))
+                     (update-in [:ui :windows window-id :bounds] merge safe-pos))))))))
 
 (defn dock-window!
   "Dock a window to a specific side."

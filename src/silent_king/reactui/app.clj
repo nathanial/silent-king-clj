@@ -260,7 +260,7 @@
                                :component component}))))
                       (:windows dock))]
     (when (seq windows)
-      (let [active-id (:active dock)
+      (let [active-id (or (:active dock) (:id (first windows)))
             active-component (some #(when (= (:id %) active-id) (:component %)) windows)]
         {:type :dock-container
          :props {:bounds bounds
