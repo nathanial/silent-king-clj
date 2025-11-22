@@ -6,6 +6,7 @@
             [silent-king.reactui.layout :as layout]
             [silent-king.reactui.render :as render]
             [silent-king.render.commands :as commands]
+            [silent-king.state :as state]
             [silent-king.color :as color]))
 
 (set! *warn-on-reflection* true)
@@ -356,6 +357,23 @@
                         true)
             false))))))
 
+(defn- check-dock-zone
+  [game-state px py]
+  (let [viewport (state/ui-viewport game-state)
+        w (double (or (:width viewport) 0.0))
+        h (double (or (:height viewport) 0.0))
+        threshold 50.0]
+    (cond
+      (< px threshold) {:side :left
+                        :rect {:x 0 :y 0 :width 300 :height h}}
+      (> px (- w threshold)) {:side :right
+                              :rect {:x (- w 300) :y 0 :width 300 :height h}}
+      (< py threshold) {:side :top
+                        :rect {:x 0 :y 0 :width w :height 200}}
+      (> py (- h threshold)) {:side :bottom
+                              :rect {:x 0 :y (- h 200) :width w :height 200}}
+      :else nil)))
+
 (defn handle-window-pointer-drag!
   [node game-state px py]
   (when-let [active (core/active-interaction)]
@@ -369,8 +387,16 @@
               new-bounds {:x (+ (double (:x start-bounds)) dx)
                           :y (+ (double (:y start-bounds)) dy)
                           :width (double (:width start-bounds))
-                          :height stored-height}]
+                          :height stored-height}
+
+              ;; Dock Check
+              dock-zone (check-dock-zone game-state px py)]
+
           (dispatch-window-bounds! node game-state new-bounds)
+          
+          (if dock-zone
+            (state/set-dock-preview! game-state (:rect dock-zone))
+            (state/set-dock-preview! game-state nil))
           true)
 
         :window-resize
@@ -407,7 +433,17 @@
           (when (interaction/contains-point? button-bounds px py)
             (dispatch-window-toggle! node game-state))
           true)
-        :window-move true
+        :window-move 
+        (let [dock-zone (check-dock-zone game-state px py)]
+          (when dock-zone
+            (when-let [on-bounds (-> node :props :on-change-bounds)]
+              ;; Convention: if on-change-bounds is [:ui.window/set-bounds :my-window],
+              ;; then the ID is the second element.
+              (when (and (vector? on-bounds) (>= (count on-bounds) 2))
+                (let [window-id (second on-bounds)]
+                  (ui-events/dispatch-event! game-state [:ui.window/dock window-id (:side dock-zone)])))))
+          (state/set-dock-preview! game-state nil)
+          true)
         :window-resize true
         :tab-click
         (let [tab-id (:value active)

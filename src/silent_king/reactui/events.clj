@@ -254,6 +254,26 @@
   (swap! game-state assoc :control-panel-tab tab-id)
   nil)
 
+(defmethod dispatch-event! :ui.window/dock
+  [game-state [_ window-id side]]
+  (state/dock-window! game-state window-id side)
+  nil)
+
+(defmethod dispatch-event! :ui.window/undock
+  [game-state [_ window-id position]]
+  (state/undock-window! game-state window-id position)
+  nil)
+
+(defmethod dispatch-event! :ui.dock/resize
+  [game-state [_ side new-size]]
+  (state/set-dock-size! game-state side new-size)
+  nil)
+
+(defmethod dispatch-event! :ui.dock/select-tab
+  [game-state [_ side window-id]]
+  (state/switch-dock-tab! game-state side window-id)
+  nil)
+
 (defmethod dispatch-event! :default
   [_ event]
   (println "Unhandled UI event" event)

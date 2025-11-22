@@ -39,6 +39,20 @@
    performance-window-id
    star-inspector-window-id])
 
+(def default-docking-state
+  {:left {:windows []
+          :active nil
+          :size 300.0}
+   :right {:windows []
+           :active nil
+           :size 300.0}
+   :bottom {:windows []
+            :active nil
+            :size 200.0}
+   :top {:windows []
+         :active nil
+         :size 200.0}})
+
 (defn next-planet-id!
   "Generate and store the next planet id. Starts at 1."
   [game-state]
@@ -163,6 +177,7 @@
                                :height 0.0}
                     :windows {}
                     :window-order default-window-order
+                    :docking default-docking-state
                     :performance-overlay {:visible? true
                                           :expanded? true}
                     :dropdowns {}}
@@ -752,3 +767,76 @@
   "Set surface in render state"
   [render-state surface]
   (swap! render-state assoc :surface surface))
+
+;; =============================================================================
+;; Docking Helpers
+;; =============================================================================
+
+(defn get-docking-state
+  [game-state]
+  (get-in @game-state [:ui :docking] default-docking-state))
+
+(defn set-dock-size!
+  [game-state side size]
+  (when (and side (number? size))
+    (swap! game-state assoc-in [:ui :docking side :size] (max 50.0 (double size)))))
+
+(defn switch-dock-tab!
+  [game-state side window-id]
+  (when (and side window-id)
+    (swap! game-state assoc-in [:ui :docking side :active] window-id)))
+
+(defn undock-window!
+  "Remove a window from any dock and restore it to floating state."
+  [game-state window-id {:keys [x y] :as at-position}]
+  (when window-id
+    (swap! game-state
+           (fn [state]
+             (let [docking (get-in state [:ui :docking])
+                   ;; Helper to remove window from a dock-side map
+                   remove-fn (fn [side-map]
+                               (let [filtered (filterv #(not= % window-id) (:windows side-map))
+                                     active (if (= (:active side-map) window-id)
+                                              (first filtered) ;; Select new active if we removed the active one
+                                              (:active side-map))]
+                                 (assoc side-map :windows filtered :active active)))
+                   new-docking (reduce-kv (fn [m side v]
+                                            (assoc m side (remove-fn v)))
+                                          {}
+                                          docking)
+                   ;; Add to window order if not present
+                   current-order (or (get-in state [:ui :window-order]) [])
+                   new-order (if (some #{window-id} current-order)
+                               current-order
+                               (conj current-order window-id))]
+               (-> state
+                   (assoc-in [:ui :docking] new-docking)
+                   (assoc-in [:ui :window-order] new-order)
+                   ;; Update bounds if position provided
+                   (cond-> at-position
+                     (update-in [:ui :windows window-id :bounds] merge at-position))))))))
+
+(defn dock-window!
+  "Dock a window to a specific side."
+  [game-state window-id side]
+  (when (and window-id side (contains? default-docking-state side))
+    ;; First undock to ensure it's clean (removes from other docks if needed)
+    (undock-window! game-state window-id nil)
+    ;; Now add to the specific dock
+    (swap! game-state
+           (fn [state]
+             ;; Remove from window order (floating)
+             (let [order (get-in state [:ui :window-order])
+                   new-order (filterv #(not= % window-id) order)
+                   ;; Add to dock
+                   dock-path [:ui :docking side]]
+               (-> state
+                   (assoc-in [:ui :window-order] new-order)
+                   (update-in (conj dock-path :windows) conj window-id)
+                   (assoc-in (conj dock-path :active) window-id)))))))
+
+(defn set-dock-preview!
+  [game-state rect]
+  (swap! game-state assoc-in [:ui :dock-preview]
+         {:visible? (boolean rect)
+          :rect (or rect {:x 0 :y 0 :width 0 :height 0})}))

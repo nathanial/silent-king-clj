@@ -13,11 +13,12 @@
 
 (defn- build-layout
   [game-state]
-  (state/set-ui-viewport! game-state {:width (:width test-viewport)
-                                      :height (:height test-viewport)})
-  (-> (app/root-tree game-state)
-      ui-core/normalize-tree
-      (layout/compute-layout test-viewport)))
+  (let [viewport {:width (:width test-viewport)
+                  :height (:height test-viewport)}]
+    (state/set-ui-viewport! game-state viewport)
+    (-> (app/root-tree game-state viewport)
+        ui-core/normalize-tree
+        (layout/compute-layout test-viewport))))
 
 (defn- build-layout-with-tab
   [game-state tab-id]

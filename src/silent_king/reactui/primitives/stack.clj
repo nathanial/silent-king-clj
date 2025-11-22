@@ -107,3 +107,21 @@
 (defmethod render/plan-node :hstack
   [context node]
   (plan-stack context node))
+
+(defmethod layout/layout-node :stack
+  [node context]
+  ;; Stack just overlays children on top of each other
+  ;; Uses resolved bounds for the stack itself
+  (let [bounds* (layout/resolve-bounds node context)
+        viewport (:viewport context)
+        children (:children node)
+        ;; Each child gets the stack's bounds as their bounds/viewport context
+        child-context (assoc context :viewport bounds* :bounds bounds*)
+        layout-children (mapv #(layout/layout-node % child-context) children)]
+    (assoc node
+           :layout {:bounds bounds*}
+           :children layout-children)))
+
+(defmethod render/plan-node :stack
+  [context node]
+  (plan-stack context node))

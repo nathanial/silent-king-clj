@@ -176,7 +176,28 @@
    [:last-world-click {:optional true} [:maybe WorldCoord]]
    [:details {:optional true} any?]])
 
-(def UI [:map {:closed false} [:scale number?]])
+;; =============================================================================
+;; Docking Schemas
+;; =============================================================================
+
+(def DockSide
+  [:map {:closed false}
+   [:windows [:sequential keyword?]] ;; List of window IDs
+   [:active [:maybe keyword?]]       ;; Currently active window ID
+   [:size number?]])                 ;; Width (for L/R) or Height (for T/B)
+
+(def DockingState
+  [:map
+   [:left DockSide]
+   [:right DockSide]
+   [:top DockSide]
+   [:bottom DockSide]])
+
+(def UI
+  [:map {:closed false}
+   [:scale number?]
+   [:docking {:optional true} DockingState]
+   [:dock-preview {:optional true} [:map [:visible? boolean?] [:rect [:map [:x number?] [:y number?] [:width number?] [:height number?]]]]]])
 
 (def Features
   [:map {:closed false}

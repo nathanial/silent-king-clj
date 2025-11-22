@@ -2,6 +2,7 @@
   "Load all Reactified UI primitive namespaces so their multimethods are registered."
   (:require [silent-king.reactui.primitives.bar-chart]
             [silent-king.reactui.primitives.button]
+            [silent-king.reactui.primitives.dock]
             [silent-king.reactui.primitives.dropdown]
             [silent-king.reactui.primitives.galaxy]
             [silent-king.reactui.primitives.label]

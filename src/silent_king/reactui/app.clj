@@ -243,7 +243,38 @@
      :children (cond-> []
                  content (conj content))}))
 
-(defn root-tree
+(defn render-dock
+  [game-state docking-state side bounds]
+  (let [dock (get docking-state side)
+        renderers {galaxy-window-id galaxy-window
+                   minimap-window-id minimap-window
+                   control-panel-window-id control-panel-window
+                   performance-window-id performance-overlay-window
+                   star-inspector-window-id star-inspector-window}
+        windows (keep (fn [id]
+                        (when-let [renderer (get renderers id)]
+                          (let [component (renderer game-state)]
+                            (when component
+                              {:id id
+                               :title (get-in component [:props :title] (str id))
+                               :component component}))))
+                      (:windows dock))]
+    (when (seq windows)
+      (let [active-id (:active dock)
+            active-component (some #(when (= (:id %) active-id) (:component %)) windows)]
+        {:type :dock-container
+         :props {:bounds bounds
+                 :side side
+                 :tabs (mapv #(select-keys % [:id :title]) windows)
+                 :active-id active-id
+                 :on-resize [:ui.dock/resize side]
+                 :on-select-tab [:ui.dock/select-tab side]}
+         ;; Render the CONTENT of the window, stripping the window chrome
+         :children (if active-component
+                     (:children active-component)
+                     [])}))))
+
+(defn render-floating-windows
   [game-state]
   (let [window-order (state/get-window-order game-state)
         renderers {galaxy-window-id galaxy-window
@@ -251,13 +282,68 @@
                    control-panel-window-id control-panel-window
                    performance-window-id performance-overlay-window
                    star-inspector-window-id star-inspector-window}]
-    (into [:vstack {:key :ui-root}]
-          (for [window-id window-order
-                :let [renderer (get renderers window-id)]
-                :when renderer
-                :let [component (renderer game-state)]
-                :when component]
-            component))))
+    (for [window-id window-order
+          :let [renderer (get renderers window-id)]
+          :when renderer
+          :let [component (renderer game-state)]
+          :when component]
+      component)))
+
+(defn dock-preview-overlay
+  [game-state]
+  (let [{:keys [visible? rect]} (get-in @game-state [:ui :dock-preview])]
+    (when visible?
+      {:type :window ;; Using window as a rect container for now, or specific overlay
+       :props {:bounds rect
+               :background-color [0.2 0.6 1.0 0.3] ;; Transparent blue
+               :border-color [0.2 0.6 1.0 0.8]
+               :header-height 0
+               :resizable? false
+               :minimized? false}
+       :children []})))
+
+(defn root-tree
+  [game-state viewport] ;; Note: viewport passed in
+  (let [docking-state (state/get-docking-state game-state)
+        layout (silent-king.reactui.layout/calculate-dock-layout viewport docking-state)
+        
+        ;; Dock Containers
+        left-dock (render-dock game-state docking-state :left (:left layout))
+        right-dock (render-dock game-state docking-state :right (:right layout))
+        top-dock (render-dock game-state docking-state :top (:top layout))
+        bottom-dock (render-dock game-state docking-state :bottom (:bottom layout))
+        
+        ;; Floating Windows
+        floating (render-floating-windows game-state)
+        
+        ;; Preview
+        preview (dock-preview-overlay game-state)]
+    
+    ;; We return a flat list of children effectively.
+    ;; But `root-tree` is expected to be a single element.
+    ;; We'll use a :vstack (or similar container) that takes up full screen?
+    ;; Actually, the `layout/calculate-dock-layout` implies we are orchestrating layout.
+    ;; But `ui-core/render-ui-tree` expects a single root.
+    ;; Let's create a "root" container that just passes through its children but uses manual bounds?
+    ;; Or just a fragment if our system supports it?
+    ;; The system expects a single map.
+    
+    {:type :stack
+     :props {:bounds viewport} ;; Fill viewport
+     :children (cond-> []
+                 ;; Background / Game View could go here in :center layout?
+                 ;; For now, we treat "Game View" as just what's behind the UI.
+                 ;; BUT, if we want the UI to squeeze the game view, we need to communicate that back to camera.
+                 ;; For this step, let's just render UI.
+                 
+                 top-dock (conj top-dock)
+                 bottom-dock (conj bottom-dock)
+                 left-dock (conj left-dock)
+                 right-dock (conj right-dock)
+                 
+                 :always (into floating)
+                 
+                 preview (conj preview))}))
 
 (defn logical-viewport
   [scale {:keys [x y width height]}]
@@ -271,15 +357,20 @@
   [^Canvas canvas viewport game-state]
   (state/set-ui-viewport! game-state viewport)
   (let [scale (state/ui-scale game-state)
+        logical-vp (logical-viewport scale viewport) ;; Calc once
         input (state/get-input game-state)
         pointer (when (:mouse-initialized? input)
                   {:x (/ (double (or (:mouse-x input) 0.0)) scale)
                    :y (/ (double (or (:mouse-y input) 0.0)) scale)})
         render-context {:pointer pointer
                         :active-interaction (ui-core/active-interaction)}
+        
+        ;; Pass logical-vp to root-tree for layout calc
+        tree (root-tree game-state logical-vp)
+        
         {:keys [layout-tree commands]} (ui-core/render-ui-tree {:canvas nil
-                                                                :tree (root-tree game-state)
-                                                                :viewport (logical-viewport scale viewport)
+                                                                :tree tree
+                                                                :viewport logical-vp
                                                                 :context render-context})
         scaled-commands (if (= 1.0 scale)
                           commands
