@@ -1,15 +1,16 @@
 (ns silent-king.reactui.components.performance-overlay
-  "Performance overlay panel rendered in the Reactified UI.")
+  "Performance overlay panel rendered in the Reactified UI."
+  (:require [silent-king.reactui.theme :as theme]))
 
 (set! *warn-on-reflection* true)
 
 (def ^:const default-panel-bounds {:width 360.0
                                    :height 620.0})
-(def ^:const panel-background 0xCC10131C)
-(def ^:const section-background 0xFF1F2330)
-(def ^:const accent-color 0xFF9CDCFE)
-(def ^:const text-color 0xFFCBCBCB)
-(def ^:const muted-color 0xFF84889A)
+(def panel-background (:panel-bg-perf theme/colors))
+(def section-background (:section-bg-alt theme/colors))
+(def accent-color (:accent theme/colors))
+(def text-color (:text theme/colors))
+(def muted-color (:text-muted-alt theme/colors))
 
 (defn- format-number
   [value {:keys [precision suffix default]}]
@@ -61,7 +62,7 @@
                            :min 0.0
                            :max 120.0
                            :bar-gap 2.0
-                           :background-color 0x33171B25
+                           :background-color (:chart-bg theme/colors)
                            :bar-color accent-color
                            :bounds {:height 90.0}}])
      (section "Rendering"
@@ -123,7 +124,7 @@
                 :bounds {:width 80.0 :height 32.0}}]
       [:button {:label "Hide"
                 :on-click [:ui/perf-toggle-visible]
-                :background-color 0xFF3C4456
+                :background-color (:btn-bg-enabled theme/colors)
                 :text-color text-color
                 :bounds {:width 60.0 :height 32.0}}]]
      (if expanded?
@@ -143,11 +144,11 @@
                              :min 0.0
                              :max 120.0
                              :bar-gap 2.0
-                             :background-color 0x33171B25
+                             :background-color (:chart-bg theme/colors)
                              :bar-color accent-color
                              :bounds {:height 80.0}}]))
      [:button {:label "Reset Metrics"
                :on-click [:metrics/reset-performance]
                :background-color accent-color
-               :text-color 0xFF0F111A
+               :text-color (:option-selected-text theme/colors)
                :bounds {:height 32.0}}]]))

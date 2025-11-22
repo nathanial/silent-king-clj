@@ -1,16 +1,17 @@
 (ns silent-king.reactui.components.hyperlane-settings
-  "Pure components for the hyperlane settings panel.")
+  "Pure components for the hyperlane settings panel."
+  (:require [silent-king.reactui.theme :as theme]))
 
 (set! *warn-on-reflection* true)
 
 (def ^:const default-panel-bounds {:width 360.0
                                    :height 420.0})
 
-(def ^:const accent-color 0xFF9CDCFE)
-(def ^:const text-color 0xFFCBCBCB)
-(def ^:const muted-color 0xFFB3B3B3)
-(def ^:const panel-background 0xCC171B25)
-(def ^:const section-background 0xFF2D2F38)
+(def accent-color (:accent theme/colors))
+(def text-color (:text theme/colors))
+(def muted-color (:text-muted theme/colors))
+(def panel-background (:panel-bg theme/colors))
+(def section-background (:section-bg theme/colors))
 
 (def color-options
   [{:value :blue :label "Blue"}
@@ -39,7 +40,7 @@
   [:button {:label label
             :on-click event
             :background-color (if enabled?
-                                0xFF3C4456
+                                (:btn-bg-enabled theme/colors)
                                 section-background)
             :text-color text-color
             :bounds {:height 34.0}}])
@@ -73,9 +74,9 @@
                :selected selected
                :expanded? expanded?
                :background-color section-background
-               :option-background 0xFF1F2330
+               :option-background (:section-bg-alt theme/colors)
                :option-selected-background accent-color
-               :option-selected-text-color 0xFF0F111A
+               :option-selected-text-color (:option-selected-text theme/colors)
                :text-color text-color
                :on-toggle [:ui.dropdown/toggle color-dropdown-id]
                :on-select [:hyperlanes/set-color-scheme]
@@ -134,7 +135,7 @@
    [:button {:label "Reset to Defaults"
              :on-click [:hyperlanes/reset]
              :background-color accent-color
-             :text-color 0xFF0F111A
+             :text-color (:option-selected-text theme/colors)
              :bounds {:height 34.0}}]])
 
 (defn hyperlane-settings-panel

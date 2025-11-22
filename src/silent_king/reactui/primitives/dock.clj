@@ -5,6 +5,7 @@
             [silent-king.reactui.layout :as layout]
             [silent-king.reactui.render :as render]
             [silent-king.reactui.interaction :as interaction]
+            [silent-king.reactui.theme :as theme]
             [silent-king.render.commands :as commands]))
 
 (set! *warn-on-reflection* true)
@@ -17,14 +18,14 @@
 (def ^:const splitter-size 6.0)
 (def ^:const tab-padding 8.0)
 
-(def active-tab-color 0xFF454545)
-(def inactive-tab-color 0xFF2A2A2A)
-(def bg-color 0xFF181818)
-(def border-color 0xFF505050)
-(def splitter-color 0xFF505050)
-(def splitter-hover-color 0xFF707070)
-(def text-color 0xFFCCCCCC)
-(def active-text-color 0xFFFFFFFF)
+(def active-tab-color (:dock-tab-active theme/colors))
+(def inactive-tab-color (:dock-tab-inactive theme/colors))
+(def bg-color (:dock-bg theme/colors))
+(def border-color (:dock-border theme/colors))
+(def splitter-color (:dock-splitter theme/colors))
+(def splitter-hover-color (:dock-splitter-hover theme/colors))
+(def text-color (:dock-text theme/colors))
+(def active-text-color (:dock-text-active theme/colors))
 
 ;; =============================================================================
 ;; Normalization & Layout

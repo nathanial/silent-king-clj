@@ -1,7 +1,7 @@
 (ns silent-king.render.skia
   "Interpret draw command data and apply it to a Skija Canvas."
   (:require [silent-king.color :as color])
-  (:import [io.github.humbleui.skija Canvas FilterTileMode Font Image Paint PaintMode PaintStrokeCap Path Shader Typeface]
+  (:import [io.github.humbleui.skija Canvas FilterTileMode Font GradientStyle Image Paint PaintMode PaintStrokeCap Path Shader Typeface]
            [io.github.humbleui.types Rect]))
 
 (set! *warn-on-reflection* true)
@@ -83,7 +83,7 @@
                                  (->float (:y to))
                                  colors
                                  positions
-                                 FilterTileMode/CLAMP))))
+                                 (GradientStyle. FilterTileMode/CLAMP true nil)))))
 
 (defn- draw-line!
   [^Canvas canvas {:keys [from to style]}]

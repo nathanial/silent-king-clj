@@ -1,14 +1,15 @@
 (ns silent-king.reactui.components.control-panel
-  "Pure components for the top-left control panel.")
+  "Pure components for the top-left control panel."
+  (:require [silent-king.reactui.theme :as theme]))
 
 (set! *warn-on-reflection* true)
 
 (def ^:const default-panel-bounds {:width 320.0
                                    :height 420.0})
 
-(def ^:const accent-color 0xFF9CDCFE)
-(def ^:const text-color 0xFFCBCBCB)
-(def ^:const muted-color 0xFFB3B3B3)
+(def accent-color (:accent theme/colors))
+(def text-color (:text theme/colors))
+(def muted-color (:text-muted theme/colors))
 
 (defn- format-zoom
   [zoom]
@@ -34,21 +35,21 @@
     [:vstack {:key :control-panel
               :padding {:all 12}
               :gap 8
-              :background-color 0xCC171B25}
+              :background-color (:panel-bg theme/colors)}
      [:label {:text "Controls"
               :color accent-color
               :font-size 16.0}]
      [:button {:label stars-label
                :on-click [:ui/toggle-stars-and-planets]
-               :background-color 0xFF343844
+               :background-color (:btn-bg-stars theme/colors)
                :text-color text-color}]
      [:button {:label hyperlane-label
                :on-click [:ui/toggle-hyperlanes]
-               :background-color 0xFF2D2F38
+               :background-color (:btn-bg-hyperlanes theme/colors)
                :text-color text-color}]
      [:button {:label voronoi-label
                :on-click [:ui/toggle-voronoi]
-               :background-color 0xFF242734
+               :background-color (:btn-bg-voronoi theme/colors)
                :text-color text-color}]
      [:label {:text (format-zoom zoom)
               :color text-color}]

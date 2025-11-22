@@ -1,16 +1,17 @@
 (ns silent-king.reactui.components.star-inspector
   "Right-side panel that shows the currently selected star."
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [silent-king.reactui.theme :as theme]))
 
 (set! *warn-on-reflection* true)
 
 (def ^:const default-panel-bounds {:width 360.0
                                    :height 520.0})
-(def ^:const panel-background 0xCC12151E)
-(def ^:const section-background 0xFF1F2330)
-(def ^:const accent-color 0xFF9CDCFE)
-(def ^:const text-color 0xFFCBCBCB)
-(def ^:const muted-color 0xFF84889A)
+(def panel-background (:panel-bg-star theme/colors))
+(def section-background (:section-bg-alt theme/colors))
+(def accent-color (:accent theme/colors))
+(def text-color (:text theme/colors))
+(def muted-color (:text-muted-alt theme/colors))
 (def ^:const zoom-target 2.4)
 
 (defn- format-position
@@ -146,14 +147,14 @@
              :on-click [:ui/zoom-to-selected-star {:zoom zoom-target}]
              :background-color (if has-selection?
                                  accent-color
-                                 0xFF3C4456)
+                                 (:btn-bg-enabled theme/colors))
              :text-color (if has-selection?
-                           0xFF0F111A
+                           (:option-selected-text theme/colors)
                            text-color)
              :bounds {:height 34.0}}]
    [:button {:label "Clear Selection"
              :on-click [:ui/clear-selection]
-             :background-color 0xFF2D2F38
+             :background-color (:btn-bg-hyperlanes theme/colors)
              :text-color text-color
              :bounds {:height 34.0}}]])
 
