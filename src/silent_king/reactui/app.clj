@@ -312,6 +312,7 @@
         right-dock (render-dock game-state docking-state :right (:right layout))
         top-dock (render-dock game-state docking-state :top (:top layout))
         bottom-dock (render-dock game-state docking-state :bottom (:bottom layout))
+        center-dock (render-dock game-state docking-state :center (:center layout))
         
         ;; Floating Windows
         floating (render-floating-windows game-state)
@@ -336,6 +337,7 @@
                  ;; BUT, if we want the UI to squeeze the game view, we need to communicate that back to camera.
                  ;; For this step, let's just render UI.
                  
+                 center-dock (conj center-dock) ;; Render center dock at bottom (or above game view if implemented)
                  top-dock (conj top-dock)
                  bottom-dock (conj bottom-dock)
                  left-dock (conj left-dock)

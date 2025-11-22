@@ -270,18 +270,58 @@
 (defn- check-dock-zone
   [game-state px py]
   (let [viewport (state/ui-viewport game-state)
-        w (double (or (:width viewport) 0.0))
-        h (double (or (:height viewport) 0.0))
-        threshold 50.0]
+        scale (state/ui-scale game-state)
+        ;; Calculate logical viewport
+        logical-vp {:x 0.0 :y 0.0
+                    :width (/ (double (or (:width viewport) 0.0)) scale)
+                    :height (/ (double (or (:height viewport) 0.0)) scale)}
+        
+        ;; Get layout zones to know where docks will be
+        ;; We simulate what would happen if we docked to each side?
+        ;; Or just use current layout?
+        ;; Actually, we want to know where the docking ZONES are (the trigger areas)
+        ;; and where the PREVIEW should be (the resulting dock area).
+        
+        ;; Zones are fixed relative to screen edges
+        threshold 50.0
+        w (:width logical-vp)
+        h (:height logical-vp)
+        cx (/ w 2.0)
+        cy (/ h 2.0)
+        center-size 100.0
+        
+        ;; Calculate potential layouts for preview
+        docking (state/get-docking-state game-state)
+        
+        ;; Helper to get preview rect for a side
+        get-preview (fn [side]
+                      (let [layout (layout/calculate-dock-layout logical-vp docking)]
+                        (get layout side)))]
+    
     (cond
-      (< px threshold) {:side :left
-                        :rect {:x 0 :y 0 :width 300 :height h}}
-      (> px (- w threshold)) {:side :right
-                              :rect {:x (- w 300) :y 0 :width 300 :height h}}
-      (< py threshold) {:side :top
-                        :rect {:x 0 :y 0 :width w :height 200}}
-      (> py (- h threshold)) {:side :bottom
-                              :rect {:x 0 :y (- h 200) :width w :height 200}}
+      ;; Left
+      (< px threshold)
+      {:side :left :rect (get-preview :left)}
+      
+      ;; Right
+      (> px (- w threshold))
+      {:side :right :rect (get-preview :right)}
+      
+      ;; Top
+      (< py threshold)
+      {:side :top :rect (get-preview :top)}
+      
+      ;; Bottom
+      (> py (- h threshold))
+      {:side :bottom :rect (get-preview :bottom)}
+      
+      ;; Center
+      (and (> px (- cx center-size))
+           (< px (+ cx center-size))
+           (> py (- cy center-size))
+           (< py (+ cy center-size)))
+      {:side :center :rect (get-preview :center)}
+      
       :else nil)))
 
 (defn handle-window-pointer-drag!

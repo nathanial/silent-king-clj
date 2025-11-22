@@ -191,7 +191,8 @@
    [:left DockSide]
    [:right DockSide]
    [:top DockSide]
-   [:bottom DockSide]])
+   [:bottom DockSide]
+   [:center DockSide]])
 
 (def UI
   [:map {:closed false}

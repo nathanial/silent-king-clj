@@ -51,7 +51,10 @@
             :size 200.0}
    :top {:windows []
          :active nil
-         :size 200.0}})
+         :size 200.0}
+   :center {:windows []
+            :active nil
+            :size 0.0}}) ;; Size ignored for center, fills space
 
 (defn next-planet-id!
   "Generate and store the next planet id. Starts at 1."
