@@ -276,12 +276,6 @@
                     :width (/ (double (or (:width viewport) 0.0)) scale)
                     :height (/ (double (or (:height viewport) 0.0)) scale)}
         
-        ;; Get layout zones to know where docks will be
-        ;; We simulate what would happen if we docked to each side?
-        ;; Or just use current layout?
-        ;; Actually, we want to know where the docking ZONES are (the trigger areas)
-        ;; and where the PREVIEW should be (the resulting dock area).
-        
         ;; Zones are fixed relative to screen edges
         threshold 50.0
         w (:width logical-vp)
@@ -291,11 +285,17 @@
         center-size 100.0
         
         ;; Calculate potential layouts for preview
-        docking (state/get-docking-state game-state)
+        base-docking (state/get-docking-state game-state)
         
-        ;; Helper to get preview rect for a side
+        ;; Helper to get preview rect for a side.
+        ;; We MUST simulate the dock being active (having windows) to get its expanded size.
         get-preview (fn [side]
-                      (let [layout (layout/calculate-dock-layout logical-vp docking)]
+                      (let [simulated-docking (update base-docking side
+                                                      (fn [dock]
+                                                        (if (seq (:windows dock))
+                                                          dock
+                                                          (assoc dock :windows [:placeholder]))))
+                            layout (layout/calculate-dock-layout logical-vp simulated-docking)]
                         (get layout side)))]
     
     (cond
