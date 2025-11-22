@@ -55,8 +55,12 @@
                         :height content-h}
         
         child-context (assoc context :viewport content-bounds :bounds content-bounds)
-        
-        children (mapv #(layout/layout-node % child-context) (:children node))]
+        ;; Docked children should fill the dock content regardless of any stored :bounds
+        children (mapv (fn [child]
+                         (-> child
+                             (update :props #(assoc (or % {}) :bounds content-bounds))
+                             (layout/layout-node child-context)))
+                       (:children node))]
     
     (assoc node
            :layout {:bounds bounds
