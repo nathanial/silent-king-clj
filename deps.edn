@@ -15,6 +15,9 @@
   nrepl/nrepl {:mvn/version "1.1.1"}
   cider/cider-nrepl {:mvn/version "0.47.1"}
 
+  ;; Portal for data visualization
+  djblue/portal {:mvn/version "0.56.0"}
+
   ;; LWJGL for windowing
   org.lwjgl/lwjgl {:mvn/version "3.3.1"}
   org.lwjgl/lwjgl-glfw {:mvn/version "3.3.1"}

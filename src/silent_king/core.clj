@@ -13,6 +13,7 @@
             [silent-king.render.skia :as skia]
             [nrepl.server :as nrepl]
             [cider.nrepl :refer [cider-nrepl-handler]]
+            [portal.api :as p]
             [silent-king.color :as color])
   (:import [org.lwjgl.glfw GLFW GLFWErrorCallback GLFWCursorPosCallbackI GLFWMouseButtonCallbackI GLFWScrollCallbackI GLFWKeyCallbackI]
            [org.lwjgl.opengl GL GL11 GL30]
@@ -21,6 +22,7 @@
 (set! *warn-on-reflection* true)
 (defonce game-state (atom (state/create-game-state)))
 (defonce render-state (atom (state/create-render-state)))
+(defonce last-frame-commands (atom nil))
 (def ^:const world-click-threshold 6.0)
 (def ^:const planet-visibility-zoom 1.5)
 
@@ -287,6 +289,7 @@
         ;; Just clear to black and then draw the UI
         frame-commands (into [(commands/clear (color/hsv 0 0 0))]
                              ui-commands)]
+    (reset! last-frame-commands frame-commands)
     (skia/draw-commands! canvas frame-commands)
     (let [time-state (state/get-time game-state)
           frame-count (:frame-count time-state)
@@ -397,6 +400,10 @@
         _nrepl-server (nrepl/start-server :port nrepl-port :handler cider-nrepl-handler)]
     (println (format "nREPL server started on port %d" nrepl-port))
     (spit ".nrepl-port" nrepl-port))
+
+  ;; Initialize Portal tap
+  (add-tap #'p/submit)
+  (println "Portal hooked up. Use (portal.api/open) to view.")
 
   ;; Reset global state atoms
   (reset! game-state (state/create-game-state))
